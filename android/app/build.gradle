@@ -3,6 +3,14 @@ apply plugin: 'com.android.application'
 android {
     namespace = "com.brainbridge.app"
     compileSdk = rootProject.ext.compileSdkVersion
+    signingConfigs {
+        release {
+            storeFile file("brainbridge.keystore")
+            storePassword "brainbridge123"
+            keyAlias "brainbridge-alias"
+            keyPassword "brainbridge123"
+        }
+    }
     defaultConfig {
         applicationId "com.brainbridge.app"
         minSdkVersion rootProject.ext.minSdkVersion
@@ -18,6 +26,7 @@ android {
     }
     buildTypes {
         release {
+            signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
