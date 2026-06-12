@@ -247,9 +247,22 @@ export default function Dashboard({ setActiveTab }) {
   return (
     <div>
       <div className="page-header">
-        <div>
-          <h1 className="page-title">Dashboard</h1>
-          <p className="page-subtitle">Welcome to BrainBridge Tuition Admin Panel.</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <img 
+            src="/logo.png" 
+            alt="BrainBridge Logo" 
+            style={{
+              width: '48px',
+              height: '48px',
+              borderRadius: '12px',
+              objectFit: 'contain',
+              boxShadow: '0 4px 12px rgba(15, 23, 42, 0.05)'
+            }}
+          />
+          <div>
+            <h1 className="page-title">Dashboard</h1>
+            <p className="page-subtitle">Welcome to BrainBridge Tuition Admin Panel.</p>
+          </div>
         </div>
         {!isSubAdmin && (
           <button 

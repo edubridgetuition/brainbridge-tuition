@@ -33,8 +33,17 @@ export default function Sidebar({ activeTab, setActiveTab, currentAdmin, onLogou
 
   return (
     <aside className="sidebar">
-      <div className="brand-container">
-        <GraduationCap className="brand-logo" size={32} />
+      <div className="brand-container" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        <img 
+          src="/logo.png" 
+          alt="Logo" 
+          style={{
+            width: '32px',
+            height: '32px',
+            borderRadius: '8px',
+            objectFit: 'contain'
+          }}
+        />
         <span className="brand-name">BrainBridge</span>
       </div>
       

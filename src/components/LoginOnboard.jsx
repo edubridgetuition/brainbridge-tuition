@@ -70,21 +70,18 @@ export default function LoginOnboard({ onLogin }) {
         zIndex: 1
       }}>
         {/* Brand Logo Header */}
-        <div style={{
-          width: '60px',
-          height: '60px',
-          borderRadius: '50%',
-          backgroundColor: '#ffffff',
-          boxShadow: '0 8px 20px rgba(37, 99, 235, 0.12)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: 'var(--primary)',
-          marginBottom: '1.25rem',
-          border: '1px solid #bfdbfe'
-        }}>
-          <GraduationCap size={32} />
-        </div>
+        <img 
+          src="/logo.png" 
+          alt="BrainBridge Logo" 
+          style={{
+            width: '64px',
+            height: '64px',
+            borderRadius: '16px',
+            objectFit: 'contain',
+            marginBottom: '1.25rem',
+            boxShadow: '0 4px 12px rgba(15, 23, 42, 0.08)'
+          }}
+        />
 
         <h2 style={{
           fontFamily: 'var(--font-heading)',
