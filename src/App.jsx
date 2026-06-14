@@ -10,6 +10,7 @@ import Homework from './pages/Homework';
 import StudyMaterial from './pages/StudyMaterial';
 import LoginOnboard from './components/LoginOnboard';
 import SuperAdmin from './pages/SuperAdmin';
+import InquiryForm from './pages/InquiryForm';
 import { GraduationCap } from 'lucide-react';
 import { dbService } from './database/dbService';
 
@@ -284,6 +285,13 @@ function App() {
         Loading BrainBridge Portal...
       </div>
     );
+  }
+
+  // Intercept for standalone Admission Inquiry form
+  const urlParams = new URLSearchParams(window.location.search);
+  const inquiryTenantId = urlParams.get('inquiry');
+  if (inquiryTenantId) {
+    return <InquiryForm tenantId={inquiryTenantId} />;
   }
 
   if (!currentUser) {

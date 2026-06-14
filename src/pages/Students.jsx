@@ -10,6 +10,8 @@ export default function Students({ currentUser, verifyAction, activeTenant }) {
   const [activeSubTab, setActiveSubTab] = useState('students'); // 'students', 'inquiries', or 'summary'
   const [selectedInquiryForDetail, setSelectedInquiryForDetail] = useState(null);
   const [approvingInquiryId, setApprovingInquiryId] = useState(null);
+  const [showQrModal, setShowQrModal] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
   
   // Search & Filter State
   const [searchTerm, setSearchTerm] = useState('');
@@ -362,6 +364,14 @@ export default function Students({ currentUser, verifyAction, activeTenant }) {
             }}>
               <Plus size={18} />
               <span>Register Student</span>
+            </button>
+          </div>
+        )}
+        {activeSubTab === 'inquiries' && (
+          <div style={{ display: 'flex', gap: '0.75rem' }}>
+            <button className="btn btn-primary" onClick={() => setShowQrModal(true)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', boxShadow: '0 4px 12px rgba(37, 99, 235, 0.15)' }}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><path d="M7 17h.01"/><path d="M17 7h.01"/><path d="M7 7h.01"/><path d="M17 17h.01"/></svg>
+              <span>Inquiry QR Code</span>
             </button>
           </div>
         )}
@@ -1261,6 +1271,102 @@ export default function Students({ currentUser, verifyAction, activeTenant }) {
           </div>
         </div>
       )}
+
+      {/* 📱 INQUIRY QR CODE MODAL */}
+      {showQrModal && (() => {
+        const inquiryLink = `${window.location.origin}/?inquiry=${activeTenant?.id || 'owner_a'}`;
+        const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(inquiryLink)}`;
+        
+        const handleCopyLink = () => {
+          navigator.clipboard.writeText(inquiryLink);
+          setLinkCopied(true);
+          setTimeout(() => setLinkCopied(false), 2000);
+        };
+
+        return (
+          <div className="modal-overlay" style={{ zIndex: 100000 }}>
+            <div className="modal-content" style={{ maxWidth: '400px', borderRadius: '20px' }}>
+              <div className="modal-header">
+                <h3 className="modal-title">Inquiry QR Code</h3>
+                <button className="modal-close" onClick={() => setShowQrModal(false)}>Close</button>
+              </div>
+              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.25rem', padding: '1.5rem 1rem' }}>
+                <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', textAlign: 'center', margin: 0, lineHeight: '1.4' }}>
+                  Show this QR code to parents or prospective students to fill the Admission Inquiry form on their mobile phones.
+                </p>
+
+                {/* QR Code Container */}
+                <div style={{
+                  padding: '1rem',
+                  backgroundColor: '#ffffff',
+                  borderRadius: '16px',
+                  boxShadow: '0 10px 25px -5px rgba(0,0,0,0.05), 0 8px 10px -6px rgba(0,0,0,0.05)',
+                  border: '1px solid #e2e8f0',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  width: '240px',
+                  height: '240px'
+                }}>
+                  <img 
+                    src={qrCodeUrl} 
+                    alt="Admission Inquiry QR Code" 
+                    style={{ width: '220px', height: '220px' }}
+                    onError={(e) => {
+                      e.target.src = `https://chart.googleapis.com/chart?chs=220x220&cht=qr&chl=${encodeURIComponent(inquiryLink)}&choe=UTF-8`;
+                    }}
+                  />
+                </div>
+
+                {/* Copy Link Section */}
+                <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <label style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-secondary)' }}>Inquiry Form URL</label>
+                  <div style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={inquiryLink}
+                      readOnly
+                      style={{ fontSize: '0.8rem', backgroundColor: '#f8fafc', border: '1px solid #cbd5e1' }}
+                    />
+                    <button
+                      type="button"
+                      className="btn"
+                      onClick={handleCopyLink}
+                      style={{
+                        padding: '0 1rem',
+                        fontSize: '0.8rem',
+                        fontWeight: '700',
+                        backgroundColor: linkCopied ? '#10b981' : 'var(--primary)',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: 'var(--radius-md)',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                        minWidth: '80px',
+                        transition: 'background-color 0.2s'
+                      }}
+                    >
+                      {linkCopied ? 'Copied!' : 'Copy'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Open Form directly */}
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => window.open(inquiryLink, '_blank')}
+                  style={{ width: '100%', padding: '0.75rem', fontSize: '0.88rem', fontWeight: '700', border: '1px solid #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                  <span>Open Form on this Device</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
