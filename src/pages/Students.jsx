@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { dbService, formatDateDisplay, sendWhatsAppMessage } from '../database/dbService';
 import { Plus, Search, Filter, Edit, Phone, MapPin, MessageCircle } from 'lucide-react';
 
-export default function Students() {
+export default function Students({ currentUser, verifyAction }) {
   const [students, setStudents] = useState([]);
   const [batches, setBatches] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -70,36 +70,44 @@ export default function Students() {
       return;
     }
 
-    try {
-      setLoading(true);
-      if (isEditing) {
-        // Update existing student details
-        const updated = await dbService.updateStudent(editingStudentId, formData);
-        setStudents(prev => prev.map(s => s.id === editingStudentId ? updated : s));
-        alert("Student details updated successfully!");
-      } else {
-        // Register new student
-        const newStudent = await dbService.addStudent(formData);
-        setStudents(prev => [...prev, newStudent]);
+    const action = async () => {
+      try {
+        setLoading(true);
+        if (isEditing) {
+          // Update existing student details
+          const updated = await dbService.updateStudent(editingStudentId, formData);
+          setStudents(prev => prev.map(s => s.id === editingStudentId ? updated : s));
+          alert("Student details updated successfully!");
+        } else {
+          // Register new student
+          const newStudent = await dbService.addStudent(formData);
+          setStudents(prev => [...prev, newStudent]);
+        }
+        setShowModal(false);
+        setIsEditing(false);
+        setEditingStudentId(null);
+        setFormData({
+          name: '',
+          mobile: '',
+          parent_mobile: '',
+          address: '',
+          school: '',
+          standard: '10th',
+          batch_id: batches[0]?.id || '',
+          admission_date: new Date().toISOString().split('T')[0]
+        });
+      } catch (err) {
+        console.error("Error saving student:", err);
+        alert("Failed to save details: " + err.message);
+      } finally {
+        setLoading(false);
       }
-      setShowModal(false);
-      setIsEditing(false);
-      setEditingStudentId(null);
-      setFormData({
-        name: '',
-        mobile: '',
-        parent_mobile: '',
-        address: '',
-        school: '',
-        standard: '10th',
-        batch_id: batches[0]?.id || '',
-        admission_date: new Date().toISOString().split('T')[0]
-      });
-    } catch (err) {
-      console.error("Error saving student:", err);
-      alert("Failed to save details: " + err.message);
-    } finally {
-      setLoading(false);
+    };
+
+    if (verifyAction) {
+      verifyAction(action);
+    } else {
+      await action();
     }
   };
 
@@ -138,18 +146,26 @@ export default function Students() {
 
   const handleArchiveStudent = async (studentId) => {
     if (window.confirm("Are you sure you want to archive this student? This will soft-delete their record from the active directory.")) {
-      try {
-        setLoading(true);
-        await dbService.archiveStudent(studentId);
-        // Refresh local student list
-        setStudents(prev => prev.filter(s => s.id !== studentId));
-        setSelectedStudentForDetail(null);
-        alert("Student archived successfully.");
-      } catch (err) {
-        console.error("Error archiving student:", err);
-        alert("Failed to archive student: " + err.message);
-      } finally {
-        setLoading(false);
+      const action = async () => {
+        try {
+          setLoading(true);
+          await dbService.archiveStudent(studentId);
+          // Refresh local student list
+          setStudents(prev => prev.filter(s => s.id !== studentId));
+          setSelectedStudentForDetail(null);
+          alert("Student archived successfully.");
+        } catch (err) {
+          console.error("Error archiving student:", err);
+          alert("Failed to archive student: " + err.message);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      if (verifyAction) {
+        verifyAction(action);
+      } else {
+        await action();
       }
     }
   };
@@ -160,25 +176,34 @@ export default function Students() {
       alert("Batch Name and Subject are required.");
       return;
     }
-    try {
-      setLoading(true);
-      const newBatch = await dbService.addBatch(batchForm);
-      setBatches(prev => [...prev, newBatch]);
-      setShowBatchModal(false);
-      setBatchForm({
-        name: '',
-        subject: '',
-        timing: '',
-        teacher_name: ''
-      });
-      // Set the newly created batch as selected in the student form if no batch is selected
-      setFormData(prev => ({ ...prev, batch_id: prev.batch_id || newBatch.id }));
-      alert(`Batch "${newBatch.name}" created successfully!`);
-    } catch (err) {
-      console.error("Error creating batch:", err);
-      alert("Failed to create batch.");
-    } finally {
-      setLoading(false);
+
+    const action = async () => {
+      try {
+        setLoading(true);
+        const newBatch = await dbService.addBatch(batchForm);
+        setBatches(prev => [...prev, newBatch]);
+        setShowBatchModal(false);
+        setBatchForm({
+          name: '',
+          subject: '',
+          timing: '',
+          teacher_name: ''
+        });
+        // Set the newly created batch as selected in the student form if no batch is selected
+        setFormData(prev => ({ ...prev, batch_id: prev.batch_id || newBatch.id }));
+        alert(`Batch "${newBatch.name}" created successfully!`);
+      } catch (err) {
+        console.error("Error creating batch:", err);
+        alert("Failed to create batch.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (verifyAction) {
+      verifyAction(action);
+    } else {
+      await action();
     }
   };
 
@@ -340,6 +365,7 @@ export default function Students() {
               <table>
                 <thead>
                   <tr>
+                    <th>Student ID</th>
                     <th>Student Name</th>
                     <th>Standard</th>
                     <th>Admission Date</th>
@@ -348,13 +374,16 @@ export default function Students() {
                 <tbody>
                   {filteredStudents.length === 0 ? (
                     <tr>
-                      <td colSpan="3" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>
+                      <td colSpan="4" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>
                         No students match the criteria.
                       </td>
                     </tr>
                   ) : (
                     filteredStudents.map(student => (
                       <tr key={student.id}>
+                        <td data-label="Student ID" style={{ fontWeight: '700', color: '#1e3a8a', fontSize: '0.9rem' }}>
+                          {student.student_id || '-'}
+                        </td>
                         <td data-label="Student Name">
                           <button
                             type="button"
@@ -661,7 +690,12 @@ export default function Students() {
                 </div>
                 <div style={{ flexGrow: 1 }}>
                   <h4 style={{ fontSize: '1.25rem', fontWeight: '800', margin: 0, color: 'var(--text-primary)' }}>{selectedStudentForDetail.name}</h4>
-                  <span className="badge badge-success" style={{ marginTop: '0.3rem' }}>{selectedStudentForDetail.standard} Standard</span>
+                  <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', marginTop: '0.3rem' }}>
+                    <span className="badge badge-success" style={{ margin: 0 }}>{selectedStudentForDetail.standard} Standard</span>
+                    <span style={{ fontSize: '0.72rem', fontWeight: '800', color: '#1e3a8a', backgroundColor: '#eff6ff', padding: '0.15rem 0.45rem', borderRadius: '4px', border: '1px solid #bfdbfe' }}>
+                      ID: {selectedStudentForDetail.student_id || '-'}
+                    </span>
+                  </div>
                 </div>
                 <button 
                   onClick={() => handleOpenEdit(selectedStudentForDetail)}

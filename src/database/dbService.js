@@ -1,9 +1,9 @@
 import { db, isFirebaseConfigured } from './firebase';
 import { 
-  collection, 
+  collection as firestoreCollection, 
   getDocs, 
   getDoc,
-  doc, 
+  doc as firestoreDoc, 
   setDoc, 
   updateDoc, 
   addDoc, 
@@ -11,8 +11,32 @@ import {
   query, 
   orderBy, 
   limit, 
-  where 
+  where,
+  onSnapshot
 } from "firebase/firestore";
+
+// --- SAAS MULTI-TENANCY DB WRAPPERS ---
+const collection = (dbInstance, name) => {
+  const tenantCode = dbService.getTenantCode();
+  if (name === "tenants") {
+    return firestoreCollection(dbInstance, "tenants");
+  }
+  if (tenantCode) {
+    return firestoreCollection(dbInstance, "tenants", tenantCode, name);
+  }
+  return firestoreCollection(dbInstance, name);
+};
+
+const doc = (dbInstance, name, id) => {
+  const tenantCode = dbService.getTenantCode();
+  if (name === "tenants") {
+    return firestoreDoc(dbInstance, "tenants", id);
+  }
+  if (tenantCode) {
+    return firestoreDoc(dbInstance, "tenants", tenantCode, name, id);
+  }
+  return firestoreDoc(dbInstance, name, id);
+};
 
 // Helper to format date from YYYY-MM-DD to DD-MM-YYYY
 export const formatDateDisplay = (dateStr) => {
@@ -55,10 +79,10 @@ const INITIAL_BATCHES = [
 ];
 
 const INITIAL_STUDENTS = [
-  { id: 's1', name: 'Amit Sharma', mobile: '9876500001', parent_mobile: '9876500011', address: '12, Shanti Nagar, Indore', school: 'DPS', standard: '10th', admission_date: '2026-04-10', batch_id: 'b1' },
-  { id: 's2', name: 'Priyanshu Patel', mobile: '9876500002', parent_mobile: '9876500012', address: '45, Scheme 54, Indore', school: 'St. Pauls', standard: '11th', admission_date: '2026-04-12', batch_id: 'b2' },
-  { id: 's3', name: 'Riya Mehta', mobile: '9876500003', parent_mobile: '9876500013', address: '102, Silver Arcade, Indore', school: 'Choithram', standard: '12th', admission_date: '2026-04-15', batch_id: 'b3' },
-  { id: 's4', name: 'Rahul Verma', mobile: '9876500004', parent_mobile: '9876500014', address: '88, Vijay Nagar, Indore', school: 'DPS', standard: '10th', admission_date: '2026-04-20', batch_id: 'b1' }
+  { id: 's1', student_id: 1001, name: 'Amit Sharma', mobile: '9876500001', parent_mobile: '9876500011', address: '12, Shanti Nagar, Indore', school: 'DPS', standard: '10th', admission_date: '2026-04-10', batch_id: 'b1' },
+  { id: 's2', student_id: 1002, name: 'Priyanshu Patel', mobile: '9876500002', parent_mobile: '9876500012', address: '45, Scheme 54, Indore', school: 'St. Pauls', standard: '11th', admission_date: '2026-04-12', batch_id: 'b2' },
+  { id: 's3', student_id: 1003, name: 'Riya Mehta', mobile: '9876500003', parent_mobile: '9876500013', address: '102, Silver Arcade, Indore', school: 'Choithram', standard: '12th', admission_date: '2026-04-15', batch_id: 'b3' },
+  { id: 's4', student_id: 1004, name: 'Rahul Verma', mobile: '9876500004', parent_mobile: '9876500014', address: '88, Vijay Nagar, Indore', school: 'DPS', standard: '10th', admission_date: '2026-04-20', batch_id: 'b1' }
 ];
 
 const INITIAL_FEES = [
@@ -96,26 +120,59 @@ const INITIAL_TIMETABLE = [
   { id: 'tt1', batch_id: 'b1', date: '2026-06-05', start_time: '16:00', end_time: '17:00', subject: 'Mathematics', topic: 'Trigonometry Introduction', teacher_name: 'Rakesh Sharma', room: 'Room A' },
   { id: 'tt2', batch_id: 'b2', date: '2026-06-05', start_time: '17:30', end_time: '18:30', subject: 'Physics', topic: 'Electrostatics Part 1', teacher_name: 'Neha Patel', room: 'Room B' },
   { id: 'tt3', batch_id: 'b3', date: '2026-06-05', start_time: '18:30', end_time: '19:30', subject: 'Accountancy', topic: 'Double Entry System', teacher_name: 'S. K. Mehta', room: 'Room C' },
-
   { id: 'tt4', batch_id: 'b1', date: '2026-06-06', start_time: '16:00', end_time: '17:00', subject: 'Mathematics', topic: 'Trigonometric Identities', teacher_name: 'Rakesh Sharma', room: 'Room A' },
   { id: 'tt5', batch_id: 'b2', date: '2026-06-06', start_time: '17:30', end_time: '18:30', subject: 'Physics', topic: 'Coulomb\'s Law MCQ Practice', teacher_name: 'Neha Patel', room: 'Room B' },
-
   { id: 'tt6', batch_id: 'b1', date: '2026-06-08', start_time: '16:00', end_time: '17:00', subject: 'Mathematics', topic: 'Height and Distance Problems', teacher_name: 'Rakesh Sharma', room: 'Room A' },
   { id: 'tt7', batch_id: 'b3', date: '2026-06-08', start_time: '18:30', end_time: '19:30', subject: 'Accountancy', topic: 'Ledger Postings & Trial Balance', teacher_name: 'S. K. Mehta', room: 'Room C' }
 ];
 
+const DEFAULT_FEATURES = {
+  students: true,
+  timetable: true,
+  attendance: true,
+  fees: true,
+  tests: true,
+  homework: true,
+  materials: true,
+  branding: true,
+  db_fees: true,
+  db_attendance: true,
+  db_tests: true,
+  db_homework: true,
+  db_materials: true,
+  db_testimonials: true
+};
+
+const INITIAL_TENANTS = [
+  { id: 'owner_a', name: 'BrainBridge Tuition', logo_url: '/logo.png', owner_whatsapp: '9876500000', admin_password: 'admin123', features: { ...DEFAULT_FEATURES }, created_at: new Date().toISOString() },
+  { id: 'owner_b', name: 'Elite Coaching', logo_url: '/logo.png', owner_whatsapp: '9876500001', admin_password: 'admin123', features: { ...DEFAULT_FEATURES }, created_at: new Date().toISOString() }
+];
+
+const getLocalKey = (key) => {
+  if (key === 'bb_tenants') {
+    return key;
+  }
+  const tenantCode = dbService.getTenantCode();
+  if (tenantCode) {
+    return key.replace('bb_', `bb_${tenantCode}_`);
+  }
+  return key;
+};
+
 // LocalStorage Initializer Helper
 const getLocalData = (key, initial) => {
-  const data = localStorage.getItem(key);
+  const scopedKey = getLocalKey(key);
+  const data = localStorage.getItem(scopedKey);
   if (!data) {
-    localStorage.setItem(key, JSON.stringify(initial));
+    localStorage.setItem(scopedKey, JSON.stringify(initial));
     return initial;
   }
   return JSON.parse(data);
 };
 
 const saveLocalData = (key, data) => {
-  localStorage.setItem(key, JSON.stringify(data));
+  const scopedKey = getLocalKey(key);
+  localStorage.setItem(scopedKey, JSON.stringify(data));
 };
 
 const getCurrentAdmin = () => {
@@ -211,8 +268,13 @@ export const dbService = {
     return runQuery(
       async () => {
         const querySnapshot = await getDocs(collection(db, "students"));
+        const fallbackMap = { s1: 1001, s2: 1002, s3: 1003, s4: 1004 };
         return querySnapshot.docs
-          .map(doc => ({ id: doc.id, ...doc.data() }))
+          .map(doc => {
+            const data = doc.data();
+            const studentIdField = data.student_id || data.student_numeric_id || fallbackMap[doc.id] || null;
+            return { id: doc.id, ...data, student_id: studentIdField };
+          })
           .filter(student => !student.archived);
       },
       () => getLocalData('bb_students', INITIAL_STUDENTS).filter(student => !student.archived)
@@ -223,9 +285,28 @@ export const dbService = {
     await dbService.logActivity(`Registered student "${student.name}"`);
     return runQuery(
       async () => {
+        // Calculate next numerical student ID in Firebase
+        const querySnapshot = await getDocs(collection(db, "students"));
+        let maxId = 1000;
+        querySnapshot.forEach(doc => {
+          let val = parseInt(doc.data().student_id || doc.data().student_numeric_id);
+          if (!val) {
+            // Fallback for default documents
+            if (doc.id === 's1') val = 1001;
+            else if (doc.id === 's2') val = 1002;
+            else if (doc.id === 's3') val = 1003;
+            else if (doc.id === 's4') val = 1004;
+          }
+          if (val && val > maxId) {
+            maxId = val;
+          }
+        });
+        const nextId = maxId + 1;
+        const studentWithId = { ...student, student_id: nextId };
+
         // Create student document
-        const docRef = await addDoc(collection(db, "students"), student);
-        const newStudent = { id: docRef.id, ...student };
+        const docRef = await addDoc(collection(db, "students"), studentWithId);
+        const newStudent = { id: docRef.id, ...studentWithId };
 
         // Also automatically initialize a pending fee entry for the new student
         const feeAmount = student.standard === '10th' ? 1500 : student.standard === '11th' ? 2000 : 2500;
@@ -246,7 +327,17 @@ export const dbService = {
       },
       () => {
         const students = getLocalData('bb_students', INITIAL_STUDENTS);
-        const newStudent = { ...student, id: generateUUID() };
+        let maxId = 1000;
+        students.forEach(s => {
+          const val = parseInt(s.student_id);
+          if (val && val > maxId) {
+            maxId = val;
+          }
+        });
+        const nextId = maxId + 1;
+        const studentWithId = { ...student, student_id: nextId };
+
+        const newStudent = { ...studentWithId, id: generateUUID() };
         students.push(newStudent);
         saveLocalData('bb_students', students);
         
@@ -477,6 +568,16 @@ export const dbService = {
     );
   },
 
+  async getAllTestMarks() {
+    return runQuery(
+      async () => {
+        const querySnapshot = await getDocs(collection(db, "test_marks"));
+        return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      },
+      () => getLocalData('bb_test_marks', INITIAL_TEST_MARKS)
+    );
+  },
+
   async saveTestMarks(testId, marksList) {
     await dbService.logActivity(`Saved marks for test ID ${testId}`);
     return runQuery(
@@ -639,7 +740,7 @@ export const dbService = {
 
   async resetDemoData() {
     await dbService.logActivity(`Reset database to demo data`);
-    // 1. Clear LocalStorage anyway
+    // 1. Clear LocalStorage
     localStorage.removeItem('bb_batches');
     localStorage.removeItem('bb_students');
     localStorage.removeItem('bb_fees');
@@ -648,12 +749,15 @@ export const dbService = {
     localStorage.removeItem('bb_test_marks');
     localStorage.removeItem('bb_testimonials');
     localStorage.removeItem('bb_timetable');
+    localStorage.removeItem('bb_parent_accounts');
+    localStorage.removeItem('bb_homework');
+    localStorage.removeItem('bb_study_materials');
 
     // 2. If Cloud Mode (Firebase) is active and configured, reset Firestore collections
     const activeMode = localStorage.getItem('bb_db_mode') || (isFirebaseConfigured ? 'cloud' : 'local');
     if (isFirebaseConfigured && activeMode === 'cloud') {
       try {
-        const collections = ['batches', 'students', 'fees', 'attendance', 'tests', 'test_marks', 'testimonials', 'timetable'];
+        const collections = ['batches', 'students', 'fees', 'attendance', 'tests', 'test_marks', 'testimonials', 'timetable', 'homework', 'study_material', 'parent_accounts'];
         
         // Delete all existing documents in parallel
         await Promise.all(collections.map(async (colName) => {
@@ -669,7 +773,7 @@ export const dbService = {
 
         // Students
         await Promise.all(INITIAL_STUDENTS.map(s => 
-          setDoc(doc(db, "students", s.id), { name: s.name, mobile: s.mobile, parent_mobile: s.parent_mobile, address: s.address, school: s.school, standard: s.standard, admission_date: s.admission_date, batch_id: s.batch_id })
+          setDoc(doc(db, "students", s.id), { student_id: s.student_id, name: s.name, mobile: s.mobile, parent_mobile: s.parent_mobile, address: s.address, school: s.school, standard: s.standard, admission_date: s.admission_date, batch_id: s.batch_id })
         ));
 
         // Fees
@@ -709,5 +813,524 @@ export const dbService = {
     }
 
     window.location.reload();
+  },
+
+  // --- PARENT / STUDENT PORTAL AUTH ---
+  async registerParent(studentNumericId, password) {
+    const numId = parseInt(studentNumericId);
+    return runQuery(
+      async () => {
+        // 1. Verify Student exists
+        const studentSnap = await getDocs(query(collection(db, "students"), where("student_id", "==", numId)));
+        if (studentSnap.empty) {
+          throw new Error("Invalid Student ID number. Student is not registered by tuition owner.");
+        }
+        const studentDoc = studentSnap.docs[0];
+        const studentId = studentDoc.id;
+
+        // 2. Check if parent account already exists
+        const parentSnap = await getDoc(doc(db, "parent_accounts", studentId));
+        if (parentSnap.exists()) {
+          throw new Error("This Student ID is already registered. Please login or contact admin.");
+        }
+
+        // 3. Register parent account
+        await setDoc(doc(db, "parent_accounts", studentId), {
+          student_id: studentId,
+          student_numeric_id: numId,
+          password: password
+        });
+
+        return { studentId, studentName: studentDoc.data().name };
+      },
+      () => {
+        const students = getLocalData('bb_students', INITIAL_STUDENTS);
+        const student = students.find(s => parseInt(s.student_id) === numId);
+        if (!student) {
+          throw new Error("Invalid Student ID number. Student is not registered by tuition owner.");
+        }
+
+        const parents = getLocalData('bb_parent_accounts', []);
+        const parentExists = parents.some(p => p.student_numeric_id === numId);
+        if (parentExists) {
+          throw new Error("This Student ID is already registered. Please login or contact admin.");
+        }
+
+        parents.push({
+          student_id: student.id,
+          student_numeric_id: numId,
+          password: password
+        });
+        saveLocalData('bb_parent_accounts', parents);
+
+        return { studentId: student.id, studentName: student.name };
+      }
+    );
+  },
+
+  async deleteParentAccount(studentId) {
+    await dbService.logActivity(`Deleted parent account access for student "${studentId}"`);
+    return runQuery(
+      async () => {
+        // 1. Delete parent credentials document
+        const credentialRef = doc(db, "parent_accounts", studentId);
+        await deleteDoc(credentialRef);
+
+        // 2. Set parent_portal_disabled flag on the student document
+        const studentRef = doc(db, "students", studentId);
+        await updateDoc(studentRef, { parent_portal_disabled: true });
+        return true;
+      },
+      () => {
+        // 1. Filter out parent credential entry from local storage
+        const parents = getLocalData('bb_parent_accounts', []);
+        const filteredParents = parents.filter(p => p.student_id !== studentId);
+        saveLocalData('bb_parent_accounts', filteredParents);
+
+        // 2. Set parent_portal_disabled = true on the local student record
+        const students = getLocalData('bb_students', INITIAL_STUDENTS);
+        const idx = students.findIndex(s => s.id === studentId);
+        if (idx !== -1) {
+          students[idx] = { ...students[idx], parent_portal_disabled: true };
+          saveLocalData('bb_students', students);
+        }
+        return true;
+      }
+    );
+  },
+
+  async verifyParentLogin(studentNumericId, password) {
+    const numId = parseInt(studentNumericId) || 0;
+    const cleanPassword = String(password || '').trim();
+    const cleanStudentNumericId = String(studentNumericId || '').trim();
+
+    const reverseFallbackMap = {
+      '1001': 's1',
+      '1002': 's2',
+      '1003': 's3',
+      '1004': 's4'
+    };
+
+    return runQuery(
+      async () => {
+        // 1. Verify Student exists
+        let studentSnap = await getDocs(query(collection(db, "students"), where("student_id", "==", numId)));
+        if (studentSnap.empty) {
+          studentSnap = await getDocs(query(collection(db, "students"), where("student_id", "==", cleanStudentNumericId)));
+        }
+        
+        let studentDoc = null;
+        let studentId = null;
+        let studentData = null;
+
+        if (!studentSnap.empty) {
+          studentDoc = studentSnap.docs[0];
+          studentId = studentDoc.id;
+          studentData = studentDoc.data();
+        } else {
+          // Fallback to check default document ID map
+          const fallbackDocId = reverseFallbackMap[cleanStudentNumericId];
+          if (fallbackDocId) {
+            const docRef = doc(db, "students", fallbackDocId);
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+              studentDoc = docSnap;
+              studentId = docSnap.id;
+              studentData = docSnap.data();
+            }
+          }
+        }
+
+        if (!studentDoc) {
+          throw new Error("Invalid Student ID number.");
+        }
+
+        if (studentData && (studentData.parent_portal_disabled === true || studentData.parent_portal_disabled === 'true')) {
+          throw new Error("This parent portal access has been deleted/disabled. Please contact your tuition administrator.");
+        }
+
+        // Ensure student_id is set in the returned data
+        const studentIdVal = studentData.student_id || studentData.student_numeric_id || numId;
+
+        // 2. Verify parent credentials (registered password or parent/student mobile number)
+        const parentSnap = await getDoc(doc(db, "parent_accounts", studentId));
+        let isValid = false;
+        
+        if (parentSnap.exists() && String(parentSnap.data().password || '').trim() === cleanPassword) {
+          isValid = true;
+        } else {
+          const pMobile = String(studentData.parent_mobile || '').trim();
+          const sMobile = String(studentData.mobile || '').trim();
+          if ((pMobile && pMobile === cleanPassword) || (sMobile && sMobile === cleanPassword)) {
+            isValid = true;
+          }
+        }
+
+        if (!isValid) {
+          throw new Error("Invalid Student ID or password.");
+        }
+
+        return { id: studentId, student_id: studentIdVal, ...studentData };
+      },
+      () => {
+        const students = getLocalData('bb_students', INITIAL_STUDENTS);
+        const student = students.find(s => 
+          parseInt(s.student_id) === numId || 
+          String(s.student_id).trim() === cleanStudentNumericId ||
+          (s.id === 's1' && cleanStudentNumericId === '1001') ||
+          (s.id === 's2' && cleanStudentNumericId === '1002') ||
+          (s.id === 's3' && cleanStudentNumericId === '1003') ||
+          (s.id === 's4' && cleanStudentNumericId === '1004')
+        );
+        if (!student) {
+          throw new Error("Invalid Student ID number.");
+        }
+
+        if (student.parent_portal_disabled === true || student.parent_portal_disabled === 'true') {
+          throw new Error("This parent portal access has been deleted/disabled. Please contact your tuition administrator.");
+        }
+
+        const parents = getLocalData('bb_parent_accounts', []);
+        const parentAccount = parents.find(p => 
+          ((parseInt(p.student_numeric_id) === numId || String(p.student_numeric_id).trim() === cleanStudentNumericId) ||
+           (p.student_id === student.id)) && 
+          String(p.password || '').trim() === cleanPassword
+        );
+        
+        let isValid = false;
+        if (parentAccount) {
+          isValid = true;
+        } else {
+          const pMobile = String(student.parent_mobile || '').trim();
+          const sMobile = String(student.mobile || '').trim();
+          if ((pMobile && pMobile === cleanPassword) || (sMobile && sMobile === cleanPassword)) {
+            isValid = true;
+          }
+        }
+
+        if (!isValid) {
+          throw new Error("Invalid Student ID or password.");
+        }
+
+        const studentIdVal = student.student_id || numId;
+        return { ...student, student_id: studentIdVal };
+      }
+    );
+  },
+
+  // --- HOMEWORK ---
+  async getHomework() {
+    return runQuery(
+      async () => {
+        const querySnapshot = await getDocs(collection(db, "homework"));
+        return querySnapshot.docs
+          .map(doc => ({ id: doc.id, ...doc.data() }))
+          .filter(h => !h.archived);
+      },
+      () => getLocalData('bb_homework', []).filter(h => !h.archived)
+    );
+  },
+
+  async addHomework(hw) {
+    const newHw = { ...hw, created_at: new Date().toISOString() };
+    await dbService.logActivity(`Added homework for batch "${hw.batch_id}"`);
+    return runQuery(
+      async () => {
+        const docRef = await addDoc(collection(db, "homework"), newHw);
+        return { id: docRef.id, ...newHw };
+      },
+      () => {
+        const homework = getLocalData('bb_homework', []);
+        const createdHw = { ...newHw, id: generateUUID() };
+        homework.push(createdHw);
+        saveLocalData('bb_homework', homework);
+        return createdHw;
+      }
+    );
+  },
+
+  async deleteHomework(id) {
+    const archiveData = { archived: true, archived_at: new Date().toISOString() };
+    await dbService.logActivity(`Archived homework "${id}"`);
+    return runQuery(
+      async () => {
+        const docRef = doc(db, "homework", id);
+        await updateDoc(docRef, archiveData);
+        return true;
+      },
+      () => {
+        const homework = getLocalData('bb_homework', []);
+        const idx = homework.findIndex(h => h.id === id);
+        if (idx !== -1) {
+          homework[idx] = { ...homework[idx], ...archiveData };
+          saveLocalData('bb_homework', homework);
+          return true;
+        }
+        return false;
+      }
+    );
+  },
+
+  // --- STUDY MATERIAL ---
+  async getStudyMaterials() {
+    return runQuery(
+      async () => {
+        const querySnapshot = await getDocs(collection(db, "study_material"));
+        return querySnapshot.docs
+          .map(doc => ({ id: doc.id, ...doc.data() }))
+          .filter(m => !m.archived);
+      },
+      () => getLocalData('bb_study_materials', []).filter(m => !m.archived)
+    );
+  },
+
+  async addStudyMaterial(material) {
+    const newMaterial = { ...material, created_at: new Date().toISOString() };
+    await dbService.logActivity(`Added study material "${material.title}"`);
+    return runQuery(
+      async () => {
+        const docRef = await addDoc(collection(db, "study_material"), newMaterial);
+        return { id: docRef.id, ...newMaterial };
+      },
+      () => {
+        const materials = getLocalData('bb_study_materials', []);
+        const createdMaterial = { ...newMaterial, id: generateUUID() };
+        materials.push(createdMaterial);
+        saveLocalData('bb_study_materials', materials);
+        return createdMaterial;
+      }
+    );
+  },
+
+  async deleteStudyMaterial(id) {
+    const archiveData = { archived: true, archived_at: new Date().toISOString() };
+    await dbService.logActivity(`Archived study material "${id}"`);
+    return runQuery(
+      async () => {
+        const docRef = doc(db, "study_material", id);
+        await updateDoc(docRef, archiveData);
+        return true;
+      },
+      () => {
+        const materials = getLocalData('bb_study_materials', []);
+        const idx = materials.findIndex(m => m.id === id);
+        if (idx !== -1) {
+          materials[idx] = { ...materials[idx], ...archiveData };
+          saveLocalData('bb_study_materials', materials);
+          return true;
+        }
+        return false;
+      }
+    );
+  },
+
+  // --- REAL-TIME NOTIFICATIONS ---
+  async addNotification(studentId, type, title, message) {
+    const timestamp = new Date().toISOString();
+    const notification = {
+      student_id: studentId,
+      type,
+      title,
+      message,
+      timestamp,
+      read: false
+    };
+
+    return runQuery(
+      async () => {
+        const docRef = await addDoc(collection(db, "notifications"), notification);
+        return { id: docRef.id, ...notification };
+      },
+      () => {
+        const list = getLocalData('bb_notifications', []);
+        const newNotif = { id: generateUUID(), ...notification };
+        list.unshift(newNotif);
+        saveLocalData('bb_notifications', list);
+        return newNotif;
+      }
+    );
+  },
+
+  async markNotificationAsRead(id) {
+    return runQuery(
+      async () => {
+        const docRef = doc(db, "notifications", id);
+        await updateDoc(docRef, { read: true });
+        return true;
+      },
+      () => {
+        const list = getLocalData('bb_notifications', []);
+        const idx = list.findIndex(n => n.id === id);
+        if (idx !== -1) {
+          list[idx].read = true;
+          saveLocalData('bb_notifications', list);
+          return true;
+        }
+        return false;
+      }
+    );
+  },
+
+  listenToNotifications(studentId, callback) {
+    if (isFirebaseConfigured && localStorage.getItem('bb_db_mode') !== 'local' && !forceLocalMode) {
+      const q = query(
+        collection(db, "notifications"), 
+        where("student_id", "==", studentId),
+        where("read", "==", false),
+        orderBy("timestamp", "desc")
+      );
+      
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        callback(list);
+      }, (error) => {
+        console.error("Error listening to notifications:", error);
+      });
+      return unsubscribe;
+    } else {
+      // LocalStorage polling simulator
+      const interval = setInterval(() => {
+        const list = getLocalData('bb_notifications', []);
+        const unread = list.filter(n => n.student_id === studentId && !n.read);
+        callback(unread);
+      }, 2000);
+      return () => clearInterval(interval);
+    }
+  },
+
+  getTenantCode() {
+    return localStorage.getItem('bb_tenant_code') || '';
+  },
+
+  setTenantCode(code) {
+    if (code) {
+      localStorage.setItem('bb_tenant_code', code);
+    } else {
+      localStorage.removeItem('bb_tenant_code');
+    }
+  },
+
+  async verifyTenantCode(code) {
+    const cleanCode = String(code || '').trim().toLowerCase();
+    if (!cleanCode) return null;
+    
+    return runQuery(
+      async () => {
+        const docRef = firestoreDoc(db, "tenants", cleanCode);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          return { id: docSnap.id, ...data, features: data.features || DEFAULT_FEATURES };
+        }
+        return null;
+      },
+      () => {
+        const list = getLocalData('bb_tenants', INITIAL_TENANTS);
+        const tenant = list.find(t => t.id === cleanCode);
+        if (tenant) {
+          return { ...tenant, features: tenant.features || DEFAULT_FEATURES };
+        }
+        return null;
+      }
+    );
+  },
+
+  async getTenants() {
+    return runQuery(
+      async () => {
+        const querySnapshot = await getDocs(firestoreCollection(db, "tenants"));
+        return querySnapshot.docs.map(doc => {
+          const data = doc.data();
+          return { id: doc.id, ...data, features: data.features || DEFAULT_FEATURES };
+        });
+      },
+      () => getLocalData('bb_tenants', INITIAL_TENANTS).map(t => ({
+        ...t,
+        features: t.features || DEFAULT_FEATURES
+      }))
+    );
+  },
+
+  async addTenant(tenant) {
+    const cleanId = String(tenant.id || '').trim().toLowerCase();
+    const newTenant = {
+      ...tenant,
+      id: cleanId,
+      features: tenant.features || {
+        students: false,
+        timetable: false,
+        attendance: false,
+        fees: false,
+        tests: false,
+        homework: false,
+        materials: false,
+        branding: false,
+        db_fees: false,
+        db_attendance: false,
+        db_tests: false,
+        db_homework: false,
+        db_materials: false,
+        db_testimonials: false
+      },
+      created_at: new Date().toISOString()
+    };
+    return runQuery(
+      async () => {
+        const docRef = firestoreDoc(db, "tenants", cleanId);
+        await setDoc(docRef, newTenant);
+        return newTenant;
+      },
+      () => {
+        const list = getLocalData('bb_tenants', INITIAL_TENANTS);
+        if (list.some(t => t.id === cleanId)) {
+          throw new Error("This Tuition Code is already taken.");
+        }
+        list.push(newTenant);
+        saveLocalData('bb_tenants', list);
+        return newTenant;
+      }
+    );
+  },
+
+  async updateTenant(tenantId, data) {
+    const cleanId = String(tenantId).trim().toLowerCase();
+    return runQuery(
+      async () => {
+        const docRef = firestoreDoc(db, "tenants", cleanId);
+        await updateDoc(docRef, data);
+        return true;
+      },
+      () => {
+        const list = getLocalData('bb_tenants', INITIAL_TENANTS);
+        const idx = list.findIndex(t => t.id === cleanId);
+        if (idx !== -1) {
+          list[idx] = { ...list[idx], ...data };
+          saveLocalData('bb_tenants', list);
+          return true;
+        }
+        return false;
+      }
+    );
+  },
+
+  async deleteTenant(tenantId) {
+    const cleanId = String(tenantId).trim().toLowerCase();
+    return runQuery(
+      async () => {
+        const docRef = firestoreDoc(db, "tenants", cleanId);
+        await deleteDoc(docRef);
+        return true;
+      },
+      () => {
+        const list = getLocalData('bb_tenants', INITIAL_TENANTS);
+        const filtered = list.filter(t => t.id !== cleanId);
+        saveLocalData('bb_tenants', filtered);
+        return true;
+      }
+    );
+  },
+
+  async updateTenantFeatures(tenantId, features) {
+    return dbService.updateTenant(tenantId, { features });
   }
 };

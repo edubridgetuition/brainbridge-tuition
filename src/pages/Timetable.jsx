@@ -13,7 +13,7 @@ import {
   BookOpen
 } from 'lucide-react';
 
-export default function Timetable() {
+export default function Timetable({ currentUser, verifyAction }) {
   const [batches, setBatches] = useState([]);
   const [slots, setSlots] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -141,18 +141,27 @@ export default function Timetable() {
       alert("Start time must be earlier than the end time.");
       return;
     }
-    try {
-      setLoading(true);
-      const newSlot = await dbService.addTimetableSlot(formSlot);
-      setSlots(prev => [...prev, newSlot]);
-      setShowCreateModal(false);
-      // Reset form topic
-      setFormSlot(prev => ({ ...prev, topic: '' }));
-    } catch (err) {
-      console.error("Failed to add timetable slot:", err);
-      alert("Error adding class slot.");
-    } finally {
-      setLoading(false);
+
+    const action = async () => {
+      try {
+        setLoading(true);
+        const newSlot = await dbService.addTimetableSlot(formSlot);
+        setSlots(prev => [...prev, newSlot]);
+        setShowCreateModal(false);
+        // Reset form topic
+        setFormSlot(prev => ({ ...prev, topic: '' }));
+      } catch (err) {
+        console.error("Failed to add timetable slot:", err);
+        alert("Error adding class slot.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (verifyAction) {
+      verifyAction(action);
+    } else {
+      await action();
     }
   };
 
@@ -179,32 +188,50 @@ export default function Timetable() {
       alert("Start time must be earlier than the end time.");
       return;
     }
-    try {
-      setLoading(true);
-      const updated = await dbService.updateTimetableSlot(editingSlotId, formSlot);
-      setSlots(prev => prev.map(s => s.id === editingSlotId ? updated : s));
-      setShowEditModal(false);
-      setEditingSlotId(null);
-    } catch (err) {
-      console.error("Failed to update timetable slot:", err);
-      alert("Error updating class slot.");
-    } finally {
-      setLoading(false);
+
+    const action = async () => {
+      try {
+        setLoading(true);
+        const updated = await dbService.updateTimetableSlot(editingSlotId, formSlot);
+        setSlots(prev => prev.map(s => s.id === editingSlotId ? updated : s));
+        setShowEditModal(false);
+        setEditingSlotId(null);
+      } catch (err) {
+        console.error("Failed to update timetable slot:", err);
+        alert("Error updating class slot.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (verifyAction) {
+      verifyAction(action);
+    } else {
+      await action();
     }
   };
 
   // Delete slot handler
   const handleDeleteSlot = async (id) => {
     if (!window.confirm("Are you sure you want to delete this class slot?")) return;
-    try {
-      setLoading(true);
-      await dbService.deleteTimetableSlot(id);
-      setSlots(prev => prev.filter(s => s.id !== id));
-    } catch (err) {
-      console.error("Failed to delete timetable slot:", err);
-      alert("Error deleting slot.");
-    } finally {
-      setLoading(false);
+
+    const action = async () => {
+      try {
+        setLoading(true);
+        await dbService.deleteTimetableSlot(id);
+        setSlots(prev => prev.filter(s => s.id !== id));
+      } catch (err) {
+        console.error("Failed to delete timetable slot:", err);
+        alert("Error deleting slot.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (verifyAction) {
+      verifyAction(action);
+    } else {
+      await action();
     }
   };
 
@@ -228,10 +255,12 @@ export default function Timetable() {
   const uniqueSubjects = [...new Set(batches.map(b => b.subject).filter(Boolean))];
 
   // Filter & Sort Slots
+  const isParent = currentUser?.role === 'parent';
   const filteredSlots = slots
     .filter(s => {
       // 1. Batch filter
-      if (selectedBatch !== 'All' && s.batch_id !== selectedBatch) return false;
+      const activeBatch = isParent ? currentUser.batchId : selectedBatch;
+      if (activeBatch !== 'All' && s.batch_id !== activeBatch) return false;
       
       // 2. Subject filter
       if (filterSubject !== 'All' && s.subject !== filterSubject) return false;
@@ -310,10 +339,12 @@ export default function Timetable() {
           <h1 className="page-title">Class Schedule & Timetable</h1>
           <p className="page-subtitle">Organize and monitor daily class schedules, subject topics, and teachers.</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowCreateModal(true)}>
-          <Plus size={18} />
-          <span>Schedule Class</span>
-        </button>
+        {currentUser?.role !== 'parent' && (
+          <button className="btn btn-primary" onClick={() => setShowCreateModal(true)}>
+            <Plus size={18} />
+            <span>Schedule Class</span>
+          </button>
+        )}
       </div>
 
       {/* Sub tabs navigation */}
@@ -416,24 +447,25 @@ export default function Timetable() {
             {/* Bottom Row: Detailed selectors grid */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
               
-              {/* 1. Class wise filter */}
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label" style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Class/Batch</label>
-                <select
-                  className="form-control"
-                  style={{ fontSize: '0.82rem', padding: '0.55rem 0.85rem' }}
-                  value={selectedBatch}
-                  onChange={(e) => {
-                    setSelectedBatch(e.target.value);
-                    setFilterStudent('All'); // Clear student to avoid filter clash
-                  }}
-                >
-                  <option value="All">All Batches</option>
-                  {batches.map(b => (
-                    <option key={b.id} value={b.id}>{b.name}</option>
-                  ))}
-                </select>
-              </div>
+              {currentUser?.role !== 'parent' && (
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Class/Batch</label>
+                  <select
+                    className="form-control"
+                    style={{ fontSize: '0.82rem', padding: '0.55rem 0.85rem' }}
+                    value={selectedBatch}
+                    onChange={(e) => {
+                      setSelectedBatch(e.target.value);
+                      setFilterStudent('All'); // Clear student to avoid filter clash
+                    }}
+                  >
+                    <option value="All">All Batches</option>
+                    {batches.map(b => (
+                      <option key={b.id} value={b.id}>{b.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               {/* 2. Subject wise filter */}
               <div className="form-group" style={{ marginBottom: 0 }}>
@@ -467,27 +499,28 @@ export default function Timetable() {
                 </select>
               </div>
 
-              {/* 4. Student wise filter */}
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label" style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Student</label>
-                <select
-                  className="form-control"
-                  style={{ fontSize: '0.82rem', padding: '0.55rem 0.85rem' }}
-                  value={filterStudent}
-                  onChange={(e) => {
-                    setFilterStudent(e.target.value);
-                    if (e.target.value !== 'All') {
-                      const stud = students.find(s => s.id === e.target.value);
-                      if (stud) setSelectedBatch(stud.batch_id); // Auto select corresponding batch
-                    }
-                  }}
-                >
-                  <option value="All">All Students</option>
-                  {students.map(s => (
-                    <option key={s.id} value={s.id}>{s.name} ({s.standard})</option>
-                  ))}
-                </select>
-              </div>
+              {currentUser?.role !== 'parent' && (
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Student</label>
+                  <select
+                    className="form-control"
+                    style={{ fontSize: '0.82rem', padding: '0.55rem 0.85rem' }}
+                    value={filterStudent}
+                    onChange={(e) => {
+                      setFilterStudent(e.target.value);
+                      if (e.target.value !== 'All') {
+                        const stud = students.find(s => s.id === e.target.value);
+                        if (stud) setSelectedBatch(stud.batch_id); // Auto select corresponding batch
+                      }
+                    }}
+                  >
+                    <option value="All">All Students</option>
+                    {students.map(s => (
+                      <option key={s.id} value={s.id}>{s.name} ({s.standard})</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               {/* 5. Time wise filter */}
               <div className="form-group" style={{ marginBottom: 0 }}>
@@ -523,9 +556,11 @@ export default function Timetable() {
                   There are no active timetable items registered for this date.
                 </p>
               </div>
-              <button className="btn btn-primary" onClick={() => setShowCreateModal(true)} style={{ marginTop: '0.5rem', padding: '0.6rem 1.25rem', fontSize: '0.8rem' }}>
-                Schedule a Class
-              </button>
+              {currentUser?.role !== 'parent' && (
+                <button className="btn btn-primary" onClick={() => setShowCreateModal(true)} style={{ marginTop: '0.5rem', padding: '0.6rem 1.25rem', fontSize: '0.8rem' }}>
+                  Schedule a Class
+                </button>
+              )}
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
@@ -585,24 +620,26 @@ export default function Timetable() {
                       </div>
 
                       {/* Controls */}
-                      <div style={{ display: 'flex', gap: '0.35rem' }}>
-                        <button 
-                          className="btn btn-secondary" 
-                          onClick={() => handleOpenEditModal(slot)} 
-                          style={{ padding: '0.45rem 0.55rem', border: '1px solid var(--border-color)' }}
-                          title="Edit Schedule Slot"
-                        >
-                          <Edit size={14} style={{ color: 'var(--text-secondary)' }} />
-                        </button>
-                        <button 
-                          className="btn btn-secondary" 
-                          onClick={() => handleDeleteSlot(slot.id)} 
-                          style={{ padding: '0.45rem 0.55rem', border: '1px solid var(--border-color)' }}
-                          title="Delete Schedule Slot"
-                        >
-                          <Trash2 size={14} style={{ color: 'var(--danger)' }} />
-                        </button>
-                      </div>
+                      {currentUser?.role !== 'parent' && (
+                        <div style={{ display: 'flex', gap: '0.35rem' }}>
+                          <button 
+                            className="btn btn-secondary" 
+                            onClick={() => handleOpenEditModal(slot)} 
+                            style={{ padding: '0.45rem 0.55rem', border: '1px solid var(--border-color)' }}
+                            title="Edit Schedule Slot"
+                          >
+                            <Edit size={14} style={{ color: 'var(--text-secondary)' }} />
+                          </button>
+                          <button 
+                            className="btn btn-secondary" 
+                            onClick={() => handleDeleteSlot(slot.id)} 
+                            style={{ padding: '0.45rem 0.55rem', border: '1px solid var(--border-color)' }}
+                            title="Delete Schedule Slot"
+                          >
+                            <Trash2 size={14} style={{ color: 'var(--danger)' }} />
+                          </button>
+                        </div>
+                      )}
                     </div>
 
                   </div>
@@ -635,14 +672,16 @@ export default function Timetable() {
                 </tr>
               </thead>
               <tbody>
-                {batches.length === 0 ? (
-                  <tr>
-                    <td colSpan="7" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2.5rem' }}>
-                      No batches created. Please add batches to view the routine.
-                    </td>
-                  </tr>
-                ) : (
-                  batches.map(batch => (
+                {(() => {
+                  const visibleBatches = currentUser?.role === 'parent' ? batches.filter(b => b.id === currentUser.batchId) : batches;
+                  return visibleBatches.length === 0 ? (
+                    <tr>
+                      <td colSpan="7" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2.5rem' }}>
+                        No batches created. Please add batches to view the routine.
+                      </td>
+                    </tr>
+                  ) : (
+                    visibleBatches.map(batch => (
                     <tr key={batch.id}>
                       <td style={{ fontWeight: '800', fontSize: '0.92rem', borderRight: '1px solid var(--border-color)' }}>
                         <div>{batch.name}</div>
@@ -695,7 +734,8 @@ export default function Timetable() {
                       })}
                     </tr>
                   ))
-                )}
+                  );
+                })()}
               </tbody>
             </table>
           </div>

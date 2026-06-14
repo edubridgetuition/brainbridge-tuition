@@ -3,7 +3,7 @@ import { dbService, formatDateDisplay, sendWhatsAppMessage } from '../database/d
 import ReceiptPDF from '../components/ReceiptPDF';
 import { IndianRupee, FileText, Check, Plus, Search, HelpCircle, DollarSign, Calendar, MessageCircle } from 'lucide-react';
 
-export default function Fees() {
+export default function Fees({ currentUser, verifyAction }) {
   const [fees, setFees] = useState([]);
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -45,23 +45,31 @@ export default function Fees() {
     e.preventDefault();
     if (!selectedFeeRecord) return;
 
-    try {
-      setLoading(true);
-      const updateData = {
-        status: 'Paid',
-        payment_date: paymentDateInput,
-        payment_mode: paymentMode
-      };
-      
-      const updatedRecord = await dbService.updateFeeStatus(selectedFeeRecord.id, updateData);
-      
-      // Update local fees state
-      setFees(prev => prev.map(f => f.id === updatedRecord.id ? updatedRecord : f));
-      setSelectedFeeRecord(null);
-    } catch (err) {
-      console.error("Failed to log payment:", err);
-    } finally {
-      setLoading(false);
+    const action = async () => {
+      try {
+        setLoading(true);
+        const updateData = {
+          status: 'Paid',
+          payment_date: paymentDateInput,
+          payment_mode: paymentMode
+        };
+        
+        const updatedRecord = await dbService.updateFeeStatus(selectedFeeRecord.id, updateData);
+        
+        // Update local fees state
+        setFees(prev => prev.map(f => f.id === updatedRecord.id ? updatedRecord : f));
+        setSelectedFeeRecord(null);
+      } catch (err) {
+        console.error("Failed to log payment:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (verifyAction) {
+      verifyAction(action);
+    } else {
+      await action();
     }
   };
   const handleOpenCollectModal = (record) => {
@@ -80,16 +88,19 @@ export default function Fees() {
     });
   };
 
+  const isParent = currentUser?.role === 'parent';
+  const visibleFees = isParent ? fees.filter(f => f.student_id === currentUser.studentId) : fees;
+
   // Calculations
   let totalCollected = 0;
   let totalPending = 0;
-  fees.forEach(f => {
+  visibleFees.forEach(f => {
     if (f.status === 'Paid') totalCollected += f.amount;
     else totalPending += f.amount;
   });
 
   // Filtered List
-  const filteredFees = fees.filter(f => {
+  const filteredFees = visibleFees.filter(f => {
     const student = getStudentDetails(f.student_id);
     const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'All' || f.status === statusFilter;
@@ -130,16 +141,18 @@ export default function Fees() {
 
       {/* Filter Options */}
       <div className="filters-bar">
-        <div className="search-input-wrapper" style={{ maxWidth: '350px' }}>
-          <Search size={18} className="search-icon" />
-          <input
-            type="text"
-            className="form-control"
-            placeholder="Search by student name..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
+        {!isParent && (
+          <div className="search-input-wrapper" style={{ maxWidth: '350px' }}>
+            <Search size={18} className="search-icon" />
+            <input
+              type="text"
+              className="form-control"
+              placeholder="Search by student name..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+        )}
 
         <div style={{ display: 'flex', gap: '0.75rem' }}>
           <button 
@@ -214,6 +227,10 @@ export default function Fees() {
                           >
                             <FileText size={14} /> Receipt
                           </button>
+                        ) : isParent ? (
+                          <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+                            Payment Pending
+                          </span>
                         ) : (
                           <div style={{ display: 'inline-flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
                             <button 

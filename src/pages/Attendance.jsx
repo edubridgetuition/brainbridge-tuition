@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { dbService, formatDateDisplay, sendWhatsAppMessage } from '../database/dbService';
 import { Calendar, Save, Check, X, CheckSquare, Square, Eye, MessageCircle } from 'lucide-react';
 
-export default function Attendance() {
+export default function Attendance({ currentUser, verifyAction }) {
   const [batches, setBatches] = useState([]);
   const [students, setStudents] = useState([]);
   const [attendance, setAttendance] = useState({}); // student_id -> 'Present'/'Absent'
@@ -17,6 +17,28 @@ export default function Attendance() {
   const [activeSubTab, setActiveSubTab] = useState('mark'); // 'mark' or 'history'
   const [historyLogs, setHistoryLogs] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+
+  const [parentLogs, setParentLogs] = useState([]);
+  const [parentLoading, setParentLoading] = useState(true);
+
+  useEffect(() => {
+    if (currentUser?.role !== 'parent') return;
+    async function loadParentAttendance() {
+      try {
+        setParentLoading(true);
+        const allLogs = await dbService.getAllAttendance();
+        const logs = allLogs
+          .filter(a => a.student_id === currentUser.studentId)
+          .sort((a, b) => b.date.localeCompare(a.date));
+        setParentLogs(logs);
+      } catch (err) {
+        console.error("Failed to load parent attendance:", err);
+      } finally {
+        setParentLoading(false);
+      }
+    }
+    loadParentAttendance();
+  }, [currentUser]);
 
   useEffect(() => {
     async function loadInitialData() {
@@ -127,23 +149,45 @@ export default function Attendance() {
   };
 
   const handleSave = async () => {
-    try {
-      setSaving(true);
-      setSaveSuccess(false);
-      
-      const records = Object.keys(attendance).map(studentId => ({
-        student_id: studentId,
-        status: attendance[studentId]
-      }));
+    const action = async () => {
+      try {
+        setSaving(true);
+        setSaveSuccess(false);
+        
+        const records = Object.keys(attendance).map(studentId => ({
+          student_id: studentId,
+          status: attendance[studentId]
+        }));
 
-      await dbService.saveAttendance(selectedDate, records);
-      setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
-    } catch (err) {
-      console.error("Failed to save attendance:", err);
-      alert("Error saving attendance records.");
-    } finally {
-      setSaving(false);
+        await dbService.saveAttendance(selectedDate, records);
+
+        // Send notifications for each student in parallel
+        const notifPromises = records.map(record => {
+          const student = students.find(s => s.id === record.student_id);
+          if (student) {
+            const isPresent = record.status === 'Present';
+            const title = isPresent ? '✅ Attendance Marked: Present' : '❌ Attendance Marked: Absent';
+            const message = `Your child ${student.name} has been marked ${record.status.toUpperCase()} today (${formatDateDisplay(selectedDate)}).`;
+            return dbService.addNotification(student.id, 'attendance', title, message);
+          }
+          return Promise.resolve();
+        });
+        await Promise.all(notifPromises);
+
+        setSaveSuccess(true);
+        setTimeout(() => setSaveSuccess(false), 3000);
+      } catch (err) {
+        console.error("Failed to save attendance:", err);
+        alert("Error saving attendance records.");
+      } finally {
+        setSaving(false);
+      }
+    };
+
+    if (verifyAction) {
+      verifyAction(action);
+    } else {
+      await action();
     }
   };
 
@@ -157,6 +201,70 @@ export default function Attendance() {
     const batch = batches.find(b => b.id === batchId);
     return batch ? batch.name : 'Unknown Batch';
   };
+
+  if (currentUser?.role === 'parent') {
+    return (
+      <div className="fade-in">
+        <div className="page-header">
+          <div>
+            <h1 className="page-title">Attendance History</h1>
+            <p className="page-subtitle">Track your child's present and absent record timeline.</p>
+          </div>
+        </div>
+
+        {parentLoading ? (
+          <div style={{ padding: '3.5rem', textAlign: 'center', color: 'var(--text-secondary)' }}>Loading attendance logs...</div>
+        ) : parentLogs.length === 0 ? (
+          <div className="card" style={{ textAlign: 'center', padding: '3rem 2rem', border: '1px dashed var(--border-color)' }}>
+            <p style={{ color: 'var(--text-secondary)', margin: 0 }}>No attendance records found yet.</p>
+          </div>
+        ) : (
+          <div className="card" style={{ padding: '2rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem' }}>
+              <div>
+                <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Overall Attendance Rate:</span>
+                <h3 style={{ fontSize: '1.8rem', fontWeight: '800', color: 'var(--primary)', margin: '0.25rem 0 0' }}>
+                  {parentLogs.length > 0 ? Math.round((parentLogs.filter(l => l.status === 'Present').length / parentLogs.length) * 100) : 100}%
+                </h3>
+              </div>
+              <div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.9rem' }}>
+                <div>
+                  <span style={{ color: '#059669', fontWeight: '700' }}>Present:</span> {parentLogs.filter(l => l.status === 'Present').length} days
+                </div>
+                <div>
+                  <span style={{ color: '#ef4444', fontWeight: '700' }}>Absent:</span> {parentLogs.filter(l => l.status === 'Absent').length} days
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {parentLogs.map(log => {
+                const isPresent = log.status === 'Present';
+                return (
+                  <div key={log.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 1.25rem', backgroundColor: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <Calendar size={18} style={{ color: 'var(--text-muted)' }} />
+                      <span style={{ fontWeight: '700', color: 'var(--text-primary)' }}>{formatDateDisplay(log.date)}</span>
+                    </div>
+                    <span className={`badge ${isPresent ? 'success' : 'danger'}`} style={{
+                      backgroundColor: isPresent ? '#d1fae5' : '#fee2e2',
+                      color: isPresent ? '#065f46' : '#991b1b',
+                      padding: '0.3rem 0.75rem',
+                      fontWeight: '800',
+                      borderRadius: '20px',
+                      fontSize: '0.8rem'
+                    }}>
+                      {log.status}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div>

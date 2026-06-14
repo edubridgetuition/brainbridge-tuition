@@ -1,17 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import { dbService, formatDateDisplay, sendWhatsAppMessage } from '../database/dbService';
-import { Users, BookOpen, CheckCircle, IndianRupee, Bell, Play, FileSpreadsheet, Star, Quote, Plus } from 'lucide-react';
+import { Users, BookOpen, CheckCircle, IndianRupee, Bell, Play, FileSpreadsheet, Star, Quote, Plus, Calendar, ClipboardList, Download } from 'lucide-react';
 
-export default function Dashboard({ setActiveTab }) {
+export default function Dashboard({ setActiveTab, currentUser, verifyAction, activeTenant }) {
   const isSubAdmin = import.meta.env.VITE_ROLE === 'admin2' || sessionStorage.getItem('bb_current_admin') === 'admin2';
   const [stats, setStats] = useState({
     studentsCount: 0,
     batchesCount: 0,
     attendanceRate: 0,
     collectedFees: 0,
-    pendingFees: 0
+    pendingFees: 0,
+    latestTestScore: '-',
+    batchName: '-'
   });
   const [recentPayments, setRecentPayments] = useState([]);
+  const [recentHomework, setRecentHomework] = useState([]);
+  const [recentMaterials, setRecentMaterials] = useState([]);
   const [expandedPaymentId, setExpandedPaymentId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
@@ -35,79 +39,152 @@ export default function Dashboard({ setActiveTab }) {
   useEffect(() => {
     async function loadDashboardData() {
       try {
-        const [students, batches, fees, tstList, latestAttDate] = await Promise.all([
-          dbService.getStudents(),
-          dbService.getBatches(),
-          dbService.getFees(),
-          dbService.getTestimonials(),
-          dbService.getLatestAttendanceDate()
-        ]);
+        if (currentUser?.role === 'parent') {
+          const studentId = currentUser.studentId;
+          const batchId = currentUser.batchId;
 
-        setStudents(students);
-        setTestimonials(tstList);
-        
-        // Compute stats
-        const studentsCount = students.length;
-        const batchesCount = batches.length;
-        
-        // Fee stats
-        let collected = 0;
-        let pending = 0;
-        fees.forEach(f => {
-          if (f.status === 'Paid') collected += f.amount;
-          else pending += f.amount;
-        });
+          const [batches, fees, allAttendance, testMarks, tests, homework, materials] = await Promise.all([
+            dbService.getBatches(),
+            dbService.getFees(),
+            dbService.getAllAttendance(),
+            dbService.getAllTestMarks(),
+            dbService.getTests(),
+            dbService.getHomework(),
+            dbService.getStudyMaterials()
+          ]);
 
-        // Attendance stats (lookup today first, fallback to latest marked date)
-        let attDate = latestAttDate || '2026-06-05';
-        let attendanceLogs = await dbService.getAttendance(attDate);
-        
-        const presentCount = attendanceLogs.filter(a => a.status === 'Present').length;
-        const rate = attendanceLogs.length > 0 ? Math.round((presentCount / attendanceLogs.length) * 100) : 0;
-        setAttendanceDate(formatDateDisplay(attDate));
+          // Student's specific batch name
+          const parentBatch = batches.find(b => b.id === batchId);
+          const batchName = parentBatch ? parentBatch.name : 'N/A';
 
-        // Recent payments (Paid state)
-        const paidFees = fees
-          .filter(f => f.status === 'Paid')
-          .map(f => {
-            const student = students.find(s => s.id === f.student_id);
-            return {
-              id: f.id,
-              studentName: student ? student.name : 'Unknown Student',
-              amount: f.amount,
-              paymentMode: f.payment_mode,
-              date: formatDateDisplay(f.payment_date)
-            };
-          })
-          .sort((a, b) => new Date(b.date) - new Date(a.date))
-          .slice(0, 4);
-
-        setStats({
-          studentsCount,
-          batchesCount,
-          attendanceRate: attendanceLogs.length > 0 ? rate : 85,
-          collectedFees: collected,
-          pendingFees: pending
-        });
-        setRecentPayments(paidFees);
-
-        // Find pending fees
-        const pendingList = fees
-          .filter(f => f.status === 'Pending')
-          .map(f => {
-            const student = students.find(s => s.id === f.student_id);
-            return {
-              ...f,
-              studentName: student ? student.name : 'Unknown Student',
-              parentMobile: student ? student.parent_mobile : 'N/A'
-            };
+          // Individual Fee Stats
+          const studentFees = fees.filter(f => f.student_id === studentId);
+          let collected = 0;
+          let pending = 0;
+          let pendingDueAlert = null;
+          
+          studentFees.forEach(f => {
+            if (f.status === 'Paid') {
+              collected += f.amount;
+            } else {
+              pending += f.amount;
+              pendingDueAlert = f;
+            }
           });
-        setDueRecordsList(pendingList);
 
-        if (pendingList.length > 0 && !sessionStorage.getItem('bb_due_popup_shown')) {
-          setActiveSimulatedRecord(pendingList[0]);
-          setShowNotificationModal(true);
-          sessionStorage.setItem('bb_due_popup_shown', 'true');
+          // Individual Attendance Stats
+          const studentAttendance = allAttendance.filter(a => a.student_id === studentId);
+          const presentCount = studentAttendance.filter(a => a.status === 'Present').length;
+          const attRate = studentAttendance.length > 0 ? Math.round((presentCount / studentAttendance.length) * 100) : 100;
+
+          // Individual Test Marks
+          const studentMarks = testMarks.filter(tm => tm.student_id === studentId);
+          let latestScoreDisplay = '-';
+          if (studentMarks.length > 0) {
+            // Find latest mark based on test date
+            const marksWithTests = studentMarks.map(sm => {
+              const test = tests.find(t => t.id === sm.test_id);
+              return { ...sm, test };
+            }).filter(x => x.test);
+            
+            if (marksWithTests.length > 0) {
+              marksWithTests.sort((a, b) => new Date(b.test.test_date) - new Date(a.test.test_date));
+              const latest = marksWithTests[0];
+              latestScoreDisplay = `${latest.marks_obtained} / ${latest.test.max_marks} (${latest.test.test_name})`;
+            }
+          }
+
+          // Homework & Materials for batch
+          const batchHomework = homework.filter(h => h.batch_id === batchId);
+          const batchMaterials = materials.filter(m => m.batch_id === batchId);
+
+          setStats({
+            studentsCount: 0,
+            batchesCount: 0,
+            attendanceRate: attRate,
+            collectedFees: collected,
+            pendingFees: pending,
+            latestTestScore: latestScoreDisplay,
+            batchName: batchName
+          });
+
+          setRecentHomework(batchHomework.slice(0, 3));
+          setRecentMaterials(batchMaterials.slice(0, 3));
+          setDueRecordsList(pendingDueAlert ? [pendingDueAlert] : []);
+
+        } else {
+          // Admin Loading
+          const [students, batches, fees, tstList, latestAttDate] = await Promise.all([
+            dbService.getStudents(),
+            dbService.getBatches(),
+            dbService.getFees(),
+            dbService.getTestimonials(),
+            dbService.getLatestAttendanceDate()
+          ]);
+
+          setStudents(students);
+          setTestimonials(tstList);
+          
+          const studentsCount = students.length;
+          const batchesCount = batches.length;
+          
+          let collected = 0;
+          let pending = 0;
+          fees.forEach(f => {
+            if (f.status === 'Paid') collected += f.amount;
+            else pending += f.amount;
+          });
+
+          let attDate = latestAttDate || '2026-06-05';
+          let attendanceLogs = await dbService.getAttendance(attDate);
+          
+          const presentCount = attendanceLogs.filter(a => a.status === 'Present').length;
+          const rate = attendanceLogs.length > 0 ? Math.round((presentCount / attendanceLogs.length) * 100) : 0;
+          setAttendanceDate(formatDateDisplay(attDate));
+
+          const paidFees = fees
+            .filter(f => f.status === 'Paid')
+            .map(f => {
+              const student = students.find(s => s.id === f.student_id);
+              return {
+                id: f.id,
+                studentName: student ? student.name : 'Unknown Student',
+                amount: f.amount,
+                paymentMode: f.payment_mode,
+                date: formatDateDisplay(f.payment_date)
+              };
+            })
+            .sort((a, b) => new Date(b.date) - new Date(a.date))
+            .slice(0, 4);
+
+          setStats({
+            studentsCount,
+            batchesCount,
+            attendanceRate: attendanceLogs.length > 0 ? rate : 85,
+            collectedFees: collected,
+            pendingFees: pending,
+            latestTestScore: '-',
+            batchName: '-'
+          });
+          setRecentPayments(paidFees);
+
+          const pendingList = fees
+            .filter(f => f.status === 'Pending')
+            .map(f => {
+              const student = students.find(s => s.id === f.student_id);
+              return {
+                ...f,
+                studentName: student ? student.name : 'Unknown Student',
+                parentMobile: student ? student.parent_mobile : 'N/A'
+              };
+            });
+          setDueRecordsList(pendingList);
+
+          if (pendingList.length > 0 && !sessionStorage.getItem('bb_due_popup_shown')) {
+            setActiveSimulatedRecord(pendingList[0]);
+            setShowNotificationModal(true);
+            sessionStorage.setItem('bb_due_popup_shown', 'true');
+          }
         }
       } catch (err) {
         console.error("Failed to load dashboard statistics:", err);
@@ -121,19 +198,28 @@ export default function Dashboard({ setActiveTab }) {
   const handleAddTestimonialSubmit = async (e) => {
     e.preventDefault();
     if (!newTestimonial.parent_name || !newTestimonial.feedback) return;
-    try {
-      const added = await dbService.addTestimonial(newTestimonial);
-      setTestimonials(prev => [...prev, added]);
-      setShowAddTestimonialModal(false);
-      setNewTestimonial({
-        parent_name: '',
-        student_name: '',
-        rating: 5,
-        feedback: '',
-        date: new Date().toISOString().split('T')[0]
-      });
-    } catch (err) {
-      console.error("Failed to add testimonial:", err);
+
+    const action = async () => {
+      try {
+        const added = await dbService.addTestimonial(newTestimonial);
+        setTestimonials(prev => [...prev, added]);
+        setShowAddTestimonialModal(false);
+        setNewTestimonial({
+          parent_name: '',
+          student_name: '',
+          rating: 5,
+          feedback: '',
+          date: new Date().toISOString().split('T')[0]
+        });
+      } catch (err) {
+        console.error("Failed to add testimonial:", err);
+      }
+    };
+
+    if (verifyAction) {
+      verifyAction(action);
+    } else {
+      await action();
     }
   };
 
@@ -141,6 +227,232 @@ export default function Dashboard({ setActiveTab }) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
         <p style={{ color: 'var(--text-secondary)' }}>Loading dashboard analytics...</p>
+      </div>
+    );
+  }
+
+  if (currentUser?.role === 'parent') {
+    const isFeatureEnabled = (key) => {
+      if (!activeTenant || !activeTenant.features) return true;
+      return activeTenant.features[key] !== false;
+    };
+
+    return (
+      <div className="fade-in">
+        {/* Parent Header */}
+        <div className="page-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            {(() => {
+              const showCustomBranding = activeTenant && activeTenant.features?.branding !== false;
+              const brandLogo = showCustomBranding ? activeTenant.logo_url : "/logo.png";
+              return (
+                <img 
+                  src={brandLogo} 
+                  alt="Tuition Logo" 
+                  onError={(e) => { e.target.src = '/logo.png'; }}
+                  style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '12px',
+                    objectFit: 'contain',
+                    boxShadow: '0 4px 12px rgba(15, 23, 42, 0.05)'
+                  }}
+                />
+              );
+            })()}
+            <div>
+              <h1 className="page-title">Home</h1>
+              <p className="page-subtitle">Welcome Parent of <strong>{currentUser.username}</strong>.</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Due Fee Alert Banner */}
+        {isFeatureEnabled('db_fees') && stats.pendingFees > 0 && (
+          <div className="simulator-banner" style={{ borderLeft: '4px solid #ef4444', backgroundColor: '#fef2f2', color: '#991b1b', marginBottom: '2rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+              <div style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '50%',
+                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#ef4444'
+              }}>
+                <Bell size={20} style={{ animation: 'swing 2s ease infinite' }} />
+              </div>
+              <div>
+                <h4 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#991b1b', margin: 0 }}>
+                  Fee Payment Outstanding
+                </h4>
+                <p style={{ margin: '0.1rem 0 0', fontSize: '0.88rem', color: '#b91c1c' }}>
+                  A fee payment of <strong>₹{stats.pendingFees}</strong> is outstanding. Please make the payment soon.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Stats Grid */}
+        <div className="grid-cols-4" style={{ marginBottom: '2.5rem' }}>
+          <div className="card stat-card">
+            <div>
+              <span className="stat-label">Batch Name</span>
+              <div className="stat-val" style={{ fontSize: '1.35rem', marginTop: '0.4rem', color: '#1e3a8a', fontWeight: '800' }}>
+                {stats.batchName}
+              </div>
+            </div>
+            <div className="stat-icon-wrapper">
+              <BookOpen size={24} />
+            </div>
+          </div>
+
+          {isFeatureEnabled('db_attendance') && (
+            <div className="card stat-card">
+              <div>
+                <span className="stat-label">Attendance Rate</span>
+                <div className="stat-val">{stats.attendanceRate}%</div>
+              </div>
+              <div className="stat-icon-wrapper success">
+                <CheckCircle size={24} />
+              </div>
+            </div>
+          )}
+
+          {isFeatureEnabled('db_fees') && (
+            <div className="card stat-card">
+              <div>
+                <span className="stat-label">Fees Paid</span>
+                <div className="stat-val" style={{ color: '#059669' }}>₹{stats.collectedFees}</div>
+              </div>
+              <div className="stat-icon-wrapper success" style={{ backgroundColor: 'rgba(5, 150, 105, 0.1)', color: '#059669' }}>
+                <IndianRupee size={24} />
+              </div>
+            </div>
+          )}
+
+          {isFeatureEnabled('db_tests') && (
+            <div className="card stat-card" style={{ gridColumn: 'span 1' }}>
+              <div>
+                <span className="stat-label">Latest Test Score</span>
+                <div className="stat-val" style={{ fontSize: '1.15rem', color: '#d97706', marginTop: '0.4rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={stats.latestTestScore}>
+                  {stats.latestTestScore}
+                </div>
+              </div>
+              <div className="stat-icon-wrapper warning">
+                <FileSpreadsheet size={24} />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Quick Links Split Grid */}
+        <div className="dashboard-split-layout">
+          {/* Quick Access */}
+          <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            <h3 style={{ fontSize: '1.2rem', marginBottom: '0.25rem' }}>Quick Access</h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Direct links to check academic activities.</p>
+            
+            <div className="quick-actions-grid">
+              {isFeatureEnabled('timetable') && (
+                <button className="btn btn-secondary quick-action-btn" onClick={() => setActiveTab('timetable')} style={{ border: '1px solid var(--border-color)' }}>
+                  <Calendar size={24} />
+                  <span>Class Timetable</span>
+                </button>
+              )}
+              {isFeatureEnabled('attendance') && (
+                <button className="btn btn-secondary quick-action-btn" onClick={() => setActiveTab('attendance')} style={{ border: '1px solid var(--border-color)' }}>
+                  <CheckCircle size={24} />
+                  <span>Attendance History</span>
+                </button>
+              )}
+              {isFeatureEnabled('homework') && (
+                <button className="btn btn-secondary quick-action-btn" onClick={() => setActiveTab('homework')} style={{ border: '1px solid var(--border-color)' }}>
+                  <ClipboardList size={24} />
+                  <span>Homework Assignments</span>
+                </button>
+              )}
+              {isFeatureEnabled('materials') && (
+                <button className="btn btn-secondary quick-action-btn" onClick={() => setActiveTab('materials')} style={{ border: '1px solid var(--border-color)' }}>
+                  <Download size={24} />
+                  <span>Study Materials</span>
+                </button>
+              )}
+              {isFeatureEnabled('fees') && (
+                <button className="btn btn-secondary quick-action-btn" onClick={() => setActiveTab('fees')} style={{ border: '1px solid var(--border-color)' }}>
+                  <IndianRupee size={24} />
+                  <span>Fee Ledger</span>
+                </button>
+              )}
+              {isFeatureEnabled('tests') && (
+                <button className="btn btn-secondary quick-action-btn" onClick={() => setActiveTab('tests')} style={{ border: '1px solid var(--border-color)' }}>
+                  <FileSpreadsheet size={24} />
+                  <span>Test Scores</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Academic Updates Timeline */}
+          {(isFeatureEnabled('db_homework') || isFeatureEnabled('db_materials')) && (
+            <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <h3 style={{ fontSize: '1.2rem' }}>Latest Updates</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '0.25rem' }}>
+                
+                {/* Homework */}
+                {isFeatureEnabled('db_homework') && (
+                  <div style={{ padding: '1rem', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                      <ClipboardList size={16} style={{ color: 'var(--primary)' }} />
+                      <span style={{ fontWeight: '800', fontSize: '0.85rem', color: '#1e3a8a' }}>Active Homework</span>
+                    </div>
+                    {recentHomework && recentHomework.length > 0 ? (
+                      <div>
+                        <div style={{ fontWeight: '700', fontSize: '0.9rem', color: 'var(--text-primary)' }}>
+                          {recentHomework[0].title}
+                        </div>
+                        <div style={{ fontSize: '0.78rem', color: '#ef4444', marginTop: '0.2rem', fontWeight: '700' }}>
+                          Due Date: {formatDateDisplay(recentHomework[0].due_date)}
+                        </div>
+                      </div>
+                    ) : (
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>No active homework assigned.</span>
+                    )}
+                  </div>
+                )}
+
+                {/* Study Material */}
+                {isFeatureEnabled('db_materials') && (
+                  <div style={{ padding: '1rem', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                      <Download size={16} style={{ color: '#059669' }} />
+                      <span style={{ fontWeight: '800', fontSize: '0.85rem', color: '#1e3a8a' }}>Latest Study Resource</span>
+                    </div>
+                    {recentMaterials && recentMaterials.length > 0 ? (
+                      <div>
+                        <div style={{ fontWeight: '700', fontSize: '0.9rem', color: 'var(--text-primary)' }}>
+                          {recentMaterials[0].title}
+                        </div>
+                        <button 
+                          onClick={() => window.open(recentMaterials[0].file_url, '_blank')}
+                          className="btn btn-secondary" 
+                          style={{ padding: '0.25rem 0.5rem', fontSize: '0.72rem', marginTop: '0.4rem', border: '1px solid var(--border-color)', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
+                        >
+                          <Download size={12} /> Download
+                        </button>
+                      </div>
+                    ) : (
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>No study materials posted.</span>
+                    )}
+                  </div>
+                )}
+
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     );
   }
@@ -244,13 +556,23 @@ export default function Dashboard({ setActiveTab }) {
     standardDistribution[std] = (standardDistribution[std] || 0) + 1;
   });
 
+  const isFeatureEnabled = (key) => {
+    if (!activeTenant || !activeTenant.features) return true;
+    return activeTenant.features[key] !== false;
+  };
+
+  const showCustomBranding = activeTenant && activeTenant.features?.branding !== false;
+  const brandLogo = showCustomBranding ? activeTenant.logo_url : "/logo.png";
+  const brandName = showCustomBranding ? activeTenant.name : "BrainBridge";
+
   return (
     <div>
       <div className="page-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <img 
-            src="/logo.png" 
-            alt="BrainBridge Logo" 
+            src={brandLogo} 
+            alt="Tuition Logo" 
+            onError={(e) => { e.target.src = '/logo.png'; }}
             style={{
               width: '48px',
               height: '48px',
@@ -260,14 +582,14 @@ export default function Dashboard({ setActiveTab }) {
             }}
           />
           <div>
-            <h1 className="page-title">Dashboard</h1>
-            <p className="page-subtitle">Welcome to BrainBridge Tuition Admin Panel.</p>
+            <h1 className="page-title">Home</h1>
+            <p className="page-subtitle">Welcome to {brandName} Tuition Admin Panel.</p>
           </div>
         </div>
       </div>
 
       {/* Parent App Due Date Alert Banner */}
-      {dueRecordsList.length > 0 && (
+      {isFeatureEnabled('db_fees') && dueRecordsList.length > 0 && (
         <div className="simulator-banner">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
             <div style={{
@@ -326,95 +648,111 @@ export default function Dashboard({ setActiveTab }) {
           </div>
         </div>
 
-        <div className="card stat-card">
-          <div>
-            <span className="stat-label">Daily Attendance</span>
-            <div className="stat-val">{stats.attendanceRate}%</div>
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: '600', display: 'block', marginTop: '0.25rem' }}>
-              Date: {attendanceDate}
-            </span>
+        {isFeatureEnabled('db_attendance') && (
+          <div className="card stat-card">
+            <div>
+              <span className="stat-label">Daily Attendance</span>
+              <div className="stat-val">{stats.attendanceRate}%</div>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: '600', display: 'block', marginTop: '0.25rem' }}>
+                Date: {attendanceDate}
+              </span>
+            </div>
+            <div className="stat-icon-wrapper success">
+              <CheckCircle size={24} />
+            </div>
           </div>
-          <div className="stat-icon-wrapper success">
-            <CheckCircle size={24} />
-          </div>
-        </div>
+        )}
 
-        <div className="card stat-card">
-          <div>
-            <span className="stat-label">Fees Collected</span>
-            <div className="stat-val">₹{stats.collectedFees}</div>
+        {isFeatureEnabled('db_fees') && (
+          <div className="card stat-card">
+            <div>
+              <span className="stat-label">Fees Collected</span>
+              <div className="stat-val">₹{stats.collectedFees}</div>
+            </div>
+            <div className="stat-icon-wrapper warning">
+              <IndianRupee size={24} />
+            </div>
           </div>
-          <div className="stat-icon-wrapper warning">
-            <IndianRupee size={24} />
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Layout Split: Quick Actions & Recent Transactions */}
       <div className="dashboard-split-layout">
         
         {/* Quick Actions Panel */}
-        <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          <h3 style={{ fontSize: '1.2rem', marginBottom: '0.25rem' }}>Quick Actions</h3>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Frequently accessed management functions.</p>
-          
-          <div className="quick-actions-grid">
-            <button className="btn btn-primary quick-action-btn" onClick={() => setActiveTab('attendance')}>
-              <CheckCircle size={24} />
-              <span>Mark Attendance</span>
-            </button>
-            <button className="btn btn-secondary quick-action-btn" onClick={() => setActiveTab('students')} style={{ border: '1px solid var(--border-color)' }}>
-              <Users size={24} />
-              <span>Register New Student</span>
-            </button>
-            <button className="btn btn-secondary quick-action-btn" onClick={() => setActiveTab('fees')} style={{ border: '1px solid var(--border-color)' }}>
-              <IndianRupee size={24} />
-              <span>Collect Monthly Fees</span>
-            </button>
-            <button className="btn btn-secondary quick-action-btn" onClick={() => setActiveTab('tests')} style={{ border: '1px solid var(--border-color)' }}>
-              <FileSpreadsheet size={24} />
-              <span>Enter Test Marks</span>
-            </button>
+        {(isFeatureEnabled('attendance') || isFeatureEnabled('students') || isFeatureEnabled('fees') || isFeatureEnabled('tests')) && (
+          <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            <h3 style={{ fontSize: '1.2rem', marginBottom: '0.25rem' }}>Quick Actions</h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Frequently accessed management functions.</p>
+            
+            <div className="quick-actions-grid">
+              {isFeatureEnabled('attendance') && (
+                <button className="btn btn-primary quick-action-btn" onClick={() => setActiveTab('attendance')}>
+                  <CheckCircle size={24} />
+                  <span>Mark Attendance</span>
+                </button>
+              )}
+              {isFeatureEnabled('students') && (
+                <button className="btn btn-secondary quick-action-btn" onClick={() => setActiveTab('students')} style={{ border: '1px solid var(--border-color)' }}>
+                  <Users size={24} />
+                  <span>Register New Student</span>
+                </button>
+              )}
+              {isFeatureEnabled('fees') && (
+                <button className="btn btn-secondary quick-action-btn" onClick={() => setActiveTab('fees')} style={{ border: '1px solid var(--border-color)' }}>
+                  <IndianRupee size={24} />
+                  <span>Collect Monthly Fees</span>
+                </button>
+              )}
+              {isFeatureEnabled('tests') && (
+                <button className="btn btn-secondary quick-action-btn" onClick={() => setActiveTab('tests')} style={{ border: '1px solid var(--border-color)' }}>
+                  <FileSpreadsheet size={24} />
+                  <span>Enter Test Marks</span>
+                </button>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Recent Payments Log */}
-        <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <h3 style={{ fontSize: '1.2rem' }}>Recent Payments</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', marginTop: '0.5rem' }}>
-            {recentPayments.length === 0 ? (
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', textAlign: 'center', padding: '1rem' }}>No payments logged yet.</p>
-            ) : (
-              recentPayments.map(p => {
-                const isExpanded = expandedPaymentId === p.id;
-                return (
-                  <div
-                    key={p.id}
-                    className={`payment-row-interactive ${isExpanded ? 'expanded' : ''}`}
-                    onClick={() => setExpandedPaymentId(isExpanded ? null : p.id)}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-                      <div className="payment-dot" />
-                      <div>
-                        <div style={{ fontWeight: '600', fontSize: '0.92rem', color: isExpanded ? 'var(--primary)' : 'var(--text-primary)', transition: 'color 0.2s ease' }}>
-                          {p.studentName}
-                        </div>
-                        <div className="payment-details-container" style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
-                          <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
-                            Amount Paid: <strong style={{ color: '#10b981', fontSize: '0.78rem' }}>₹{p.amount}</strong>
-                          </span>
-                          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                            Paid via {p.paymentMode} on {p.date}
-                          </span>
+        {isFeatureEnabled('db_fees') && (
+          <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <h3 style={{ fontSize: '1.2rem' }}>Recent Payments</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', marginTop: '0.5rem' }}>
+              {recentPayments.length === 0 ? (
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', textAlign: 'center', padding: '1rem' }}>No payments logged yet.</p>
+              ) : (
+                recentPayments.map(p => {
+                  const isExpanded = expandedPaymentId === p.id;
+                  return (
+                    <div
+                      key={p.id}
+                      className={`payment-row-interactive ${isExpanded ? 'expanded' : ''}`}
+                      onClick={() => setExpandedPaymentId(isExpanded ? null : p.id)}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                        <div className="payment-dot" />
+                        <div>
+                          <div style={{ fontWeight: '600', fontSize: '0.92rem', color: isExpanded ? 'var(--primary)' : 'var(--text-primary)', transition: 'color 0.2s ease' }}>
+                            {p.studentName}
+                          </div>
+                          <div className="payment-details-container" style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
+                            <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
+                              Amount Paid: <strong style={{ color: '#10b981', fontSize: '0.78rem' }}>₹{p.amount}</strong>
+                            </span>
+                            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                              Paid via {p.paymentMode} on {p.date}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })
-            )}
+                  );
+                })
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
       </div>
 
@@ -730,99 +1068,101 @@ export default function Dashboard({ setActiveTab }) {
       )}
 
       {/* Parent Testimonials Section */}
-      <div style={{ marginTop: '3rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-          <div>
-            <h3 style={{ fontSize: '1.6rem', fontWeight: '800', fontFamily: 'var(--font-heading)' }}>✨ Parent Testimonials</h3>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', marginTop: '0.2rem' }}>
-              Feedback and appreciation received from parents regarding their child's academic progress.
-            </p>
-          </div>
-          <button 
-            className="btn btn-secondary" 
-            onClick={() => setShowAddTestimonialModal(true)}
-            style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem', border: '1px solid var(--border-color)' }}
-          >
-            <Plus size={16} /> Add Testimonial
-          </button>
-        </div>
-
-        <div className="testimonials-grid">
-          {testimonials.length === 0 ? (
-            <div className="card" style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '2.5rem', color: 'var(--text-secondary)' }}>
-              No testimonials added yet. Click "Add Testimonial" to write one!
+      {isFeatureEnabled('db_testimonials') && (
+        <div style={{ marginTop: '3rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+            <div>
+              <h3 style={{ fontSize: '1.6rem', fontWeight: '800', fontFamily: 'var(--font-heading)' }}>✨ Parent Testimonials</h3>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', marginTop: '0.2rem' }}>
+                Feedback and appreciation received from parents regarding their child's academic progress.
+              </p>
             </div>
-          ) : (
-            testimonials.map(tst => (
-              <div 
-                key={tst.id} 
-                className="card" 
-                style={{ 
-                  display: 'flex', 
-                  flexDirection: 'column', 
-                  justifyContent: 'space-between',
-                  position: 'relative', 
-                  padding: '1.75rem',
-                  background: 'var(--bg-card)',
-                  overflow: 'hidden'
-                }}
-              >
-                {/* Quote Icon overlay */}
-                <div style={{ position: 'absolute', top: '1rem', right: '1.25rem', opacity: 0.08, color: 'var(--primary)' }}>
-                  <Quote size={56} style={{ transform: 'rotate(180deg)' }} />
-                </div>
+            <button 
+              className="btn btn-secondary" 
+              onClick={() => setShowAddTestimonialModal(true)}
+              style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem', border: '1px solid var(--border-color)' }}
+            >
+              <Plus size={16} /> Add Testimonial
+            </button>
+          </div>
 
-                <div>
-                  {/* Star Ratings */}
-                  <div style={{ display: 'flex', gap: '0.25rem', marginBottom: '0.85rem' }}>
-                    {Array.from({ length: tst.rating }).map((_, i) => (
-                      <Star key={i} size={16} fill="#f59e0b" color="#f59e0b" />
-                    ))}
+          <div className="testimonials-grid">
+            {testimonials.length === 0 ? (
+              <div className="card" style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '2.5rem', color: 'var(--text-secondary)' }}>
+                No testimonials added yet. Click "Add Testimonial" to write one!
+              </div>
+            ) : (
+              testimonials.map(tst => (
+                <div 
+                  key={tst.id} 
+                  className="card" 
+                  style={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    justifyContent: 'space-between',
+                    position: 'relative', 
+                    padding: '1.75rem',
+                    background: 'var(--bg-card)',
+                    overflow: 'hidden'
+                  }}
+                >
+                  {/* Quote Icon overlay */}
+                  <div style={{ position: 'absolute', top: '1rem', right: '1.25rem', opacity: 0.08, color: 'var(--primary)' }}>
+                    <Quote size={56} style={{ transform: 'rotate(180deg)' }} />
                   </div>
 
-                  {/* Feedback text */}
-                  <p style={{ 
-                    fontStyle: 'italic', 
-                    color: 'var(--text-primary)', 
-                    fontSize: '0.92rem', 
-                    lineHeight: '1.6',
-                    marginBottom: '1.25rem',
-                    fontFamily: 'var(--font-body)'
-                  }}>
-                    "{tst.feedback}"
-                  </p>
-                </div>
-
-                {/* Parent Info */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem', marginTop: '0.5rem' }}>
-                  <div style={{
-                    width: '38px',
-                    height: '38px',
-                    borderRadius: '50%',
-                    background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
-                    color: '#fff',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: '700',
-                    fontSize: '0.9rem'
-                  }}>
-                    {tst.parent_name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
-                  </div>
                   <div>
-                    <h5 style={{ fontSize: '0.92rem', fontWeight: '700', color: 'var(--text-primary)', margin: 0 }}>
-                      {tst.parent_name}
-                    </h5>
-                    <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: '0.15rem 0 0 0' }}>
-                      Parent of {tst.student_name || 'Student'} • {formatDateDisplay(tst.date)}
+                    {/* Star Ratings */}
+                    <div style={{ display: 'flex', gap: '0.25rem', marginBottom: '0.85rem' }}>
+                      {Array.from({ length: tst.rating }).map((_, i) => (
+                        <Star key={i} size={16} fill="#f59e0b" color="#f59e0b" />
+                      ))}
+                    </div>
+
+                    {/* Feedback text */}
+                    <p style={{ 
+                      fontStyle: 'italic', 
+                      color: 'var(--text-primary)', 
+                      fontSize: '0.92rem', 
+                      lineHeight: '1.6',
+                      marginBottom: '1.25rem',
+                      fontFamily: 'var(--font-body)'
+                    }}>
+                      "{tst.feedback}"
                     </p>
                   </div>
+
+                  {/* Parent Info */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem', marginTop: '0.5rem' }}>
+                    <div style={{
+                      width: '38px',
+                      height: '38px',
+                      borderRadius: '50%',
+                      background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                      color: '#fff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontWeight: '700',
+                      fontSize: '0.9rem'
+                    }}>
+                      {tst.parent_name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                    </div>
+                    <div>
+                      <h5 style={{ fontSize: '0.92rem', fontWeight: '700', color: 'var(--text-primary)', margin: 0 }}>
+                        {tst.parent_name}
+                      </h5>
+                      <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: '0.15rem 0 0 0' }}>
+                        Parent of {tst.student_name || 'Student'} • {formatDateDisplay(tst.date)}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))
-          )}
+              ))
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Add Testimonial Modal */}
       {showAddTestimonialModal && (

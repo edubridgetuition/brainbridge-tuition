@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { dbService, formatDateDisplay } from '../database/dbService';
 import { Plus, Check, Award, BarChart2, Save, FileSpreadsheet, ChevronRight } from 'lucide-react';
 
-export default function TestMarks() {
+export default function TestMarks({ currentUser, verifyAction }) {
   const [batches, setBatches] = useState([]);
   const [students, setStudents] = useState([]);
   const [tests, setTests] = useState([]);
@@ -25,6 +25,36 @@ export default function TestMarks() {
     test_date: new Date().toISOString().split('T')[0],
     batch_id: ''
   });
+
+  const [parentScores, setParentScores] = useState([]);
+  const [parentLoading, setParentLoading] = useState(true);
+
+  useEffect(() => {
+    if (currentUser?.role !== 'parent') return;
+    async function loadParentScores() {
+      try {
+        setParentLoading(true);
+        const [allScores, allTests] = await Promise.all([
+          dbService.getAllTestMarks(),
+          dbService.getTests()
+        ]);
+        const scopedScores = allScores
+          .filter(s => s.student_id === currentUser.studentId)
+          .map(score => {
+            const test = allTests.find(t => t.id === score.test_id);
+            return { ...score, test };
+          })
+          .filter(s => s.test) // filter out scores without a test
+          .sort((a, b) => b.test.test_date.localeCompare(a.test.test_date));
+        setParentScores(scopedScores);
+      } catch (err) {
+        console.error("Failed to load parent test scores:", err);
+      } finally {
+        setParentLoading(false);
+      }
+    }
+    loadParentScores();
+  }, [currentUser]);
 
   useEffect(() => {
     async function loadTestData() {
@@ -95,7 +125,6 @@ export default function TestMarks() {
   };
 
   const handleMarksChange = (studentId, val) => {
-    // Validate value isn't greater than max marks
     const num = Number(val);
     if (num > activeTestForMarks.max_marks) {
       return;
@@ -107,24 +136,32 @@ export default function TestMarks() {
     e.preventDefault();
     if (!activeTestForMarks) return;
 
-    try {
-      setLoading(true);
-      const marksList = Object.keys(marksInput).map(studentId => ({
-        student_id: studentId,
-        marks_obtained: marksInput[studentId] === '' ? 0 : Number(marksInput[studentId])
-      }));
+    const action = async () => {
+      try {
+        setLoading(true);
+        const marksList = Object.keys(marksInput).map(studentId => ({
+          student_id: studentId,
+          marks_obtained: marksInput[studentId] === '' ? 0 : Number(marksInput[studentId])
+        }));
 
-      await dbService.saveTestMarks(activeTestForMarks.id, marksList);
-      
-      // Re-calculate stats
-      calculateStats(marksList, activeTestForMarks.max_marks);
-      alert("Test marks saved successfully!");
-      setActiveTestForMarks(null);
-    } catch (err) {
-      console.error("Failed to save student test scores:", err);
-      alert("Error saving test marks.");
-    } finally {
-      setLoading(false);
+        await dbService.saveTestMarks(activeTestForMarks.id, marksList);
+        
+        // Re-calculate stats
+        calculateStats(marksList, activeTestForMarks.max_marks);
+        alert("Test marks saved successfully!");
+        setActiveTestForMarks(null);
+      } catch (err) {
+        console.error("Failed to save student test scores:", err);
+        alert("Error saving test marks.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (verifyAction) {
+      verifyAction(action);
+    } else {
+      await action();
     }
   };
 
@@ -132,24 +169,32 @@ export default function TestMarks() {
     e.preventDefault();
     if (!newTestForm.test_name || !newTestForm.batch_id) return;
 
-    try {
-      setLoading(true);
-      const createdTest = await dbService.addTest(newTestForm);
-      setTests(prev => [createdTest, ...prev]);
-      setShowCreateTestModal(false);
-      
-      // Reset form
-      setNewTestForm({
-        test_name: '',
-        subject: batches.find(b => b.id === newTestForm.batch_id)?.subject || '',
-        max_marks: 50,
-        test_date: new Date().toISOString().split('T')[0],
-        batch_id: newTestForm.batch_id
-      });
-    } catch (err) {
-      console.error("Failed to schedule exam:", err);
-    } finally {
-      setLoading(false);
+    const action = async () => {
+      try {
+        setLoading(true);
+        const createdTest = await dbService.addTest(newTestForm);
+        setTests(prev => [createdTest, ...prev]);
+        setShowCreateTestModal(false);
+        
+        // Reset form
+        setNewTestForm({
+          test_name: '',
+          subject: batches.find(b => b.id === newTestForm.batch_id)?.subject || '',
+          max_marks: 50,
+          test_date: new Date().toISOString().split('T')[0],
+          batch_id: newTestForm.batch_id
+        });
+      } catch (err) {
+        console.error("Failed to schedule exam:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (verifyAction) {
+      verifyAction(action);
+    } else {
+      await action();
     }
   };
 
@@ -169,6 +214,87 @@ export default function TestMarks() {
 
   // Filtered Tests
   const filteredTests = tests.filter(t => selectedBatch === 'All' || t.batch_id === selectedBatch);
+
+  if (currentUser?.role === 'parent') {
+    return (
+      <div className="fade-in">
+        <div className="page-header">
+          <div>
+            <h1 className="page-title">Test Results</h1>
+            <p className="page-subtitle">View scores and performance metrics for exams and quizzes.</p>
+          </div>
+        </div>
+
+        {parentLoading ? (
+          <div style={{ padding: '3.5rem', textAlign: 'center', color: 'var(--text-secondary)' }}>Loading exam scores...</div>
+        ) : parentScores.length === 0 ? (
+          <div className="card" style={{ textAlign: 'center', padding: '3rem 2rem', border: '1px dashed var(--border-color)' }}>
+            <p style={{ color: 'var(--text-secondary)', margin: 0 }}>No test marks logged yet.</p>
+          </div>
+        ) : (
+          <div className="card" style={{ padding: '1.5rem' }}>
+            <div className="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Test Name</th>
+                    <th>Subject</th>
+                    <th>Date</th>
+                    <th>Score</th>
+                    <th>Percentage</th>
+                    <th>Performance</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {parentScores.map(score => {
+                    const percentage = Math.round((score.marks_obtained / score.test.max_marks) * 100);
+                    let perfColor = '#eab308'; // yellow for average
+                    let perfText = 'Average';
+                    if (percentage >= 80) {
+                      perfColor = '#22c55e'; // green for excellent
+                      perfText = 'Excellent';
+                    } else if (percentage < 40) {
+                      perfColor = '#ef4444'; // red for needs improvement
+                      perfText = 'Needs Improvement';
+                    }
+                    return (
+                      <tr key={score.id}>
+                        <td data-label="Test Name" style={{ fontWeight: '800', color: 'var(--text-primary)' }}>
+                          {score.test.test_name}
+                        </td>
+                        <td data-label="Subject">{score.test.subject}</td>
+                        <td data-label="Date" style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                          {formatDateDisplay(score.test.test_date)}
+                        </td>
+                        <td data-label="Score" style={{ fontWeight: '700' }}>
+                          {score.marks_obtained} / {score.test.max_marks}
+                        </td>
+                        <td data-label="Percentage" style={{ fontWeight: '700', color: 'var(--primary)' }}>
+                          {percentage}%
+                        </td>
+                        <td data-label="Performance">
+                          <span className="badge" style={{
+                            backgroundColor: `${perfColor}15`,
+                            color: perfColor,
+                            border: `1px solid ${perfColor}30`,
+                            padding: '0.25rem 0.6rem',
+                            fontSize: '0.75rem',
+                            fontWeight: '800'
+                          }}>
+                            {perfText}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div>
