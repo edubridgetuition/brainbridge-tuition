@@ -44,6 +44,12 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
     }
   }, [activeTenant]);
 
+  useEffect(() => {
+    if (activeTenant && activeTenant.features?.inquiries === false && activeTab === 'inquiry') {
+      setActiveTab('parent_login');
+    }
+  }, [activeTenant, activeTab]);
+
   const clearMessages = () => {
     setError('');
     setSuccess('');
@@ -537,24 +543,26 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
             >
               Teacher Login
             </button>
-            <button
-              onClick={() => handleTabChange('inquiry')}
-              style={{
-                flex: 1,
-                padding: '0.55rem 0.25rem',
-                fontSize: '0.74rem',
-                fontWeight: '700',
-                borderRadius: '8px',
-                border: 'none',
-                backgroundColor: activeTab === 'inquiry' ? '#ffffff' : 'transparent',
-                color: activeTab === 'inquiry' ? '#1e3a8a' : '#64748b',
-                boxShadow: activeTab === 'inquiry' ? '0 2px 6px rgba(0,0,0,0.05)' : 'none',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              Admission Inquiry
-            </button>
+            {(!activeTenant || activeTenant.features?.inquiries !== false) && (
+              <button
+                onClick={() => handleTabChange('inquiry')}
+                style={{
+                  flex: 1,
+                  padding: '0.55rem 0.25rem',
+                  fontSize: '0.74rem',
+                  fontWeight: '700',
+                  borderRadius: '8px',
+                  border: 'none',
+                  backgroundColor: activeTab === 'inquiry' ? '#ffffff' : 'transparent',
+                  color: activeTab === 'inquiry' ? '#1e3a8a' : '#64748b',
+                  boxShadow: activeTab === 'inquiry' ? '0 2px 6px rgba(0,0,0,0.05)' : 'none',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                Admission Inquiry
+              </button>
+            )}
           </div>
 
           {/* Forms */}

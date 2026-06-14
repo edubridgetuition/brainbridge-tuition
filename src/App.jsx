@@ -345,7 +345,7 @@ function App() {
       case 'dashboard':
         return <Dashboard setActiveTab={setActiveTab} currentUser={currentUser} activeTenant={activeTenant} />;
       case 'students':
-        return <Students currentUser={currentUser} verifyAction={verifyAction} />;
+        return <Students currentUser={currentUser} verifyAction={verifyAction} activeTenant={activeTenant} />;
       case 'timetable':
         return <Timetable currentUser={currentUser} verifyAction={verifyAction} />;
       case 'attendance':

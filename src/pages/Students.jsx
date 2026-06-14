@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { dbService, formatDateDisplay, sendWhatsAppMessage } from '../database/dbService';
 import { Plus, Search, Filter, Edit, Phone, MapPin, MessageCircle, Check, X, Trash2, Eye, FileText, CheckCircle } from 'lucide-react';
 
-export default function Students({ currentUser, verifyAction }) {
+export default function Students({ currentUser, verifyAction, activeTenant }) {
   const [students, setStudents] = useState([]);
   const [batches, setBatches] = useState([]);
   const [inquiries, setInquiries] = useState([]);
@@ -62,6 +62,12 @@ export default function Students({ currentUser, verifyAction }) {
     }
     loadData();
   }, []);
+
+  useEffect(() => {
+    if (activeTenant && activeTenant.features?.inquiries === false && activeSubTab === 'inquiries') {
+      setActiveSubTab('students');
+    }
+  }, [activeTenant, activeSubTab]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -382,45 +388,47 @@ export default function Students({ currentUser, verifyAction }) {
         >
           Student Directory
         </button>
-        <button
-          type="button"
-          onClick={() => setActiveSubTab('inquiries')}
-          style={{
-            padding: '0.85rem 0.25rem',
-            fontSize: '0.98rem',
-            fontWeight: '800',
-            color: activeSubTab === 'inquiries' ? 'var(--primary)' : 'var(--text-secondary)',
-            border: 'none',
-            background: 'none',
-            borderBottom: activeSubTab === 'inquiries' ? '3px solid var(--primary)' : '3px solid transparent',
-            cursor: 'pointer',
-            transition: 'var(--transition-smooth)',
-            marginBottom: '-2px',
-            fontFamily: 'var(--font-body)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.4rem'
-          }}
-        >
-          <span>Admission Inquiries</span>
-          {inquiries.filter(iq => iq.status === 'Pending').length > 0 && (
-            <span style={{
-              fontSize: '0.72rem',
+        {(!activeTenant || activeTenant.features?.inquiries !== false) && (
+          <button
+            type="button"
+            onClick={() => setActiveSubTab('inquiries')}
+            style={{
+              padding: '0.85rem 0.25rem',
+              fontSize: '0.98rem',
               fontWeight: '800',
-              backgroundColor: '#ef4444',
-              color: '#ffffff',
-              padding: '0.15rem 0.45rem',
-              borderRadius: '50px',
+              color: activeSubTab === 'inquiries' ? 'var(--primary)' : 'var(--text-secondary)',
+              border: 'none',
+              background: 'none',
+              borderBottom: activeSubTab === 'inquiries' ? '3px solid var(--primary)' : '3px solid transparent',
+              cursor: 'pointer',
+              transition: 'var(--transition-smooth)',
+              marginBottom: '-2px',
+              fontFamily: 'var(--font-body)',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              lineHeight: 1,
-              minWidth: '16px'
-            }}>
-              {inquiries.filter(iq => iq.status === 'Pending').length}
-            </span>
-          )}
-        </button>
+              gap: '0.4rem'
+            }}
+          >
+            <span>Admission Inquiries</span>
+            {inquiries.filter(iq => iq.status === 'Pending').length > 0 && (
+              <span style={{
+                fontSize: '0.72rem',
+                fontWeight: '800',
+                backgroundColor: '#ef4444',
+                color: '#ffffff',
+                padding: '0.15rem 0.45rem',
+                borderRadius: '50px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                lineHeight: 1,
+                minWidth: '16px'
+              }}>
+                {inquiries.filter(iq => iq.status === 'Pending').length}
+              </span>
+            )}
+          </button>
+        )}
         <button
           type="button"
           onClick={() => setActiveSubTab('summary')}
