@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { GraduationCap, ShieldAlert, CheckCircle2, Lock, User, UserCheck, Key, Eye, EyeOff, Shield, School } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { GraduationCap, ShieldAlert, CheckCircle2, Lock, User, UserCheck, Key, Eye, EyeOff, Shield, School, FileText, Send } from 'lucide-react';
 import { dbService } from '../database/dbService';
 
 export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit, onChangeTenantCode }) {
@@ -16,6 +16,23 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
   const [password, setPassword] = useState('');
   const [studentId, setStudentId] = useState('');
   
+  // Inquiry Form States
+  const [inquiryStudentName, setInquiryStudentName] = useState('');
+  const [inquiryParentName, setInquiryParentName] = useState('');
+  const [inquiryMobile, setInquiryMobile] = useState('');
+  const [inquiryParentMobile, setInquiryParentMobile] = useState('');
+  const [inquiryEmergencyMobile, setInquiryEmergencyMobile] = useState('');
+  const [inquiryStandard, setInquiryStandard] = useState('10th');
+  const [inquirySchool, setInquirySchool] = useState('');
+  const [inquiryAddress, setInquiryAddress] = useState('');
+  const [inquiryRemarks, setInquiryRemarks] = useState('');
+  const [inquiryDeclared, setInquiryDeclared] = useState(false);
+  const [hasSigned, setHasSigned] = useState(false);
+
+  // Signature drawing refs and states
+  const canvasRef = useRef(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+
   // Messages
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -154,6 +171,155 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
       });
     } catch (err) {
       setError(err.message || 'Invalid Student ID or password.');
+    }
+  };
+
+  const startDrawing = (e) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#1e3a8a';
+    
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+
+    let clientX, clientY;
+    if (e.touches && e.touches.length > 0) {
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    } else {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
+
+    const x = (clientX - rect.left) * scaleX;
+    const y = (clientY - rect.top) * scaleY;
+    
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    setIsDrawing(true);
+    setHasSigned(true);
+  };
+
+  const draw = (e) => {
+    if (!isDrawing) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+
+    let clientX, clientY;
+    if (e.touches && e.touches.length > 0) {
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    } else {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
+
+    const x = (clientX - rect.left) * scaleX;
+    const y = (clientY - rect.top) * scaleY;
+    
+    ctx.lineTo(x, y);
+    ctx.stroke();
+    
+    if (e.cancelable) {
+      e.preventDefault();
+    }
+  };
+
+  const stopDrawing = () => {
+    setIsDrawing(false);
+  };
+
+  const clearSignature = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    setHasSigned(false);
+  };
+
+  const handleInquirySubmit = async (e) => {
+    e.preventDefault();
+    clearMessages();
+
+    const cleanCode = centreName.trim().toLowerCase();
+    if (!cleanCode) {
+      setError('Please enter Centre Name.');
+      return;
+    }
+
+    if (!inquiryStudentName.trim() || !inquiryParentName.trim() || !inquiryMobile.trim()) {
+      setError('Student Name, Parent Name, and Student Mobile are required.');
+      return;
+    }
+
+    if (!hasSigned) {
+      setError('Please provide your signature.');
+      return;
+    }
+
+    if (!inquiryDeclared) {
+      setError('Please accept the declaration checkbox.');
+      return;
+    }
+
+    try {
+      const tenant = await dbService.verifyTenantCode(cleanCode);
+      if (!tenant) {
+        setError('Invalid Centre Name.');
+        return;
+      }
+
+      await onTenantCodeSubmit(cleanCode);
+      dbService.setTenantCode(cleanCode);
+
+      const canvas = canvasRef.current;
+      const signatureData = canvas ? canvas.toDataURL('image/png') : '';
+
+      await dbService.addInquiry({
+        student_name: inquiryStudentName.trim(),
+        parent_name: inquiryParentName.trim(),
+        mobile: inquiryMobile.trim(),
+        parent_mobile: inquiryParentMobile.trim(),
+        emergency_mobile: inquiryEmergencyMobile.trim(),
+        standard: inquiryStandard,
+        school: inquirySchool.trim(),
+        address: inquiryAddress.trim(),
+        remarks: inquiryRemarks.trim(),
+        signature_data: signatureData,
+        status: 'Pending'
+      });
+
+      setSuccess('Your admission inquiry has been submitted successfully! The tuition team will contact you soon.');
+      
+      // Clear form states
+      setInquiryStudentName('');
+      setInquiryParentName('');
+      setInquiryMobile('');
+      setInquiryParentMobile('');
+      setInquiryEmergencyMobile('');
+      setInquiryStandard('10th');
+      setInquirySchool('');
+      setInquiryAddress('');
+      setInquiryRemarks('');
+      setInquiryDeclared(false);
+      setHasSigned(false);
+      if (canvas) {
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to submit inquiry. Please try again.');
+      console.error(err);
     }
   };
 
@@ -318,6 +484,13 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
             </div>
           )}
 
+          {success && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%', padding: '0.75rem 1rem', backgroundColor: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 'var(--radius-md)', color: '#047857', fontSize: '0.78rem', fontWeight: '600', marginBottom: '1.25rem' }}>
+              <CheckCircle2 size={16} style={{ flexShrink: 0 }} />
+              <span>{success}</span>
+            </div>
+          )}
+
           {/* Tab Switcher */}
           <div style={{
             display: 'flex',
@@ -333,7 +506,7 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
               style={{
                 flex: 1,
                 padding: '0.55rem 0.25rem',
-                fontSize: '0.78rem',
+                fontSize: '0.74rem',
                 fontWeight: '700',
                 borderRadius: '8px',
                 border: 'none',
@@ -351,7 +524,7 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
               style={{
                 flex: 1,
                 padding: '0.55rem 0.25rem',
-                fontSize: '0.78rem',
+                fontSize: '0.74rem',
                 fontWeight: '700',
                 borderRadius: '8px',
                 border: 'none',
@@ -363,6 +536,24 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
               }}
             >
               Teacher Login
+            </button>
+            <button
+              onClick={() => handleTabChange('inquiry')}
+              style={{
+                flex: 1,
+                padding: '0.55rem 0.25rem',
+                fontSize: '0.74rem',
+                fontWeight: '700',
+                borderRadius: '8px',
+                border: 'none',
+                backgroundColor: activeTab === 'inquiry' ? '#ffffff' : 'transparent',
+                color: activeTab === 'inquiry' ? '#1e3a8a' : '#64748b',
+                boxShadow: activeTab === 'inquiry' ? '0 2px 6px rgba(0,0,0,0.05)' : 'none',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              Admission Inquiry
             </button>
           </div>
 
@@ -489,6 +680,258 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
 
               <button type="submit" className="btn btn-primary" style={{ padding: '0.85rem', fontSize: '0.92rem', marginTop: '0.5rem', boxShadow: '0 4px 12px rgba(37, 99, 235, 0.2)' }}>
                 Access Student Workspace
+              </button>
+            </form>
+          )}
+
+          {activeTab === 'inquiry' && !activeTenant && (
+            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', textAlign: 'center', margin: 0, fontWeight: '500' }}>
+                Please enter the Centre Code (Tuition Code) to load the Admission Inquiry form.
+              </p>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <div style={{ position: 'relative' }}>
+                  <School size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Enter Centre name (e.g. AK007)"
+                    value={centreName}
+                    onChange={(e) => handleCentreNameChange(e.target.value)}
+                    style={{ paddingLeft: '2.5rem' }}
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'inquiry' && activeTenant && (
+            <form onSubmit={handleInquirySubmit} style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '1rem', maxHeight: '420px', overflowY: 'auto', paddingRight: '6px', scrollbarWidth: 'thin' }}>
+              {/* Form header */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.5rem', marginBottom: '0.25rem' }}>
+                <FileText size={18} style={{ color: '#1e3a8a' }} />
+                <span style={{ fontSize: '0.9rem', fontWeight: '800', color: '#1e3a8a' }}>Registration Form</span>
+              </div>
+
+              {/* Student Name */}
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label" style={{ fontSize: '0.75rem', fontWeight: '700' }}>Student Full Name *</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Enter student's name"
+                  value={inquiryStudentName}
+                  onChange={(e) => setInquiryStudentName(e.target.value)}
+                  required
+                />
+              </div>
+
+              {/* Parent Name */}
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label" style={{ fontSize: '0.75rem', fontWeight: '700' }}>Parent Full Name *</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Enter parent's name"
+                  value={inquiryParentName}
+                  onChange={(e) => setInquiryParentName(e.target.value)}
+                  required
+                />
+              </div>
+
+              {/* Student Mobile */}
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label" style={{ fontSize: '0.75rem', fontWeight: '700' }}>Student Mobile Number *</label>
+                <input
+                  type="tel"
+                  className="form-control"
+                  placeholder="10-digit mobile number"
+                  value={inquiryMobile}
+                  onChange={(e) => setInquiryMobile(e.target.value.replace(/\D/g, '').substring(0, 10))}
+                  required
+                />
+              </div>
+
+              {/* Parent Mobile & Emergency Mobile in 2 columns */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" style={{ fontSize: '0.75rem', fontWeight: '700' }} title="Parent Mobile Number (used by parent only)">Parent Mobile *</label>
+                  <input
+                    type="tel"
+                    className="form-control"
+                    placeholder="Parent's number"
+                    value={inquiryParentMobile}
+                    onChange={(e) => setInquiryParentMobile(e.target.value.replace(/\D/g, '').substring(0, 10))}
+                    required
+                  />
+                </div>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" style={{ fontSize: '0.75rem', fontWeight: '700' }}>Emergency Contact *</label>
+                  <input
+                    type="tel"
+                    className="form-control"
+                    placeholder="Emergency number"
+                    value={inquiryEmergencyMobile}
+                    onChange={(e) => setInquiryEmergencyMobile(e.target.value.replace(/\D/g, '').substring(0, 10))}
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Standard & School in 2 columns */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" style={{ fontSize: '0.75rem', fontWeight: '700' }}>Standard/Class *</label>
+                  <select
+                    className="form-control"
+                    value={inquiryStandard}
+                    onChange={(e) => setInquiryStandard(e.target.value)}
+                  >
+                    <option value="10th">10th Standard</option>
+                    <option value="11th">11th Standard</option>
+                    <option value="12th">12th Standard</option>
+                  </select>
+                </div>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" style={{ fontSize: '0.75rem', fontWeight: '700' }}>School Name</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="E.g. DPS School"
+                    value={inquirySchool}
+                    onChange={(e) => setInquirySchool(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* Residential Address */}
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label" style={{ fontSize: '0.75rem', fontWeight: '700' }}>Residential Address *</label>
+                <textarea
+                  className="form-control"
+                  rows="2"
+                  placeholder="Enter full residential address"
+                  value={inquiryAddress}
+                  onChange={(e) => setInquiryAddress(e.target.value)}
+                  style={{ resize: 'none', fontFamily: 'inherit' }}
+                  required
+                />
+              </div>
+
+              {/* Remarks */}
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label" style={{ fontSize: '0.75rem', fontWeight: '700' }}>Remarks / Message</label>
+                <textarea
+                  className="form-control"
+                  rows="2"
+                  placeholder="Any special remarks or message"
+                  value={inquiryRemarks}
+                  onChange={(e) => setInquiryRemarks(e.target.value)}
+                  style={{ resize: 'none', fontFamily: 'inherit' }}
+                />
+              </div>
+
+              {/* Signature Canvas Pad */}
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.2rem' }}>
+                  <label className="form-label" style={{ fontSize: '0.75rem', fontWeight: '700', margin: 0 }}>Signature *</label>
+                  {hasSigned && (
+                    <button
+                      type="button"
+                      onClick={clearSignature}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--danger)',
+                        fontSize: '0.7rem',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        padding: 0,
+                        textDecoration: 'underline'
+                      }}
+                    >
+                      Clear Pad
+                    </button>
+                  )}
+                </div>
+                <div style={{
+                  border: '1px dashed #cbd5e1',
+                  borderRadius: '8px',
+                  overflow: 'hidden',
+                  backgroundColor: '#f8fafc',
+                  position: 'relative',
+                  height: '110px'
+                }}>
+                  <canvas
+                    ref={canvasRef}
+                    width={380}
+                    height={110}
+                    onMouseDown={startDrawing}
+                    onMouseMove={draw}
+                    onMouseUp={stopDrawing}
+                    onMouseLeave={stopDrawing}
+                    onTouchStart={startDrawing}
+                    onTouchMove={draw}
+                    onTouchEnd={stopDrawing}
+                    style={{
+                      display: 'block',
+                      width: '100%',
+                      height: '100%',
+                      cursor: 'crosshair',
+                      touchAction: 'none'
+                    }}
+                  />
+                  {!hasSigned && (
+                    <div style={{
+                      position: 'absolute',
+                      inset: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      pointerEvents: 'none',
+                      color: '#94a3b8',
+                      fontSize: '0.75rem',
+                      fontWeight: '500'
+                    }}>
+                      Draw your signature here
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Declaration Note and Checkbox */}
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start', marginTop: '0.25rem' }}>
+                <input
+                  type="checkbox"
+                  id="inquiryDeclared"
+                  checked={inquiryDeclared}
+                  onChange={(e) => setInquiryDeclared(e.target.checked)}
+                  style={{ marginTop: '0.15rem', cursor: 'pointer' }}
+                  required
+                />
+                <label htmlFor="inquiryDeclared" style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', cursor: 'pointer', userSelect: 'none', lineHeight: '1.4' }}>
+                  <strong>Note:</strong> All the details provided above are true and correct as per my knowledge.
+                </label>
+              </div>
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                className="btn btn-primary"
+                style={{
+                  padding: '0.8rem',
+                  fontSize: '0.9rem',
+                  marginTop: '0.5rem',
+                  boxShadow: '0 4px 12px rgba(37, 99, 235, 0.2)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem'
+                }}
+              >
+                <Send size={14} />
+                Submit Admission Inquiry
               </button>
             </form>
           )}

@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { dbService, formatDateDisplay, sendWhatsAppMessage } from '../database/dbService';
-import { Plus, Search, Filter, Edit, Phone, MapPin, MessageCircle } from 'lucide-react';
+import { Plus, Search, Filter, Edit, Phone, MapPin, MessageCircle, Check, X, Trash2, Eye, FileText, CheckCircle } from 'lucide-react';
 
 export default function Students({ currentUser, verifyAction }) {
   const [students, setStudents] = useState([]);
   const [batches, setBatches] = useState([]);
+  const [inquiries, setInquiries] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeSubTab, setActiveSubTab] = useState('students'); // 'students' or 'summary'
+  const [activeSubTab, setActiveSubTab] = useState('students'); // 'students', 'inquiries', or 'summary'
+  const [selectedInquiryForDetail, setSelectedInquiryForDetail] = useState(null);
+  const [approvingInquiryId, setApprovingInquiryId] = useState(null);
   
   // Search & Filter State
   const [searchTerm, setSearchTerm] = useState('');
@@ -40,17 +43,19 @@ export default function Students({ currentUser, verifyAction }) {
   useEffect(() => {
     async function loadData() {
       try {
-        const [studentList, batchList] = await Promise.all([
+        const [studentList, batchList, inquiryList] = await Promise.all([
           dbService.getStudents(),
-          dbService.getBatches()
+          dbService.getBatches(),
+          dbService.getInquiries()
         ]);
         setStudents(studentList);
         setBatches(batchList);
+        setInquiries(inquiryList || []);
         if (batchList.length > 0) {
           setFormData(prev => ({ ...prev, batch_id: batchList[0].id }));
         }
       } catch (err) {
-        console.error("Failed to load students data:", err);
+        console.error("Failed to load students/inquiries data:", err);
       } finally {
         setLoading(false);
       }
@@ -82,6 +87,16 @@ export default function Students({ currentUser, verifyAction }) {
           // Register new student
           const newStudent = await dbService.addStudent(formData);
           setStudents(prev => [...prev, newStudent]);
+
+          // If this registration was approved from an inquiry
+          if (approvingInquiryId) {
+            await dbService.updateInquiryStatus(approvingInquiryId, 'Approved');
+            setInquiries(prev => prev.map(iq => iq.id === approvingInquiryId ? { ...iq, status: 'Approved' } : iq));
+            setApprovingInquiryId(null);
+            alert("Student registered and inquiry approved successfully!");
+          } else {
+            alert("Student registered successfully!");
+          }
         }
         setShowModal(false);
         setIsEditing(false);
@@ -132,6 +147,7 @@ export default function Students({ currentUser, verifyAction }) {
     setShowModal(false);
     setIsEditing(false);
     setEditingStudentId(null);
+    setApprovingInquiryId(null);
     setFormData({
       name: '',
       mobile: '',
@@ -142,6 +158,78 @@ export default function Students({ currentUser, verifyAction }) {
       batch_id: batches[0]?.id || '',
       admission_date: new Date().toISOString().split('T')[0]
     });
+  };
+
+  const handleApproveInquiry = (inquiry) => {
+    setFormData({
+      name: inquiry.student_name || '',
+      mobile: inquiry.mobile || '',
+      parent_mobile: inquiry.parent_mobile || '',
+      address: inquiry.address || '',
+      school: inquiry.school || '',
+      standard: inquiry.standard || '10th',
+      batch_id: batches[0]?.id || '',
+      admission_date: new Date().toISOString().split('T')[0]
+    });
+    setApprovingInquiryId(inquiry.id);
+    setIsEditing(false);
+    setEditingStudentId(null);
+    setShowModal(true);
+  };
+
+  const handleRejectInquiry = async (inquiryId) => {
+    if (window.confirm("Are you sure you want to mark this inquiry as Rejected?")) {
+      const action = async () => {
+        try {
+          setLoading(true);
+          await dbService.updateInquiryStatus(inquiryId, 'Rejected');
+          setInquiries(prev => prev.map(iq => iq.id === inquiryId ? { ...iq, status: 'Rejected' } : iq));
+          alert("Inquiry marked as Rejected.");
+        } catch (err) {
+          console.error("Error rejecting inquiry:", err);
+          alert("Failed to reject inquiry: " + err.message);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      if (verifyAction) {
+        verifyAction(action);
+      } else {
+        await action();
+      }
+    }
+  };
+
+  const handleDeleteInquiry = async (inquiryId) => {
+    if (window.confirm("Are you sure you want to permanently delete this inquiry? This cannot be undone.")) {
+      const action = async () => {
+        try {
+          setLoading(true);
+          await dbService.deleteInquiry(inquiryId);
+          setInquiries(prev => prev.filter(iq => iq.id !== inquiryId));
+          alert("Inquiry deleted permanently.");
+        } catch (err) {
+          console.error("Error deleting inquiry:", err);
+          alert("Failed to delete inquiry: " + err.message);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      if (verifyAction) {
+        verifyAction(action);
+      } else {
+        await action();
+      }
+    }
+  };
+
+  const formatInquiryDate = (isoStr) => {
+    if (!isoStr) return '-';
+    const date = new Date(isoStr);
+    if (isNaN(date.getTime())) return isoStr;
+    return date.toLocaleDateString('en-GB') + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
   const handleArchiveStudent = async (studentId) => {
@@ -296,6 +384,45 @@ export default function Students({ currentUser, verifyAction }) {
         </button>
         <button
           type="button"
+          onClick={() => setActiveSubTab('inquiries')}
+          style={{
+            padding: '0.85rem 0.25rem',
+            fontSize: '0.98rem',
+            fontWeight: '800',
+            color: activeSubTab === 'inquiries' ? 'var(--primary)' : 'var(--text-secondary)',
+            border: 'none',
+            background: 'none',
+            borderBottom: activeSubTab === 'inquiries' ? '3px solid var(--primary)' : '3px solid transparent',
+            cursor: 'pointer',
+            transition: 'var(--transition-smooth)',
+            marginBottom: '-2px',
+            fontFamily: 'var(--font-body)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.4rem'
+          }}
+        >
+          <span>Admission Inquiries</span>
+          {inquiries.filter(iq => iq.status === 'Pending').length > 0 && (
+            <span style={{
+              fontSize: '0.72rem',
+              fontWeight: '800',
+              backgroundColor: '#ef4444',
+              color: '#ffffff',
+              padding: '0.15rem 0.45rem',
+              borderRadius: '50px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              lineHeight: 1,
+              minWidth: '16px'
+            }}>
+              {inquiries.filter(iq => iq.status === 'Pending').length}
+            </span>
+          )}
+        </button>
+        <button
+          type="button"
           onClick={() => setActiveSubTab('summary')}
           style={{
             padding: '0.85rem 0.25rem',
@@ -315,7 +442,7 @@ export default function Students({ currentUser, verifyAction }) {
         </button>
       </div>
 
-      {activeSubTab === 'students' ? (
+      {activeSubTab === 'students' && (
         <>
           {/* Filters Bar */}
           <div className="filters-bar">
@@ -415,7 +542,152 @@ export default function Students({ currentUser, verifyAction }) {
             </div>
           )}
         </>
-      ) : (
+      )}
+
+      {activeSubTab === 'inquiries' && (
+        <>
+          {/* Inquiries Table */}
+          {loading && inquiries.length === 0 ? (
+            <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>Loading inquiries database...</div>
+          ) : (
+            <div className="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Student Name</th>
+                    <th>Parent Name</th>
+                    <th>Standard</th>
+                    <th>Contact Info</th>
+                    <th>Status</th>
+                    <th style={{ textAlign: 'right' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {inquiries.length === 0 ? (
+                    <tr>
+                      <td colSpan="7" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>
+                        No inquiries submitted yet.
+                      </td>
+                    </tr>
+                  ) : (
+                    inquiries.map(inquiry => (
+                      <tr key={inquiry.id}>
+                        <td data-label="Date" style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                          {formatInquiryDate(inquiry.created_at)}
+                        </td>
+                        <td data-label="Student Name">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedInquiryForDetail(inquiry)}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              padding: 0,
+                              fontWeight: '600',
+                              color: 'var(--primary)',
+                              textAlign: 'left',
+                              cursor: 'pointer',
+                              textDecoration: 'underline',
+                              fontFamily: 'var(--font-body)'
+                            }}
+                          >
+                            {inquiry.student_name}
+                          </button>
+                        </td>
+                        <td data-label="Parent Name">{inquiry.parent_name}</td>
+                        <td data-label="Standard">{inquiry.standard}</td>
+                        <td data-label="Contact Info" style={{ fontSize: '0.85rem' }}>
+                          <div>S: {inquiry.mobile}</div>
+                          {inquiry.parent_mobile && <div style={{ color: 'var(--text-secondary)', fontSize: '0.78rem' }}>P: {inquiry.parent_mobile}</div>}
+                        </td>
+                        <td data-label="Status">
+                          <span style={{
+                            fontSize: '0.74rem',
+                            fontWeight: '800',
+                            backgroundColor: inquiry.status === 'Pending' ? '#fef3c7' : inquiry.status === 'Approved' ? '#d1fae5' : '#fee2e2',
+                            color: inquiry.status === 'Pending' ? '#b45309' : inquiry.status === 'Approved' ? '#065f46' : '#991b1b',
+                            padding: '0.2rem 0.6rem',
+                            borderRadius: '50px',
+                            display: 'inline-block'
+                          }}>
+                            {inquiry.status}
+                          </span>
+                        </td>
+                        <td data-label="Actions" style={{ textAlign: 'right' }}>
+                          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
+                            {inquiry.status === 'Pending' && (
+                              <>
+                                <button
+                                  onClick={() => handleApproveInquiry(inquiry)}
+                                  className="btn btn-primary"
+                                  style={{
+                                    padding: '0.35rem 0.65rem',
+                                    fontSize: '0.74rem',
+                                    fontWeight: '800',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.25rem'
+                                  }}
+                                  title="Approve & Register"
+                                >
+                                  <Check size={12} />
+                                  <span>Approve</span>
+                                </button>
+                                <button
+                                  onClick={() => handleRejectInquiry(inquiry.id)}
+                                  className="btn btn-danger"
+                                  style={{
+                                    padding: '0.35rem 0.65rem',
+                                    fontSize: '0.74rem',
+                                    fontWeight: '800',
+                                    backgroundColor: '#fee2e2',
+                                    color: '#dc2626',
+                                    border: '1px solid #fca5a5',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.25rem'
+                                  }}
+                                  title="Reject Inquiry"
+                                >
+                                  <X size={12} />
+                                  <span>Reject</span>
+                                </button>
+                              </>
+                            )}
+                            <button
+                              onClick={() => handleDeleteInquiry(inquiry.id)}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                color: 'var(--text-secondary)',
+                                cursor: 'pointer',
+                                padding: '0.25rem',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                borderRadius: '4px',
+                                transition: 'all 0.2s'
+                              }}
+                              onMouseOver={(e) => e.currentTarget.style.color = '#dc2626'}
+                              onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
+                              title="Delete Inquiry permanently"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      )}
+
+      {activeSubTab === 'summary' && (
         /* Admissions Summary View */
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
           {/* Summary Stats Cards Row */}
@@ -805,6 +1077,177 @@ export default function Students({ currentUser, verifyAction }) {
                 style={{ flex: 1 }}
               >
                 Close Profile
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Inquiry Detail Modal */}
+      {selectedInquiryForDetail && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '480px' }}>
+            <div className="modal-header">
+              <h3 className="modal-title">Admission Inquiry Details</h3>
+              <button className="modal-close" onClick={() => setSelectedInquiryForDetail(null)}>Close</button>
+            </div>
+            <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem', width: '100%' }}>
+                <div style={{
+                  width: '52px',
+                  height: '52px',
+                  borderRadius: '50%',
+                  backgroundColor: 'rgba(37, 99, 235, 0.08)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'var(--primary)',
+                  fontWeight: '800',
+                  fontSize: '1.25rem'
+                }}>
+                  {selectedInquiryForDetail.student_name ? selectedInquiryForDetail.student_name.charAt(0) : 'I'}
+                </div>
+                <div style={{ flexGrow: 1 }}>
+                  <h4 style={{ fontSize: '1.25rem', fontWeight: '800', margin: 0, color: 'var(--text-primary)' }}>{selectedInquiryForDetail.student_name}</h4>
+                  <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', marginTop: '0.3rem' }}>
+                    <span className="badge badge-success" style={{ margin: 0 }}>{selectedInquiryForDetail.standard} Standard</span>
+                    <span style={{ 
+                      fontSize: '0.72rem', 
+                      fontWeight: '800', 
+                      backgroundColor: selectedInquiryForDetail.status === 'Pending' ? '#fef3c7' : selectedInquiryForDetail.status === 'Approved' ? '#d1fae5' : '#fee2e2', 
+                      color: selectedInquiryForDetail.status === 'Pending' ? '#b45309' : selectedInquiryForDetail.status === 'Approved' ? '#065f46' : '#991b1b', 
+                      padding: '0.15rem 0.45rem', 
+                      borderRadius: '4px' 
+                    }}>
+                      {selectedInquiryForDetail.status}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.95rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.04em' }}>Parent Name</span>
+                    <div style={{ fontWeight: '600', fontSize: '0.92rem', color: 'var(--text-primary)', marginTop: '0.15rem' }}>
+                      {selectedInquiryForDetail.parent_name}
+                    </div>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.04em' }}>School Name</span>
+                    <div style={{ fontWeight: '600', fontSize: '0.92rem', color: 'var(--text-primary)', marginTop: '0.15rem' }}>
+                      {selectedInquiryForDetail.school || 'Not specified'}
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.04em' }}>Student Mobile</span>
+                  <div style={{ fontWeight: '600', fontSize: '0.92rem', color: 'var(--text-primary)', marginTop: '0.15rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                      <Phone size={13} style={{ color: 'var(--text-muted)' }} />
+                      {selectedInquiryForDetail.mobile}
+                    </span>
+                    <button 
+                      onClick={() => sendWhatsAppMessage(selectedInquiryForDetail.mobile, `Hello ${selectedInquiryForDetail.student_name},`)}
+                      style={{ background: 'none', border: 'none', color: '#25d366', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem', fontWeight: '700' }}
+                    >
+                      <MessageCircle size={14} /> WhatsApp
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.04em' }}>Parent Mobile</span>
+                    <div style={{ fontWeight: '600', fontSize: '0.92rem', color: 'var(--text-primary)', marginTop: '0.15rem' }}>
+                      {selectedInquiryForDetail.parent_mobile || 'N/A'}
+                    </div>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.04em' }}>Emergency Contact</span>
+                    <div style={{ fontWeight: '600', fontSize: '0.92rem', color: 'var(--text-primary)', marginTop: '0.15rem' }}>
+                      {selectedInquiryForDetail.emergency_mobile || 'N/A'}
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.04em' }}>Residential Address</span>
+                  <div style={{ fontWeight: '600', fontSize: '0.92rem', color: 'var(--text-primary)', marginTop: '0.15rem', lineHeight: '1.4' }}>
+                    {selectedInquiryForDetail.address || 'N/A'}
+                  </div>
+                </div>
+
+                <div>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.04em' }}>Remarks / Message</span>
+                  <div style={{ fontWeight: '600', fontSize: '0.92rem', color: 'var(--text-primary)', marginTop: '0.15rem', lineHeight: '1.4' }}>
+                    {selectedInquiryForDetail.remarks || 'None'}
+                  </div>
+                </div>
+
+                {selectedInquiryForDetail.signature_data && (
+                  <div>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.04em', display: 'block', marginBottom: '0.25rem' }}>Signature Image</span>
+                    <div style={{
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '8px',
+                      padding: '0.5rem',
+                      backgroundColor: '#f8fafc',
+                      display: 'flex',
+                      justifyContent: 'center',
+                      maxHeight: '120px'
+                    }}>
+                      <img 
+                        src={selectedInquiryForDetail.signature_data} 
+                        alt="Signature" 
+                        style={{ maxHeight: '100px', maxWidth: '100%', objectFit: 'contain' }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.04em' }}>Inquiry Date</span>
+                  <div style={{ fontWeight: '600', fontSize: '0.92rem', color: 'var(--text-primary)', marginTop: '0.15rem' }}>
+                    {formatInquiryDate(selectedInquiryForDetail.created_at)}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer" style={{ display: 'flex', gap: '0.75rem' }}>
+              {selectedInquiryForDetail.status === 'Pending' && (
+                <>
+                  <button 
+                    className="btn btn-primary" 
+                    onClick={() => {
+                      const inquiry = selectedInquiryForDetail;
+                      setSelectedInquiryForDetail(null);
+                      handleApproveInquiry(inquiry);
+                    }}
+                    style={{ flex: 1 }}
+                  >
+                    Approve & Register
+                  </button>
+                  <button 
+                    className="btn btn-danger" 
+                    onClick={() => {
+                      const id = selectedInquiryForDetail.id;
+                      setSelectedInquiryForDetail(null);
+                      handleRejectInquiry(id);
+                    }}
+                    style={{ flex: 1 }}
+                  >
+                    Reject
+                  </button>
+                </>
+              )}
+              <button 
+                className="btn btn-secondary" 
+                onClick={() => setSelectedInquiryForDetail(null)} 
+                style={{ flex: 1 }}
+              >
+                Close Details
               </button>
             </div>
           </div>

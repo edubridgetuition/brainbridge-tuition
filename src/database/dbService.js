@@ -1124,6 +1124,74 @@ export const dbService = {
     );
   },
 
+  // --- ADMISSION INQUIRIES ---
+  async getInquiries() {
+    return runQuery(
+      async () => {
+        const querySnapshot = await getDocs(collection(db, "inquiries"));
+        return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      },
+      () => getLocalData('bb_inquiries', [])
+    );
+  },
+
+  async addInquiry(inquiry) {
+    const newInquiry = {
+      ...inquiry,
+      status: inquiry.status || 'Pending',
+      created_at: new Date().toISOString()
+    };
+    return runQuery(
+      async () => {
+        const docRef = await addDoc(collection(db, "inquiries"), newInquiry);
+        return { id: docRef.id, ...newInquiry };
+      },
+      () => {
+        const inquiries = getLocalData('bb_inquiries', []);
+        const createdInquiry = { ...newInquiry, id: generateUUID() };
+        inquiries.unshift(createdInquiry);
+        saveLocalData('bb_inquiries', inquiries);
+        return createdInquiry;
+      }
+    );
+  },
+
+  async updateInquiryStatus(id, status) {
+    return runQuery(
+      async () => {
+        const docRef = doc(db, "inquiries", id);
+        await updateDoc(docRef, { status });
+        return true;
+      },
+      () => {
+        const inquiries = getLocalData('bb_inquiries', []);
+        const idx = inquiries.findIndex(iq => iq.id === id);
+        if (idx !== -1) {
+          inquiries[idx].status = status;
+          saveLocalData('bb_inquiries', inquiries);
+          return true;
+        }
+        return false;
+      }
+    );
+  },
+
+  async deleteInquiry(id) {
+    return runQuery(
+      async () => {
+        const docRef = doc(db, "inquiries", id);
+        await deleteDoc(docRef);
+        return true;
+      },
+      () => {
+        const inquiries = getLocalData('bb_inquiries', []);
+        const filtered = inquiries.filter(iq => iq.id !== id);
+        saveLocalData('bb_inquiries', filtered);
+        return true;
+      }
+    );
+  },
+
   // --- REAL-TIME NOTIFICATIONS ---
   async addNotification(studentId, type, title, message) {
     const timestamp = new Date().toISOString();
