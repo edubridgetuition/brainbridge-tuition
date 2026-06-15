@@ -115,9 +115,8 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
     return activeTenant.features[featureKey] !== false;
   };
 
-  const showCustomBranding = activeTenant && activeTenant.features?.branding !== false;
-  const brandLogo = showCustomBranding ? activeTenant.logo_url : "/logo.png";
-  const brandName = showCustomBranding ? activeTenant.name : "BrainBridge";
+  const hasCustomLogo = activeTenant && activeTenant.logo_url && activeTenant.logo_url !== '' && activeTenant.logo_url !== '/logo.png';
+  const brandName = activeTenant ? activeTenant.name : "BrainBridge";
 
   const shouldShowItem = (item) => {
     if (item.role === 'admin' && currentUser?.role !== 'admin') return false;
@@ -197,19 +196,28 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
       {/* 1. DESKTOP SIDEBAR VIEW */}
       <aside className="sidebar desktop-sidebar">
         <div className="brand-container" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <img 
-            src={brandLogo} 
-            alt="Logo" 
-            onError={(e) => { e.target.src = '/logo.png'; }}
-            style={{
+          {hasCustomLogo ? (
+            <img 
+              src={activeTenant.logo_url} 
+              alt="Logo" 
+              style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '8px',
+                objectFit: 'contain',
+                border: '1px solid #bfdbfe',
+                backgroundColor: '#ffffff'
+              }}
+            />
+          ) : (
+            <div style={{
               width: '32px',
               height: '32px',
               borderRadius: '8px',
-              objectFit: 'contain',
-              border: '1px solid #bfdbfe',
-              backgroundColor: '#ffffff'
-            }}
-          />
+              backgroundColor: '#000000',
+              border: '1px solid #bfdbfe'
+            }} />
+          )}
           <span className="brand-name">{brandName}</span>
         </div>
         

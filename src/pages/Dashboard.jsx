@@ -231,6 +231,9 @@ export default function Dashboard({ setActiveTab, currentUser, verifyAction, act
     );
   }
 
+  const hasCustomLogo = activeTenant && activeTenant.logo_url && activeTenant.logo_url !== '' && activeTenant.logo_url !== '/logo.png';
+  const brandName = activeTenant ? activeTenant.name : "BrainBridge";
+
   if (currentUser?.role === 'parent') {
     const isFeatureEnabled = (key) => {
       if (!activeTenant || !activeTenant.features) return true;
@@ -242,24 +245,28 @@ export default function Dashboard({ setActiveTab, currentUser, verifyAction, act
         {/* Parent Header */}
         <div className="page-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            {(() => {
-              const showCustomBranding = activeTenant && activeTenant.features?.branding !== false;
-              const brandLogo = showCustomBranding ? activeTenant.logo_url : "/logo.png";
-              return (
-                <img 
-                  src={brandLogo} 
-                  alt="Tuition Logo" 
-                  onError={(e) => { e.target.src = '/logo.png'; }}
-                  style={{
-                    width: '48px',
-                    height: '48px',
-                    borderRadius: '12px',
-                    objectFit: 'contain',
-                    boxShadow: '0 4px 12px rgba(15, 23, 42, 0.05)'
-                  }}
-                />
-              );
-            })()}
+            {hasCustomLogo ? (
+              <img 
+                src={activeTenant.logo_url} 
+                alt="Tuition Logo" 
+                style={{
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '12px',
+                  objectFit: 'contain',
+                  boxShadow: '0 4px 12px rgba(15, 23, 42, 0.05)'
+                }}
+              />
+            ) : (
+              <div style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '12px',
+                backgroundColor: '#000000',
+                border: '1px solid #bfdbfe',
+                boxShadow: '0 4px 12px rgba(15, 23, 42, 0.05)'
+              }} />
+            )}
             <div>
               <h1 className="page-title">Home</h1>
               <p className="page-subtitle">Welcome Parent of <strong>{currentUser.username}</strong>.</p>
@@ -561,29 +568,39 @@ export default function Dashboard({ setActiveTab, currentUser, verifyAction, act
     return activeTenant.features[key] !== false;
   };
 
-  const showCustomBranding = activeTenant && activeTenant.features?.branding !== false;
-  const brandLogo = showCustomBranding ? activeTenant.logo_url : "/logo.png";
-  const brandName = showCustomBranding ? activeTenant.name : "BrainBridge";
+  const headerTitle = currentUser?.role === 'admin' 
+    ? (currentUser.staffId ? currentUser.designation || 'Owner admin' : 'Owner admin') 
+    : 'Home';
 
   return (
     <div>
       <div className="page-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <img 
-            src={brandLogo} 
-            alt="Tuition Logo" 
-            onError={(e) => { e.target.src = '/logo.png'; }}
-            style={{
+          {hasCustomLogo ? (
+            <img 
+              src={activeTenant.logo_url} 
+              alt="Tuition Logo" 
+              style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '12px',
+                objectFit: 'contain',
+                boxShadow: '0 4px 12px rgba(15, 23, 42, 0.05)'
+              }}
+            />
+          ) : (
+            <div style={{
               width: '48px',
               height: '48px',
               borderRadius: '12px',
-              objectFit: 'contain',
+              backgroundColor: '#000000',
+              border: '1px solid #bfdbfe',
               boxShadow: '0 4px 12px rgba(15, 23, 42, 0.05)'
-            }}
-          />
+            }} />
+          )}
           <div>
-            <h1 className="page-title">Home</h1>
-            <p className="page-subtitle">Welcome to {brandName} Tuition Admin Panel.</p>
+            <h1 className="page-title">{headerTitle}</h1>
+            <p className="page-subtitle">Welcome to Admin panel</p>
           </div>
         </div>
       </div>

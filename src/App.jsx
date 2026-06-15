@@ -541,25 +541,34 @@ function App() {
         {/* Mobile Header */}
         <header className="mobile-header">
         {(() => {
-          const showCustomBranding = activeTenant && activeTenant.features?.branding !== false;
-          const brandLogo = showCustomBranding ? activeTenant.logo_url : "/logo.png";
-          const brandName = showCustomBranding ? activeTenant.name : "BrainBridge";
+          const hasCustomLogo = activeTenant && activeTenant.logo_url && activeTenant.logo_url !== '' && activeTenant.logo_url !== '/logo.png';
+          const brandName = activeTenant ? activeTenant.name : "BrainBridge";
           return (
             <div className="brand-container-mobile" style={{ display: 'flex', alignItems: 'center' }}>
-              <img 
-                src={brandLogo} 
-                alt="Logo" 
-                onError={(e) => { e.target.src = '/logo.png'; }}
-                style={{
+              {hasCustomLogo ? (
+                <img 
+                  src={activeTenant.logo_url} 
+                  alt="Logo" 
+                  style={{
+                    width: '24px',
+                    height: '24px',
+                    borderRadius: '6px',
+                    objectFit: 'contain',
+                    marginRight: '0.4rem',
+                    border: '1px solid #cbd5e1',
+                    backgroundColor: '#fff'
+                  }}
+                />
+              ) : (
+                <div style={{
                   width: '24px',
                   height: '24px',
                   borderRadius: '6px',
-                  objectFit: 'contain',
-                  marginRight: '0.4rem',
+                  backgroundColor: '#000000',
                   border: '1px solid #cbd5e1',
-                  backgroundColor: '#fff'
-                }}
-              />
+                  marginRight: '0.4rem'
+                }} />
+              )}
               <span className="brand-name-mobile" style={{ fontSize: '1.2rem', fontWeight: '800' }}>
                 {brandName}
               </span>
