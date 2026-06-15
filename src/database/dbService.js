@@ -218,6 +218,9 @@ const runQuery = async (firebaseQueryFn, localStorageFallbackFn) => {
 };
 
 export const dbService = {
+  // --- HELPERS ---
+  sendWhatsAppMessage,
+
   // --- AUDIT LOGGING ---
   async logActivity(action) {
     const admin = getCurrentAdmin();
