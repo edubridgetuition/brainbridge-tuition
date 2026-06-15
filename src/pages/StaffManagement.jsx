@@ -7,6 +7,7 @@ export default function StaffManagement({ currentUser, verifyAction, activeTenan
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('Pending'); // 'Pending', 'Approved', 'Rejected', 'All'
   const [selectedStaffForApproval, setSelectedStaffForApproval] = useState(null);
+  const [selectedStaffForView, setSelectedStaffForView] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
@@ -235,6 +236,25 @@ export default function StaffManagement({ currentUser, verifyAction, activeTenan
                     </td>
                     <td data-label="Actions" style={{ textAlign: 'right' }}>
                       <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
+                        <button
+                          onClick={() => setSelectedStaffForView(staff)}
+                          className="btn btn-secondary"
+                          style={{
+                            padding: '0.35rem 0.65rem',
+                            fontSize: '0.74rem',
+                            fontWeight: '800',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.25rem',
+                            backgroundColor: '#f1f5f9',
+                            color: '#1e293b',
+                            border: '1px solid #cbd5e1'
+                          }}
+                          title="View Full Profile"
+                        >
+                          <Eye size={12} />
+                          <span>View Profile</span>
+                        </button>
                         {staff.status === 'Pending' && (
                           <>
                             <button
@@ -413,6 +433,193 @@ export default function StaffManagement({ currentUser, verifyAction, activeTenan
               >
                 Cancel
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* VIEW PROFILE MODAL */}
+      {selectedStaffForView && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.65)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 99999,
+          padding: '1rem'
+        }}>
+          <div className="card" style={{
+            width: '100%',
+            maxWidth: '520px',
+            padding: '2rem 1.75rem',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+            border: '1px solid #bfdbfe',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1.25rem',
+            backgroundColor: '#ffffff',
+            borderRadius: '16px',
+            maxHeight: '90vh',
+            overflowY: 'auto'
+          }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              borderBottom: '1px solid #e2e8f0',
+              paddingBottom: '0.75rem'
+            }}>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: '800', color: 'var(--primary)', margin: 0 }}>
+                Staff Profile Detail
+              </h3>
+              <button 
+                onClick={() => setSelectedStaffForView(null)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', fontSize: '0.88rem', color: '#1e293b' }}>
+              
+              {/* Header profile info */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', paddingBottom: '1rem', borderBottom: '1px dashed #e2e8f0' }}>
+                <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem', fontWeight: '800' }}>
+                  {selectedStaffForView.name.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '800', color: '#0f172a' }}>{selectedStaffForView.name}</h4>
+                  <span style={{
+                    fontSize: '0.75rem',
+                    fontWeight: '700',
+                    color: '#1e3a8a',
+                    backgroundColor: '#eff6ff',
+                    padding: '0.15rem 0.45rem',
+                    borderRadius: '4px',
+                    display: 'inline-block',
+                    marginTop: '0.2rem'
+                  }}>
+                    {selectedStaffForView.role || 'Teacher'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Grid of Profile Details */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '0.2rem' }}>Gender</label>
+                  <span style={{ fontWeight: '600' }}>{selectedStaffForView.gender || '-'}</span>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '0.2rem' }}>Date of Birth</label>
+                  <span style={{ fontWeight: '600' }}>
+                    {selectedStaffForView.dob ? (() => {
+                      const parts = selectedStaffForView.dob.split('-');
+                      if (parts.length === 3) {
+                        return `${parts[2]}-${parts[1]}-${parts[0]}`;
+                      }
+                      return selectedStaffForView.dob;
+                    })() : '-'}
+                  </span>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '0.2rem' }}>Education</label>
+                  <span style={{ fontWeight: '600' }}>{selectedStaffForView.education || '-'}</span>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '0.2rem' }}>Experience</label>
+                  <span style={{ fontWeight: '600' }}>{selectedStaffForView.experience || '-'}</span>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '0.2rem' }}>Mobile Number</label>
+                  <span style={{ fontWeight: '600' }}>{selectedStaffForView.mobile}</span>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '0.2rem' }}>Email Address</label>
+                  <span style={{ fontWeight: '600' }}>{selectedStaffForView.email || '-'}</span>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '0.2rem' }}>Subject Specialist</label>
+                  <span style={{ fontWeight: '600' }}>{selectedStaffForView.subject || '-'}</span>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '0.2rem' }}>Status</label>
+                  <span style={{
+                    fontSize: '0.74rem',
+                    fontWeight: '800',
+                    backgroundColor: selectedStaffForView.status === 'Pending' ? '#fef3c7' : selectedStaffForView.status === 'Approved' ? '#d1fae5' : '#fee2e2',
+                    color: selectedStaffForView.status === 'Pending' ? '#b45309' : selectedStaffForView.status === 'Approved' ? '#065f46' : '#991b1b',
+                    padding: '0.15rem 0.5rem',
+                    borderRadius: '50px',
+                    display: 'inline-block'
+                  }}>
+                    {selectedStaffForView.status === 'Approved' ? 'Active' : selectedStaffForView.status}
+                  </span>
+                </div>
+              </div>
+
+              <div style={{ borderTop: '1px dashed #e2e8f0', paddingTop: '1rem', marginTop: '0.5rem' }}>
+                <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '0.2rem' }}>Residential Address</label>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.35rem', fontWeight: '500' }}>
+                  <MapPin size={14} style={{ color: '#64748b', flexShrink: 0, marginTop: '0.15rem' }} />
+                  <span>{selectedStaffForView.address}</span>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '0.2rem' }}>Registration Date</label>
+                <span style={{ color: '#64748b', fontSize: '0.8rem' }}>{formatDate(selectedStaffForView.created_at)}</span>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem', borderTop: '1px solid #e2e8f0', paddingTop: '1.25rem' }}>
+              {selectedStaffForView.status === 'Pending' ? (
+                <>
+                  <button 
+                    onClick={() => {
+                      const staffToApprove = selectedStaffForView;
+                      setSelectedStaffForView(null);
+                      handleOpenApproveModal(staffToApprove);
+                    }}
+                    className="btn btn-primary" 
+                    style={{ flex: 1, padding: '0.65rem', fontSize: '0.85rem', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}
+                  >
+                    <Check size={14} /> Approve Request
+                  </button>
+                  <button 
+                    onClick={() => {
+                      const staffToReject = selectedStaffForView;
+                      setSelectedStaffForView(null);
+                      handleRejectStaff(staffToReject);
+                    }}
+                    className="btn btn-danger" 
+                    style={{
+                      padding: '0.65rem 1.25rem',
+                      fontSize: '0.85rem',
+                      fontWeight: '800',
+                      backgroundColor: '#fee2e2',
+                      color: '#dc2626',
+                      border: '1px solid #fca5a5'
+                    }}
+                  >
+                    Reject
+                  </button>
+                </>
+              ) : (
+                <button 
+                  onClick={() => setSelectedStaffForView(null)}
+                  className="btn btn-secondary" 
+                  style={{ flex: 1, padding: '0.65rem', fontSize: '0.85rem', fontWeight: '800' }}
+                >
+                  Close Profile
+                </button>
+              )}
             </div>
           </div>
         </div>

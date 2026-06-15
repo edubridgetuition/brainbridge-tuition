@@ -22,6 +22,10 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
   const [staffSubject, setStaffSubject] = useState('');
   const [staffRole, setStaffRole] = useState('Teacher');
   const [staffAddress, setStaffAddress] = useState('');
+  const [staffGender, setStaffGender] = useState('');
+  const [staffDob, setStaffDob] = useState('');
+  const [staffEducation, setStaffEducation] = useState('');
+  const [staffExperience, setStaffExperience] = useState('');
   const [staffPassword, setStaffPassword] = useState('');
   const [staffConfirmPassword, setStaffConfirmPassword] = useState('');
 
@@ -43,6 +47,10 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
     setStaffSubject('');
     setStaffRole('Teacher');
     setStaffAddress('');
+    setStaffGender('');
+    setStaffDob('');
+    setStaffEducation('');
+    setStaffExperience('');
     setStaffPassword('');
     setStaffConfirmPassword('');
     setStaffOtpCode('');
@@ -896,7 +904,7 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
               <form onSubmit={(e) => {
                 e.preventDefault();
                 setStaffRegError('');
-                if (!staffName.trim() || !staffMobile.trim() || !staffAddress.trim()) {
+                if (!staffName.trim() || !staffMobile.trim() || !staffAddress.trim() || !staffGender || !staffDob || !staffEducation.trim() || !staffExperience.trim()) {
                   setStaffRegError('Please fill in all required fields.');
                   return;
                 }
@@ -944,6 +952,33 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                    <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Gender *</label>
+                    <select
+                      className="form-control"
+                      value={staffGender}
+                      onChange={(e) => setStaffGender(e.target.value)}
+                      required
+                    >
+                      <option value="">Select Gender</option>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                    <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Date of Birth *</label>
+                    <input
+                      type="date"
+                      className="form-control"
+                      value={staffDob}
+                      onChange={(e) => setStaffDob(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                     <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Subject Specialist</label>
                     <input
                       type="text"
@@ -965,6 +1000,31 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
                       <option value="Admin Staff">Admin Staff</option>
                       <option value="Assistant">Assistant</option>
                     </select>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                    <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Education *</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="e.g. M.Sc, B.Ed"
+                      value={staffEducation}
+                      onChange={(e) => setStaffEducation(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                    <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Experience *</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="e.g. 5 Years"
+                      value={staffExperience}
+                      onChange={(e) => setStaffExperience(e.target.value)}
+                      required
+                    />
                   </div>
                 </div>
 
@@ -1018,7 +1078,11 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
                     subject: staffSubject.trim(),
                     role: staffRole,
                     address: staffAddress.trim(),
-                    password: staffPassword.trim()
+                    password: staffPassword.trim(),
+                    gender: staffGender,
+                    dob: staffDob,
+                    education: staffEducation.trim(),
+                    experience: staffExperience.trim()
                   });
 
                   if (activeTenant) {
