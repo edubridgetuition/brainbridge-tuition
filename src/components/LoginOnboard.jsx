@@ -14,7 +14,8 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
 
   // Staff Registration States
   const [showStaffRegister, setShowStaffRegister] = useState(false);
-  const [staffStep, setStaffStep] = useState('profile'); // 'profile', 'otp', 'password', 'success'
+  const [staffStep, setStaffStep] = useState('code'); // 'code', 'profile', 'password', 'success'
+  const [staffCentreCode, setStaffCentreCode] = useState('');
   const [staffName, setStaffName] = useState('');
   const [staffMobile, setStaffMobile] = useState('');
   const [staffEmail, setStaffEmail] = useState('');
@@ -34,6 +35,8 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
   const [loadingStaffReg, setLoadingStaffReg] = useState(false);
 
   const clearStaffForm = () => {
+    setStaffStep('code');
+    setStaffCentreCode('');
     setStaffName('');
     setStaffMobile('');
     setStaffEmail('');
@@ -670,7 +673,7 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
 
               <button 
                 type="button" 
-                onClick={() => { setShowStaffRegister(true); setStaffStep('profile'); clearStaffForm(); }}
+                onClick={() => { clearStaffForm(); setShowStaffRegister(true); }}
                 className="btn btn-secondary" 
                 style={{ 
                   padding: '0.65rem', 
@@ -804,14 +807,14 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
                 </button>
               )}
             </div>
-
             {/* Stepper Header */}
             {staffStep !== 'success' && (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '0.25rem 0 0.75rem 0', padding: '0.25rem' }}>
-                {['profile', 'otp', 'password'].map((s, idx) => {
-                  const stepLabels = ['Profile', 'OTP Verify', 'Password'];
+                {['code', 'profile', 'password'].map((s, idx) => {
+                  const stepLabels = ['Tuition Code', 'Profile', 'Password'];
                   const isActive = staffStep === s;
-                  const isDone = (s === 'profile' && (staffStep === 'otp' || staffStep === 'password')) || (s === 'otp' && staffStep === 'password');
+                  const isDone = (s === 'code' && (staffStep === 'profile' || staffStep === 'password')) || 
+                                 (s === 'profile' && staffStep === 'password');
                   return (
                     <div key={s} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                       <div style={{
@@ -844,7 +847,51 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
               </div>
             )}
 
-            {/* Step 1: Profile Details */}
+            {/* Step 1: Enter Tuition Code */}
+            {staffStep === 'code' && (
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                setStaffRegError('');
+                const cleanCode = staffCentreCode.trim().toLowerCase();
+                if (!cleanCode) {
+                  setStaffRegError('Please enter the Tuition Code.');
+                  return;
+                }
+                try {
+                  setLoadingStaffReg(true);
+                  const tenant = await dbService.verifyTenantCode(cleanCode);
+                  if (!tenant) {
+                    setStaffRegError('Invalid Tuition Code. Please contact your tuition owner.');
+                    return;
+                  }
+                  // Set active tenant in system
+                  await onTenantCodeSubmit(cleanCode);
+                  // Advance to profile step
+                  setStaffStep('profile');
+                } catch (err) {
+                  setStaffRegError('Failed to verify Tuition Code: ' + err.message);
+                } finally {
+                  setLoadingStaffReg(false);
+                }
+              }} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Tuition / Centre Code *</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Enter Tuition Code (e.g. owner_a)"
+                    value={staffCentreCode}
+                    onChange={(e) => setStaffCentreCode(e.target.value)}
+                    required
+                  />
+                </div>
+                <button type="submit" className="btn btn-primary" style={{ padding: '0.65rem', fontWeight: '800', marginTop: '0.5rem' }} disabled={loadingStaffReg}>
+                  {loadingStaffReg ? 'Verifying...' : 'Continue'}
+                </button>
+              </form>
+            )}
+
+            {/* Step 2: Profile Details */}
             {staffStep === 'profile' && (
               <form onSubmit={(e) => {
                 e.preventDefault();
@@ -857,15 +904,7 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
                   setStaffRegError('Please enter a valid 10-digit mobile number.');
                   return;
                 }
-                const otp = Math.floor(1000 + Math.random() * 9000).toString();
-                setStaffOtpCode(otp);
-                const msg = `BrainBridge Staff Verification: Your OTP code is ${otp}. Please enter this code to verify your mobile number.`;
-                try {
-                  dbService.sendWhatsAppMessage(staffMobile, msg);
-                } catch (e) {
-                  console.error("WhatsApp trigger blocked or failed:", e);
-                }
-                setStaffStep('otp');
+                setStaffStep('password');
               }} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
@@ -942,82 +981,15 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
                   />
                 </div>
 
-                <button type="submit" className="btn btn-primary" style={{ padding: '0.65rem', fontWeight: '800', marginTop: '0.5rem' }}>
-                  Next: Verify Mobile
-                </button>
+                <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+                  <button type="submit" className="btn btn-primary" style={{ flex: 1, padding: '0.65rem', fontWeight: '800' }}>
+                    Next: Create Password
+                  </button>
+                  <button type="button" onClick={() => setStaffStep('code')} className="btn btn-secondary" style={{ padding: '0.65rem 1rem', fontWeight: '800' }}>
+                    Back
+                  </button>
+                </div>
               </form>
-            )}
-
-            {/* Step 2: WhatsApp OTP Verification */}
-            {staffStep === 'otp' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                <div style={{ textAlign: 'center', fontSize: '0.82rem', color: '#475569', lineHeight: '1.4' }}>
-                  We sent an OTP code via WhatsApp to <strong style={{ color: 'var(--primary)' }}>{staffMobile}</strong>.
-                  <br />Please enter it below to verify your number.
-                </div>
-                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                  <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569', textAlign: 'center' }}>Enter 4-Digit Verification Code</label>
-                  <input
-                    type="text"
-                    maxLength={4}
-                    className="form-control"
-                    placeholder="e.g. 1234"
-                    value={staffOtpInput}
-                    onChange={(e) => {
-                      setStaffOtpError('');
-                      setStaffOtpInput(e.target.value.replace(/\D/g, '').substring(0, 4));
-                    }}
-                    style={{ textAlign: 'center', fontSize: '1.2rem', fontWeight: '800', letterSpacing: '0.2em', width: '150px', alignSelf: 'center' }}
-                  />
-                  {staffOtpError && <span style={{ color: '#ef4444', fontSize: '0.74rem', fontWeight: '700', textAlign: 'center' }}>❌ {staffOtpError}</span>}
-                </div>
-
-                <div style={{ display: 'flex', gap: '0.75rem' }}>
-                  <button 
-                    type="button"
-                    onClick={() => {
-                      if (!staffOtpInput.trim() || !staffOtpCode) {
-                        setStaffOtpError('Please enter the verification code.');
-                        return;
-                      }
-                      if (staffOtpInput === staffOtpCode) {
-                        setIsStaffMobileVerified(true);
-                        setStaffStep('password');
-                      } else {
-                        setStaffOtpError('Incorrect code. Please check your verification code.');
-                      }
-                    }}
-                    className="btn btn-primary"
-                    style={{ flex: 1, padding: '0.65rem', fontWeight: '800' }}
-                  >
-                    Verify Code
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const otp = Math.floor(1000 + Math.random() * 9000).toString();
-                      setStaffOtpCode(otp);
-                      const msg = `BrainBridge Staff Verification: Your OTP code is ${otp}. Please enter this code to verify your mobile number.`;
-                      try {
-                        dbService.sendWhatsAppMessage(staffMobile, msg);
-                      } catch (e) {
-                        console.error("WhatsApp trigger blocked or failed:", e);
-                      }
-                    }}
-                    className="btn btn-secondary"
-                    style={{ padding: '0.65rem 1rem', fontWeight: '800' }}
-                  >
-                    Resend Code
-                  </button>
-                </div>
-
-                <button 
-                  onClick={() => setStaffStep('profile')}
-                  style={{ background: 'none', border: 'none', color: '#64748b', fontSize: '0.78rem', cursor: 'pointer', textDecoration: 'underline', alignSelf: 'center' }}
-                >
-                  Go Back to Profile
-                </button>
-              </div>
             )}
 
             {/* Step 3: Create Password */}
@@ -1105,7 +1077,7 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
                   </button>
                   <button 
                     type="button" 
-                    onClick={() => setStaffStep('otp')}
+                    onClick={() => setStaffStep('profile')}
                     className="btn btn-secondary" 
                     style={{ padding: '0.65rem 1rem', fontWeight: '800' }}
                   >
