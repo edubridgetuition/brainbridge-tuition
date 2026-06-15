@@ -209,6 +209,19 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
                 backgroundColor: '#ffffff'
               }}
             />
+          ) : (activeTenant && activeTenant.use_black_logo_fallback === false) ? (
+            <img 
+              src="/logo.png" 
+              alt="Logo" 
+              style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '8px',
+                objectFit: 'contain',
+                border: '1px solid #bfdbfe',
+                backgroundColor: '#ffffff'
+              }}
+            />
           ) : (
             <div style={{
               width: '32px',

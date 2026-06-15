@@ -33,6 +33,11 @@ export default function SuperAdmin({ onLogout, onInspectTenant }) {
   const [selectedTenantForRights, setSelectedTenantForRights] = useState(null);
   const [tempFeatures, setTempFeatures] = useState({});
   const [savingFeatures, setSavingFeatures] = useState(false);
+  const [customOwnerTitle, setCustomOwnerTitle] = useState('');
+  const [customOwnerSubtitle, setCustomOwnerSubtitle] = useState('');
+  const [customTeacherSubtitle, setCustomTeacherSubtitle] = useState('');
+  const [useBlackLogoFallback, setUseBlackLogoFallback] = useState(true);
+  const [superAdminNotes, setSuperAdminNotes] = useState('');
 
   // Form Fields
   const [code, setCode] = useState('');
@@ -149,6 +154,11 @@ export default function SuperAdmin({ onLogout, onInspectTenant }) {
   const handleManageRightsClick = (t) => {
     setSelectedTenantForRights(t);
     setTempFeatures(t.features || {});
+    setCustomOwnerTitle(t.custom_owner_title || '');
+    setCustomOwnerSubtitle(t.custom_owner_subtitle || '');
+    setCustomTeacherSubtitle(t.custom_teacher_subtitle || '');
+    setUseBlackLogoFallback(t.use_black_logo_fallback !== false);
+    setSuperAdminNotes(t.super_admin_notes || '');
   };
 
   const handleFeatureToggle = (key, checked) => {
@@ -162,17 +172,25 @@ export default function SuperAdmin({ onLogout, onInspectTenant }) {
     if (!selectedTenantForRights) return;
     try {
       setSavingFeatures(true);
-      await dbService.updateTenantFeatures(selectedTenantForRights.id, tempFeatures);
+      const updatedData = {
+        features: tempFeatures,
+        custom_owner_title: customOwnerTitle.trim(),
+        custom_owner_subtitle: customOwnerSubtitle.trim(),
+        custom_teacher_subtitle: customTeacherSubtitle.trim(),
+        use_black_logo_fallback: useBlackLogoFallback,
+        super_admin_notes: superAdminNotes.trim()
+      };
+      await dbService.updateTenant(selectedTenantForRights.id, updatedData);
       
       // Update local state
       setTenants(prev => prev.map(t => 
         t.id === selectedTenantForRights.id 
-          ? { ...t, features: tempFeatures } 
+          ? { ...t, ...updatedData } 
           : t
       ));
       
       setSelectedTenantForRights(null);
-      alert('Rights updated successfully!');
+      alert('Rights & branding updated successfully!');
       
       // Refresh statistics
       const updatedStats = await dbService.getSuperAdminStats();
@@ -912,6 +930,113 @@ export default function SuperAdmin({ onLogout, onInspectTenant }) {
                       {item.label}
                     </label>
                   ))}
+                </div>
+              </div>
+
+              {/* Branding Customizations & Notes Section */}
+              <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '1.25rem' }}>
+                <h4 style={{ fontSize: '0.85rem', fontWeight: '800', color: '#475569', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  ✨ Branding Customizations & Admin Notes
+                </h4>
+                <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '-0.3rem', marginBottom: '0.75rem' }}>
+                  Customize page headers, subtitles, logo fallbacks, and record internal notes.
+                </p>
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '1rem',
+                  background: '#f8fafc',
+                  padding: '1.25rem',
+                  borderRadius: '12px',
+                  border: '1px solid #e2e8f0'
+                }}>
+                  {/* Black Logo Fallback Toggle */}
+                  <label style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.6rem',
+                    fontSize: '0.88rem',
+                    fontWeight: '600',
+                    color: '#334155',
+                    cursor: 'pointer'
+                  }}>
+                    <input
+                      type="checkbox"
+                      checked={useBlackLogoFallback}
+                      onChange={(e) => setUseBlackLogoFallback(e.target.checked)}
+                      style={{
+                        width: '18px',
+                        height: '18px',
+                        cursor: 'pointer',
+                        accentColor: '#1655e0'
+                      }}
+                    />
+                    <span>Use Black Square Logo Fallback</span>
+                  </label>
+                  <span style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '-0.6rem', marginLeft: '1.7rem', display: 'block' }}>
+                    💡 If checked, a blank black space is displayed when no custom logo is uploaded.
+                  </span>
+
+                  {/* Custom Owner Title */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                    <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Custom Owner Dashboard Title</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="Default: Owner admin"
+                      value={customOwnerTitle}
+                      onChange={(e) => setCustomOwnerTitle(e.target.value)}
+                    />
+                    <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                      📝 Note: Text shown as the main page title when the center Owner logs in.
+                    </span>
+                  </div>
+
+                  {/* Custom Owner Subtitle */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                    <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Custom Owner Dashboard Subtitle</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="Default: Welcome to Admin panel"
+                      value={customOwnerSubtitle}
+                      onChange={(e) => setCustomOwnerSubtitle(e.target.value)}
+                    />
+                    <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                      📝 Note: Subtitle shown below the owner dashboard header title.
+                    </span>
+                  </div>
+
+                  {/* Custom Teacher Subtitle */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                    <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Custom Teacher Dashboard Subtitle</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="Default: Welcome to tuition management system"
+                      value={customTeacherSubtitle}
+                      onChange={(e) => setCustomTeacherSubtitle(e.target.value)}
+                    />
+                    <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                      📝 Note: Subtitle shown when logged in as a teacher / staff member.
+                    </span>
+                  </div>
+
+                  {/* Super Admin Notes */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                    <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Super Admin Config Notes & Remarks</label>
+                    <textarea
+                      className="form-control"
+                      rows="3"
+                      placeholder="Add configuration notes, owner preferences, or instructions about this center..."
+                      value={superAdminNotes}
+                      onChange={(e) => setSuperAdminNotes(e.target.value)}
+                      style={{ resize: 'none', fontFamily: 'inherit' }}
+                    />
+                    <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                      📌 Internal Notes: Only visible to Super Admin in this panel.
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>

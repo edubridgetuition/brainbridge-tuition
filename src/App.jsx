@@ -559,6 +559,20 @@ function App() {
                     backgroundColor: '#fff'
                   }}
                 />
+              ) : (activeTenant && activeTenant.use_black_logo_fallback === false) ? (
+                <img 
+                  src="/logo.png" 
+                  alt="Logo" 
+                  style={{
+                    width: '24px',
+                    height: '24px',
+                    borderRadius: '6px',
+                    objectFit: 'contain',
+                    marginRight: '0.4rem',
+                    border: '1px solid #cbd5e1',
+                    backgroundColor: '#fff'
+                  }}
+                />
               ) : (
                 <div style={{
                   width: '24px',

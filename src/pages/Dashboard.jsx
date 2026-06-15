@@ -257,6 +257,18 @@ export default function Dashboard({ setActiveTab, currentUser, verifyAction, act
                   boxShadow: '0 4px 12px rgba(15, 23, 42, 0.05)'
                 }}
               />
+            ) : (activeTenant && activeTenant.use_black_logo_fallback === false) ? (
+              <img 
+                src="/logo.png" 
+                alt="Tuition Logo" 
+                style={{
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '12px',
+                  objectFit: 'contain',
+                  boxShadow: '0 4px 12px rgba(15, 23, 42, 0.05)'
+                }}
+              />
             ) : (
               <div style={{
                 width: '48px',
@@ -569,7 +581,7 @@ export default function Dashboard({ setActiveTab, currentUser, verifyAction, act
   };
 
   const headerTitle = currentUser?.role === 'admin' 
-    ? (currentUser.staffId ? currentUser.designation || 'Owner admin' : 'Owner admin') 
+    ? (currentUser.staffId ? currentUser.designation || (activeTenant?.custom_owner_title || 'Owner admin') : (activeTenant?.custom_owner_title || 'Owner admin')) 
     : 'Home';
 
   return (
@@ -579,6 +591,18 @@ export default function Dashboard({ setActiveTab, currentUser, verifyAction, act
           {hasCustomLogo ? (
             <img 
               src={activeTenant.logo_url} 
+              alt="Tuition Logo" 
+              style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '12px',
+                objectFit: 'contain',
+                boxShadow: '0 4px 12px rgba(15, 23, 42, 0.05)'
+              }}
+            />
+          ) : (activeTenant && activeTenant.use_black_logo_fallback === false) ? (
+            <img 
+              src="/logo.png" 
               alt="Tuition Logo" 
               style={{
                 width: '48px',
@@ -601,7 +625,9 @@ export default function Dashboard({ setActiveTab, currentUser, verifyAction, act
           <div>
             <h1 className="page-title">{headerTitle}</h1>
             <p className="page-subtitle">
-              {currentUser?.staffId ? 'Welcome to tuition management system' : 'Welcome to Admin panel'}
+              {currentUser?.staffId 
+                ? (activeTenant?.custom_teacher_subtitle || 'Welcome to tuition management system') 
+                : (activeTenant?.custom_owner_subtitle || 'Welcome to Admin panel')}
             </p>
           </div>
         </div>
