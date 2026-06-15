@@ -810,7 +810,19 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
               {staffStep !== 'success' && (
                 <button 
                   onClick={() => setShowStaffRegister(false)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
+                  style={{ 
+                    background: 'none', 
+                    border: 'none', 
+                    cursor: 'pointer', 
+                    color: '#64748b',
+                    width: '36px',
+                    height: '36px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: '50%',
+                    backgroundColor: 'transparent'
+                  }}
                 >
                   <X size={18} />
                 </button>
@@ -905,7 +917,7 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
               <form onSubmit={(e) => {
                 e.preventDefault();
                 setStaffRegError('');
-                if (!staffName.trim() || !staffMobile.trim() || !staffAddress.trim() || !staffGender || !staffDob || !staffEducation.trim() || !staffExperience.trim()) {
+                if (!staffName.trim() || !staffMobile.trim() || !staffAddress.trim() || !staffGender || !staffDob || !staffEducation.trim() || !staffExperience.trim() || !staffEmail.trim() || !staffSubject.trim()) {
                   setStaffRegError('Please fill in all required fields.');
                   return;
                 }
@@ -941,13 +953,14 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                  <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Email Address</label>
+                  <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Email Address *</label>
                   <input
                     type="email"
                     className="form-control"
                     placeholder="Enter email address"
                     value={staffEmail}
                     onChange={(e) => setStaffEmail(e.target.value)}
+                    required
                   />
                 </div>
 
@@ -980,13 +993,14 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                    <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Subject Specialist</label>
+                    <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Subject Specialist *</label>
                     <input
                       type="text"
                       className="form-control"
                       placeholder="e.g. Physics"
                       value={staffSubject}
                       onChange={(e) => setStaffSubject(e.target.value)}
+                      required
                     />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>

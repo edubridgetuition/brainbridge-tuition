@@ -280,9 +280,9 @@ export default function StaffManagement({ currentUser, verifyAction, activeTenan
                                 padding: '0.35rem 0.65rem',
                                 fontSize: '0.74rem',
                                 fontWeight: '800',
-                                backgroundColor: '#fee2e2',
-                                color: '#dc2626',
-                                border: '1px solid #fca5a5',
+                                backgroundColor: '#dc2626',
+                                color: '#ffffff',
+                                border: '1px solid #dc2626',
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '0.25rem'
@@ -362,7 +362,19 @@ export default function StaffManagement({ currentUser, verifyAction, activeTenan
               </h3>
               <button 
                 onClick={() => setSelectedStaffForApproval(null)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
+                style={{ 
+                  background: 'none', 
+                  border: 'none', 
+                  cursor: 'pointer', 
+                  color: '#64748b',
+                  width: '36px',
+                  height: '36px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: '50%',
+                  backgroundColor: 'transparent'
+                }}
               >
                 <X size={18} />
               </button>
@@ -480,7 +492,19 @@ export default function StaffManagement({ currentUser, verifyAction, activeTenan
               </h3>
               <button 
                 onClick={() => setSelectedStaffForView(null)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
+                style={{ 
+                  background: 'none', 
+                  border: 'none', 
+                  cursor: 'pointer', 
+                  color: '#64748b',
+                  width: '36px',
+                  height: '36px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: '50%',
+                  backgroundColor: 'transparent'
+                }}
               >
                 <X size={18} />
               </button>
@@ -603,9 +627,9 @@ export default function StaffManagement({ currentUser, verifyAction, activeTenan
                       padding: '0.65rem 1.25rem',
                       fontSize: '0.85rem',
                       fontWeight: '800',
-                      backgroundColor: '#fee2e2',
-                      color: '#dc2626',
-                      border: '1px solid #fca5a5'
+                      backgroundColor: '#dc2626',
+                      color: '#ffffff',
+                      border: '1px solid #dc2626'
                     }}
                   >
                     Reject
