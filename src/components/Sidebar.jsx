@@ -277,7 +277,9 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
               </div>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <span style={{ fontSize: '0.72rem', fontWeight: '800', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  {currentUser?.role === 'admin' ? 'Admin Mode' : `Student ID: ${currentUser?.numericId}`}
+                  {currentUser?.role === 'admin' 
+                    ? (currentUser.staffId ? `${currentUser.designation || 'Staff'} Mode` : 'Owner Admin') 
+                    : `Student ID: ${currentUser?.numericId}`}
                 </span>
                 <span style={{ fontSize: '0.92rem', fontWeight: '800', color: '#1e3a8a', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={currentUser?.username}>
                   {currentUser?.username}

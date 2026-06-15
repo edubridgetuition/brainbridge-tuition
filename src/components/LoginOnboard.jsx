@@ -184,6 +184,7 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
             studentId: null,
             batchId: null,
             staffId: staff.id,
+            designation: staff.role || 'Teacher',
             must_change_password: staff.must_change_password
           });
           return;
