@@ -503,45 +503,36 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
           zIndex: 1
         }}>
           {/* Custom Brand Logo */}
-          {(() => {
-            const showCustomBranding = activeTenant && activeTenant.features?.branding !== false;
-            const brandLogo = showCustomBranding ? activeTenant.logo_url : "/logo.png";
-            const brandName = showCustomBranding ? activeTenant.name : "BrainBridge";
-            return (
-              <>
-                <img 
-                  src={brandLogo} 
-                  alt="Tuition Logo" 
-                  onError={(e) => { e.target.src = '/logo.png'; }}
-                  onDoubleClick={() => setShowSuperAdminLogin(true)}
-                  style={{
-                    width: '64px',
-                    height: '64px',
-                    borderRadius: '16px',
-                    objectFit: 'contain',
-                    marginBottom: '1rem',
-                    boxShadow: '0 4px 12px rgba(15, 23, 42, 0.08)',
-                    backgroundColor: '#fff',
-                    cursor: 'pointer'
-                  }}
-                  title="Double click to access Super Admin"
-                />
+          <img 
+            src="/logo.png" 
+            alt="Tuition Logo" 
+            onError={(e) => { e.target.src = '/logo.png'; }}
+            onDoubleClick={() => setShowSuperAdminLogin(true)}
+            style={{
+              width: '64px',
+              height: '64px',
+              borderRadius: '16px',
+              objectFit: 'contain',
+              marginBottom: '1rem',
+              boxShadow: '0 4px 12px rgba(15, 23, 42, 0.08)',
+              backgroundColor: '#fff',
+              cursor: 'pointer'
+            }}
+            title="Double click to access Super Admin"
+          />
 
-                <h2 style={{
-                  fontFamily: 'var(--font-heading)',
-                  fontSize: '1.5rem',
-                  fontWeight: '800',
-                  background: 'linear-gradient(135deg, #1e3a8a 30%, #3b82f6 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  marginBottom: '0.25rem',
-                  textAlign: 'center'
-                }}>
-                  {brandName}
-                </h2>
-              </>
-            );
-          })()}
+          <h2 style={{
+            fontFamily: 'var(--font-heading)',
+            fontSize: '1.5rem',
+            fontWeight: '800',
+            background: 'linear-gradient(135deg, #1e3a8a 30%, #3b82f6 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            marginBottom: '0.25rem',
+            textAlign: 'center'
+          }}>
+            BrainBridge
+          </h2>
           <p style={{
             fontSize: '0.82rem',
             color: 'var(--text-secondary)',
