@@ -14,11 +14,12 @@ import {
   LogOut,
   Trash2,
   FileText,
-  UserCheck
+  UserCheck,
+  Shield
 } from 'lucide-react';
 import { dbService } from '../database/dbService';
 
-export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout, activeTenant }) {
+export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout, activeTenant, setActiveTenant, allTenants = [] }) {
   const [dbMode, setDbModeState] = useState(dbService.getDbMode());
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -126,6 +127,14 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
 
   // --- DESKTOP VIEW GROUPS ---
   const desktopGroups = [
+    ...(currentUser?.role === 'superadmin' ? [
+      {
+        title: 'Administration',
+        items: [
+          { id: 'manage_centers', label: 'Manage Tuition Centre', icon: Shield }
+        ]
+      }
+    ] : []),
     {
       title: 'Core',
       items: [
@@ -169,8 +178,9 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
   ).filter(item => (item.id === 'dashboard' || isFeatureEnabled(item.id)) && shouldShowItem(item));
 
   // --- MOBILE MORE DRAWER ITEMS ---
-  const mobileMoreItems = (currentUser?.role === 'admin'
+  const mobileMoreItems = (currentUser?.role === 'admin' || currentUser?.role === 'superadmin'
     ? [
+        ...(currentUser?.role === 'superadmin' ? [{ id: 'manage_centers', label: 'Manage Tuition Centre', icon: Shield }] : []),
         { id: 'timetable', label: 'Timetable', icon: Calendar },
         { id: 'inquiries', label: 'Inquiries', icon: FileText },
         { id: 'staff', label: 'Staff Management', icon: UserCheck, role: 'owner' },
@@ -233,6 +243,44 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
           )}
           <span className="brand-name">{brandName}</span>
         </div>
+
+        {/* Superadmin Tenant Selector dropdown in Desktop view */}
+        {currentUser?.role === 'superadmin' && (
+          <div className="tenant-selector-container" style={{ padding: '0 0.5rem 1.25rem 0.5rem', borderBottom: '1px solid #bfdbfe', marginBottom: '1.25rem' }}>
+            <label style={{ fontSize: '0.68rem', fontWeight: '800', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '0.4rem' }}>
+              Select Tuition Center
+            </label>
+            <select 
+              value={activeTenant?.id || ''} 
+              onChange={(e) => {
+                const tenantId = e.target.value;
+                const found = allTenants.find(t => t.id === tenantId);
+                if (found) {
+                  dbService.setTenantCode(found.id);
+                  setActiveTenant(found);
+                }
+              }}
+              style={{
+                width: '100%',
+                padding: '0.55rem 0.75rem',
+                borderRadius: '8px',
+                border: '1px solid #cbd5e1',
+                backgroundColor: '#ffffff',
+                color: '#0f172a',
+                fontSize: '0.82rem',
+                fontWeight: '700',
+                cursor: 'pointer',
+                outline: 'none',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                transition: 'border-color 0.2s'
+              }}
+            >
+              {allTenants.map(t => (
+                <option key={t.id} value={t.id}>{t.name} ({t.id})</option>
+              ))}
+            </select>
+          </div>
+        )}
         
         {/* Scrollable Group List */}
         <div className="sidebar-scrollable-links" style={{ flexGrow: 1, overflowY: 'auto', marginBottom: '1rem', paddingRight: '0.25rem' }}>
@@ -458,6 +506,38 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
                 <X size={20} />
               </button>
             </div>
+
+            {/* Superadmin Tenant Selector dropdown in Mobile view */}
+            {currentUser?.role === 'superadmin' && (
+              <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #e2e8f0', marginBottom: '0.75rem' }}>
+                <label style={{ fontSize: '0.72rem', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '0.35rem' }}>
+                  Select Tuition Center
+                </label>
+                <select 
+                  value={activeTenant?.id || ''} 
+                  onChange={(e) => {
+                    const tenantId = e.target.value;
+                    const found = allTenants.find(t => t.id === tenantId);
+                    if (found) {
+                      dbService.setTenantCode(found.id);
+                      setActiveTenant(found);
+                    }
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '0.45rem 0.6rem',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '0.8rem',
+                    fontWeight: '700'
+                  }}
+                >
+                  {allTenants.map(t => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {/* Grid options */}
             <div className="mobile-drawer-grid">

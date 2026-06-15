@@ -215,7 +215,7 @@ export default function SuperAdmin({ onLogout, onInspectTenant }) {
   };
 
   return (
-    <div style={{ padding: '2rem', maxWidth: '1100px', margin: '0 auto', height: '100vh', overflowY: 'auto' }}>
+    <div className="fade-in" style={{ maxWidth: '1100px', margin: '0 auto' }}>
       <style>{`
         @keyframes spin {
           from { transform: rotate(0deg); }
@@ -227,37 +227,11 @@ export default function SuperAdmin({ onLogout, onInspectTenant }) {
       `}</style>
 
       {/* Header */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
-        padding: '1.5rem 2rem',
-        borderRadius: '16px',
-        color: '#fff',
-        boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
-        marginBottom: '2.5rem'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <Shield size={28} style={{ color: '#3b82f6' }} />
-          <div>
-            <h1 style={{ fontSize: '1.5rem', fontWeight: '800', margin: 0 }}>Super Admin Console</h1>
-            <p style={{ fontSize: '0.8rem', color: '#94a3b8', margin: '0.2rem 0 0 0' }}>Manage registered tuition centers, codes, and portals.</p>
-          </div>
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Manage Tuition Centres</h1>
+          <p className="page-subtitle">Register new tuition centers, manage center features, rights, and view system statistics.</p>
         </div>
-        <button onClick={onLogout} className="btn" style={{
-          backgroundColor: '#ef4444',
-          borderColor: '#ef4444',
-          color: '#fff',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.4rem',
-          padding: '0.5rem 1.25rem',
-          fontWeight: '700',
-          fontSize: '0.88rem'
-        }}>
-          <LogOut size={16} /> Logout Super Admin
-        </button>
       </div>
 
       {/* View Tabs Selector */}

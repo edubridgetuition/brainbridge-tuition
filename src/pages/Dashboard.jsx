@@ -580,7 +580,7 @@ export default function Dashboard({ setActiveTab, currentUser, verifyAction, act
     return activeTenant.features[key] !== false;
   };
 
-  const headerTitle = currentUser?.role === 'admin' 
+  const headerTitle = (currentUser?.role === 'admin' || currentUser?.role === 'superadmin')
     ? (currentUser.staffId ? currentUser.designation || (activeTenant?.custom_owner_title || 'Owner admin') : (activeTenant?.custom_owner_title || 'Owner admin')) 
     : 'Home';
 

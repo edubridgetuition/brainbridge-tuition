@@ -27,6 +27,7 @@ function App() {
   const [activeTenant, setActiveTenant] = useState(null);
   const [loadingTenant, setLoadingTenant] = useState(true);
   const [showSplash, setShowSplash] = useState(true);
+  const [allTenants, setAllTenants] = useState([]);
 
   // OTP Modal states
   const [otpModalOpen, setOtpModalOpen] = useState(false);
@@ -145,11 +146,34 @@ function App() {
   useEffect(() => {
     if (activeTenant && activeTenant.features) {
       const features = activeTenant.features;
-      if (activeTab !== 'dashboard' && features[activeTab] === false) {
+      if (activeTab !== 'dashboard' && activeTab !== 'manage_centers' && features[activeTab] === false) {
         setActiveTab('dashboard');
       }
     }
   }, [activeTenant, activeTab]);
+
+  useEffect(() => {
+    if (currentUser && currentUser.role === 'superadmin') {
+      async function loadAllTenants() {
+        try {
+          const list = await dbService.getTenants();
+          setAllTenants(list);
+          const currentCode = dbService.getTenantCode();
+          let defaultTenant = list.find(t => t.id === currentCode);
+          if (!defaultTenant && list.length > 0) {
+            defaultTenant = list[0];
+          }
+          if (defaultTenant) {
+            dbService.setTenantCode(defaultTenant.id);
+            setActiveTenant(defaultTenant);
+          }
+        } catch (err) {
+          console.error("Failed to load all tenants for superadmin:", err);
+        }
+      }
+      loadAllTenants();
+    }
+  }, [currentUser]);
 
   const handleDismissNotification = async (notificationId) => {
     try {
@@ -171,7 +195,9 @@ function App() {
       handleExitInspection();
       return;
     }
-    const portalName = currentUser?.role === 'admin' ? 'Admin Portal' : 'Parent Portal';
+    const portalName = currentUser?.role === 'superadmin' 
+      ? 'Super Admin Portal' 
+      : (currentUser?.role === 'admin' ? 'Admin Portal' : 'Parent Portal');
     if (window.confirm(`Are you sure you want to log out from the ${portalName}?`)) {
       sessionStorage.removeItem('bb_current_user');
       setCurrentUser(null);
@@ -196,6 +222,10 @@ function App() {
   };
 
   const verifyAction = (onConfirm) => {
+    if (currentUser?.role === 'superadmin') {
+      onConfirm();
+      return;
+    }
     const isInspection = sessionStorage.getItem('bb_inspection_mode') === 'true';
     if (!isInspection) {
       onConfirm();
@@ -329,32 +359,7 @@ function App() {
     );
   }
 
-  if (currentUser.role === 'superadmin' && !currentUser.isInspecting) {
-    return (
-      <SuperAdmin 
-        onLogout={() => {
-          if (window.confirm("Log out from Super Admin Console?")) {
-            sessionStorage.removeItem('bb_current_user');
-            setCurrentUser(null);
-          }
-        }} 
-        onInspectTenant={(tenant) => {
-          sessionStorage.setItem('bb_inspection_mode', 'true');
-          dbService.setTenantCode(tenant.id);
-          setActiveTenant(tenant);
-          const inspectUser = {
-            username: `Super Admin (${tenant.name})`,
-            role: 'admin',
-            isInspecting: true,
-            inspectTenant: tenant
-          };
-          sessionStorage.setItem('bb_current_user', JSON.stringify(inspectUser));
-          setCurrentUser(inspectUser);
-          setActiveTab('dashboard');
-        }}
-      />
-    );
-  }
+  // Standalone SuperAdmin page removed to integrate inside main app layout
 
   if (currentUser.role === 'admin' && currentUser.staffId && currentUser.must_change_password) {
     return (
@@ -372,32 +377,46 @@ function App() {
 
   const renderContent = () => {
     const features = activeTenant?.features || {};
-    const isTabEnabled = activeTab === 'dashboard' || features[activeTab] !== false;
+    const isTabEnabled = activeTab === 'dashboard' || activeTab === 'manage_centers' || features[activeTab] !== false;
     const tabToRender = isTabEnabled ? activeTab : 'dashboard';
+
+    const tenantKey = activeTenant?.id || 'default';
 
     switch (tabToRender) {
       case 'dashboard':
-        return <Dashboard setActiveTab={setActiveTab} currentUser={currentUser} activeTenant={activeTenant} />;
+        return <Dashboard key={tenantKey} setActiveTab={setActiveTab} currentUser={currentUser} activeTenant={activeTenant} />;
       case 'students':
-        return <Students currentUser={currentUser} verifyAction={verifyAction} activeTenant={activeTenant} />;
+        return <Students key={tenantKey} currentUser={currentUser} verifyAction={verifyAction} activeTenant={activeTenant} />;
       case 'inquiries':
-        return <Inquiries currentUser={currentUser} verifyAction={verifyAction} activeTenant={activeTenant} />;
+        return <Inquiries key={tenantKey} currentUser={currentUser} verifyAction={verifyAction} activeTenant={activeTenant} />;
       case 'staff':
-        return <StaffManagement currentUser={currentUser} verifyAction={verifyAction} activeTenant={activeTenant} />;
+        return <StaffManagement key={tenantKey} currentUser={currentUser} verifyAction={verifyAction} activeTenant={activeTenant} />;
       case 'timetable':
-        return <Timetable currentUser={currentUser} verifyAction={verifyAction} />;
+        return <Timetable key={tenantKey} currentUser={currentUser} verifyAction={verifyAction} />;
       case 'attendance':
-        return <Attendance currentUser={currentUser} verifyAction={verifyAction} />;
+        return <Attendance key={tenantKey} currentUser={currentUser} verifyAction={verifyAction} />;
       case 'fees':
-        return <Fees currentUser={currentUser} verifyAction={verifyAction} />;
+        return <Fees key={tenantKey} currentUser={currentUser} verifyAction={verifyAction} />;
       case 'tests':
-        return <TestMarks currentUser={currentUser} verifyAction={verifyAction} />;
+        return <TestMarks key={tenantKey} currentUser={currentUser} verifyAction={verifyAction} />;
       case 'homework':
-        return <Homework currentUser={currentUser} verifyAction={verifyAction} />;
+        return <Homework key={tenantKey} currentUser={currentUser} verifyAction={verifyAction} />;
       case 'materials':
-        return <StudyMaterial currentUser={currentUser} verifyAction={verifyAction} />;
+        return <StudyMaterial key={tenantKey} currentUser={currentUser} verifyAction={verifyAction} />;
+      case 'manage_centers':
+        return (
+          <SuperAdmin 
+            key="manage_centers"
+            onLogout={handleLogout}
+            onInspectTenant={(tenant) => {
+              dbService.setTenantCode(tenant.id);
+              setActiveTenant(tenant);
+              setActiveTab('dashboard');
+            }}
+          />
+        );
       default:
-        return <Dashboard setActiveTab={setActiveTab} currentUser={currentUser} activeTenant={activeTenant} />;
+        return <Dashboard key={tenantKey} setActiveTab={setActiveTab} currentUser={currentUser} activeTenant={activeTenant} />;
     }
   };
 
@@ -591,7 +610,7 @@ function App() {
         })()}
           <div className="admin-profile-mobile">
             <span className="admin-name" style={{ fontSize: '0.85rem' }}>
-              {currentUser.role === 'admin' ? 'Admin' : 'Parent'}: {currentUser.username}
+              {currentUser.role === 'superadmin' ? 'SuperAdmin' : currentUser.role === 'admin' ? 'Admin' : 'Parent'}: {currentUser.username}
             </span>
             <button onClick={handleLogout} className="btn-logout-mobile">
               Logout
@@ -606,6 +625,8 @@ function App() {
           currentUser={currentUser} 
           onLogout={handleLogout} 
           activeTenant={activeTenant}
+          setActiveTenant={setActiveTenant}
+          allTenants={allTenants}
         />
         
         {/* Main Dynamic Workspace */}
