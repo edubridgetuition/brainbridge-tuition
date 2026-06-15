@@ -331,9 +331,12 @@ export const dbService = {
         const nextId = maxId + 1;
         const studentWithId = { ...student, student_id: nextId };
 
-        // Create student document
-        const docRef = await addDoc(collection(db, "students"), studentWithId);
-        const newStudent = { id: docRef.id, ...studentWithId };
+        // Create custom student doc ID using name and nextId, e.g. Amit_Sharma_1001
+        const cleanName = String(student.name || '').trim().replace(/\s+/g, '_');
+        const customStudentDocId = `${cleanName}_${nextId}`;
+        const docRef = doc(db, "students", customStudentDocId);
+        await setDoc(docRef, studentWithId);
+        const newStudent = { id: customStudentDocId, ...studentWithId };
 
         // Also automatically initialize a pending fee entry for the new student
         const feeAmount = student.standard === '10th' ? 1500 : student.standard === '11th' ? 2000 : 2500;
@@ -348,7 +351,8 @@ export const dbService = {
           payment_date: null,
           payment_mode: ''
         };
-        await addDoc(collection(db, "fees"), feeData);
+        const customFeeDocId = `${newStudent.id}_${dueDate}`;
+        await setDoc(doc(db, "fees", customFeeDocId), feeData);
 
         return newStudent;
       },
@@ -363,8 +367,10 @@ export const dbService = {
         });
         const nextId = maxId + 1;
         const studentWithId = { ...student, student_id: nextId };
+        const cleanName = String(student.name || '').trim().replace(/\s+/g, '_');
+        const customStudentDocId = `${cleanName}_${nextId}`;
 
-        const newStudent = { ...studentWithId, id: generateUUID() };
+        const newStudent = { ...studentWithId, id: customStudentDocId };
         students.push(newStudent);
         saveLocalData('bb_students', students);
         
@@ -373,8 +379,9 @@ export const dbService = {
         const feeAmount = student.standard === '10th' ? 1500 : student.standard === '11th' ? 2000 : 2500;
         const today = new Date();
         const dueDate = new Date(today.getFullYear(), today.getMonth() + 1, 10).toISOString().split('T')[0]; // Next month 10th
+        const customFeeDocId = `${newStudent.id}_${dueDate}`;
         fees.push({
-          id: generateUUID(),
+          id: customFeeDocId,
           student_id: newStudent.id,
           amount: feeAmount,
           due_date: dueDate,
@@ -1596,14 +1603,18 @@ export const dbService = {
       must_change_password: true,
       created_at: new Date().toISOString()
     };
+    const cleanName = String(staff.name || '').trim().replace(/\s+/g, '_');
+    const cleanMobile = String(staff.mobile || '').trim().replace(/\D/g, '');
+    const customStaffDocId = `${cleanName}_${cleanMobile}`;
     return runQuery(
       async () => {
-        const docRef = await addDoc(collection(db, "staff_accounts"), newStaff);
-        return { id: docRef.id, ...newStaff };
+        const docRef = doc(db, "staff_accounts", customStaffDocId);
+        await setDoc(docRef, newStaff);
+        return { id: customStaffDocId, ...newStaff };
       },
       () => {
         const list = getLocalData('bb_staff_accounts', []);
-        const created = { ...newStaff, id: generateUUID() };
+        const created = { ...newStaff, id: customStaffDocId };
         list.unshift(created);
         saveLocalData('bb_staff_accounts', list);
         return created;
