@@ -560,8 +560,12 @@ function App() {
         {/* Mobile Header */}
         <header className="mobile-header">
         {(() => {
-          const hasCustomLogo = activeTenant && activeTenant.logo_url && activeTenant.logo_url !== '' && activeTenant.logo_url !== '/logo.png';
-          const brandName = activeTenant ? activeTenant.name : "BrainBridge";
+          const hasCustomLogo = currentUser?.role === 'superadmin' 
+            ? false 
+            : (activeTenant && activeTenant.logo_url && activeTenant.logo_url !== '' && activeTenant.logo_url !== '/logo.png');
+          const brandName = currentUser?.role === 'superadmin' 
+            ? "BrainBridge" 
+            : (activeTenant ? activeTenant.name : "BrainBridge");
           return (
             <div className="brand-container-mobile" style={{ display: 'flex', alignItems: 'center' }}>
               {hasCustomLogo ? (
@@ -578,7 +582,7 @@ function App() {
                     backgroundColor: '#fff'
                   }}
                 />
-              ) : (activeTenant && activeTenant.use_black_logo_fallback === false) ? (
+              ) : (currentUser?.role === 'superadmin' || (activeTenant && activeTenant.use_black_logo_fallback === false)) ? (
                 <img 
                   src="/logo.png" 
                   alt="Logo" 
