@@ -600,7 +600,9 @@ export default function Dashboard({ setActiveTab, currentUser, verifyAction, act
           )}
           <div>
             <h1 className="page-title">{headerTitle}</h1>
-            <p className="page-subtitle">Welcome to Admin panel</p>
+            <p className="page-subtitle">
+              {currentUser?.staffId ? 'Welcome to tuition management system' : 'Welcome to Admin panel'}
+            </p>
           </div>
         </div>
       </div>
