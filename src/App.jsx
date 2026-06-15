@@ -11,6 +11,9 @@ import StudyMaterial from './pages/StudyMaterial';
 import LoginOnboard from './components/LoginOnboard';
 import SuperAdmin from './pages/SuperAdmin';
 import InquiryForm from './pages/InquiryForm';
+import Inquiries from './pages/Inquiries';
+import StaffManagement from './pages/StaffManagement';
+import ForcedPasswordChange from './components/ForcedPasswordChange';
 import { GraduationCap } from 'lucide-react';
 import { dbService } from './database/dbService';
 
@@ -71,6 +74,15 @@ function App() {
     }, 2500);
     return () => clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    if (currentUser && !currentUser.isInspecting && currentUser.role !== 'superadmin') {
+      if (localStorage.getItem('bb_db_mode') === 'local') {
+        localStorage.setItem('bb_db_mode', 'cloud');
+        window.location.reload();
+      }
+    }
+  }, [currentUser]);
 
   useEffect(() => {
     async function loadTenantDetails() {
@@ -344,6 +356,20 @@ function App() {
     );
   }
 
+  if (currentUser.role === 'admin' && currentUser.staffId && currentUser.must_change_password) {
+    return (
+      <ForcedPasswordChange 
+        currentUser={currentUser}
+        onPasswordChanged={(updatedUser) => {
+          sessionStorage.setItem('bb_current_user', JSON.stringify(updatedUser));
+          setCurrentUser(updatedUser);
+        }}
+        onLogout={handleLogout}
+        activeTenant={activeTenant}
+      />
+    );
+  }
+
   const renderContent = () => {
     const features = activeTenant?.features || {};
     const isTabEnabled = activeTab === 'dashboard' || features[activeTab] !== false;
@@ -354,6 +380,10 @@ function App() {
         return <Dashboard setActiveTab={setActiveTab} currentUser={currentUser} activeTenant={activeTenant} />;
       case 'students':
         return <Students currentUser={currentUser} verifyAction={verifyAction} activeTenant={activeTenant} />;
+      case 'inquiries':
+        return <Inquiries currentUser={currentUser} verifyAction={verifyAction} activeTenant={activeTenant} />;
+      case 'staff':
+        return <StaffManagement currentUser={currentUser} verifyAction={verifyAction} activeTenant={activeTenant} />;
       case 'timetable':
         return <Timetable currentUser={currentUser} verifyAction={verifyAction} />;
       case 'attendance':

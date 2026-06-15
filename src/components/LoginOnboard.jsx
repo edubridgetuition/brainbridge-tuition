@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { GraduationCap, ShieldAlert, CheckCircle2, Lock, User, UserCheck, Key, Eye, EyeOff, Shield, School, FileText, Send } from 'lucide-react';
+import { GraduationCap, ShieldAlert, CheckCircle2, Lock, User, UserCheck, Key, Eye, EyeOff, Shield, School, FileText, Send, X } from 'lucide-react';
 import { dbService } from '../database/dbService';
 
 export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit, onChangeTenantCode }) {
@@ -11,6 +11,45 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
   const [showSuperAdminLogin, setShowSuperAdminLogin] = useState(false);
   const [superAdminPassword, setSuperAdminPassword] = useState('');
   const [centreName, setCentreName] = useState(activeTenant?.id || '');
+
+  // Staff Registration States
+  const [showStaffRegister, setShowStaffRegister] = useState(false);
+  const [staffStep, setStaffStep] = useState('profile'); // 'profile', 'otp', 'password', 'success'
+  const [staffName, setStaffName] = useState('');
+  const [staffMobile, setStaffMobile] = useState('');
+  const [staffEmail, setStaffEmail] = useState('');
+  const [staffSubject, setStaffSubject] = useState('');
+  const [staffRole, setStaffRole] = useState('Teacher');
+  const [staffAddress, setStaffAddress] = useState('');
+  const [staffPassword, setStaffPassword] = useState('');
+  const [staffConfirmPassword, setStaffConfirmPassword] = useState('');
+
+  // OTP Verification States
+  const [staffOtpCode, setStaffOtpCode] = useState('');
+  const [staffOtpInput, setStaffOtpInput] = useState('');
+  const [isStaffMobileVerified, setIsStaffMobileVerified] = useState(false);
+  const [staffOtpError, setStaffOtpError] = useState('');
+  const [staffRegError, setStaffRegError] = useState('');
+  const [staffRegSuccess, setStaffRegSuccess] = useState('');
+  const [loadingStaffReg, setLoadingStaffReg] = useState(false);
+
+  const clearStaffForm = () => {
+    setStaffName('');
+    setStaffMobile('');
+    setStaffEmail('');
+    setStaffSubject('');
+    setStaffRole('Teacher');
+    setStaffAddress('');
+    setStaffPassword('');
+    setStaffConfirmPassword('');
+    setStaffOtpCode('');
+    setStaffOtpInput('');
+    setIsStaffMobileVerified(false);
+    setStaffOtpError('');
+    setStaffRegError('');
+    setStaffRegSuccess('');
+    setLoadingStaffReg(false);
+  };
 
   // Login Form States
   const [username, setUsername] = useState('');
@@ -87,7 +126,7 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
     e.preventDefault();
     clearMessages();
     
-    if (superAdminPassword === 'super123') {
+    if (superAdminPassword === 'Super123!') {
       onLogin({
         username: 'Super Admin',
         role: 'superadmin',
@@ -125,8 +164,22 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
       
       const requiredPassword = tenant.admin_password || 'admin123';
       if (password !== requiredPassword) {
-        setError('Invalid password.');
-        return;
+        // Fallback: Check staff accounts
+        try {
+          const staff = await dbService.verifyStaffLogin(username.trim(), password);
+          onLogin({
+            username: staff.name,
+            role: 'admin', // Logs into Teacher Workspace
+            studentId: null,
+            batchId: null,
+            staffId: staff.id,
+            must_change_password: staff.must_change_password
+          });
+          return;
+        } catch (err) {
+          setError('Invalid login code or password.');
+          return;
+        }
       }
       
       onLogin({
@@ -364,6 +417,9 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
                   style={{ backgroundColor: '#0f172a', borderColor: '#334155', color: '#fff', textAlign: 'center' }}
                   required
                 />
+                <span style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '0.35rem', display: 'block', textAlign: 'center', lineHeight: '1.4' }}>
+                  Password must contain at least 8 characters, an uppercase letter, a number, and a special character (!@#$&*-).
+                </span>
               </div>
 
               {error && (
@@ -603,10 +659,31 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.35rem', display: 'block', textAlign: 'center', lineHeight: '1.4' }}>
+                  Password must contain at least 8 characters, an uppercase letter, a number, and a special character (!@#$&*-).
+                </span>
               </div>
 
               <button type="submit" className="btn btn-primary" style={{ padding: '0.85rem', fontSize: '0.92rem', marginTop: '0.5rem', boxShadow: '0 4px 12px rgba(37, 99, 235, 0.2)' }}>
                 Access Teacher Workspace
+              </button>
+
+              <button 
+                type="button" 
+                onClick={() => { setShowStaffRegister(true); setStaffStep('profile'); clearStaffForm(); }}
+                className="btn btn-secondary" 
+                style={{ 
+                  padding: '0.65rem', 
+                  fontSize: '0.82rem', 
+                  fontWeight: '700', 
+                  marginTop: '0.5rem', 
+                  backgroundColor: 'transparent',
+                  color: 'var(--primary)',
+                  borderColor: 'var(--primary)',
+                  boxShadow: 'none'
+                }}
+              >
+                Don't have an account? Sign Up as Staff
               </button>
             </form>
           )}
@@ -666,6 +743,9 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.35rem', display: 'block', textAlign: 'center', lineHeight: '1.4' }}>
+                  Password must contain at least 8 characters, an uppercase letter, a number, and a special character (!@#$&*-) (or enter registered Mobile Number).
+                </span>
               </div>
 
               <button type="submit" className="btn btn-primary" style={{ padding: '0.85rem', fontSize: '0.92rem', marginTop: '0.5rem', boxShadow: '0 4px 12px rgba(37, 99, 235, 0.2)' }}>
@@ -675,6 +755,407 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
           )}
         </div>
       </div>
+
+      {showStaffRegister && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.65)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 100000,
+          padding: '1rem'
+        }}>
+          <div className="card" style={{
+            width: '100%',
+            maxWidth: '440px',
+            padding: '2rem 1.5rem',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+            border: '1px solid #bfdbfe',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1.25rem',
+            backgroundColor: '#ffffff',
+            borderRadius: '16px',
+            maxHeight: '90vh',
+            overflowY: 'auto'
+          }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              borderBottom: '1px solid #e2e8f0',
+              paddingBottom: '0.75rem'
+            }}>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: '800', color: 'var(--primary)', margin: 0 }}>
+                Staff / Teacher Sign Up
+              </h3>
+              {staffStep !== 'success' && (
+                <button 
+                  onClick={() => setShowStaffRegister(false)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
+                >
+                  <X size={18} />
+                </button>
+              )}
+            </div>
+
+            {/* Stepper Header */}
+            {staffStep !== 'success' && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '0.25rem 0 0.75rem 0', padding: '0.25rem' }}>
+                {['profile', 'otp', 'password'].map((s, idx) => {
+                  const stepLabels = ['Profile', 'OTP Verify', 'Password'];
+                  const isActive = staffStep === s;
+                  const isDone = (s === 'profile' && (staffStep === 'otp' || staffStep === 'password')) || (s === 'otp' && staffStep === 'password');
+                  return (
+                    <div key={s} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <div style={{
+                        width: '24px',
+                        height: '24px',
+                        borderRadius: '50%',
+                        backgroundColor: isActive ? 'var(--primary)' : isDone ? '#10b981' : '#e2e8f0',
+                        color: isActive || isDone ? '#fff' : '#64748b',
+                        fontSize: '0.75rem',
+                        fontWeight: '800',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        {idx + 1}
+                      </div>
+                      <span style={{ fontSize: '0.74rem', fontWeight: isActive || isDone ? '700' : '500', color: isActive ? 'var(--primary)' : isDone ? '#10b981' : '#64748b' }}>
+                        {stepLabels[idx]}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {staffRegError && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem', backgroundColor: 'var(--danger-bg)', border: '1px solid var(--danger-border)', borderRadius: '8px', color: 'var(--danger)', fontSize: '0.78rem', fontWeight: '600' }}>
+                <ShieldAlert size={16} />
+                <span>{staffRegError}</span>
+              </div>
+            )}
+
+            {/* Step 1: Profile Details */}
+            {staffStep === 'profile' && (
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                setStaffRegError('');
+                if (!staffName.trim() || !staffMobile.trim() || !staffAddress.trim()) {
+                  setStaffRegError('Please fill in all required fields.');
+                  return;
+                }
+                if (staffMobile.length < 10) {
+                  setStaffRegError('Please enter a valid 10-digit mobile number.');
+                  return;
+                }
+                const otp = Math.floor(1000 + Math.random() * 9000).toString();
+                setStaffOtpCode(otp);
+                const msg = `BrainBridge Staff Verification: Your OTP code is ${otp}. Please enter this code to verify your mobile number.`;
+                try {
+                  dbService.sendWhatsAppMessage(staffMobile, msg);
+                } catch (e) {
+                  console.error("WhatsApp trigger blocked or failed:", e);
+                }
+                setStaffStep('otp');
+              }} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Full Name *</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Enter full name"
+                    value={staffName}
+                    onChange={(e) => setStaffName(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Mobile Number *</label>
+                  <input
+                    type="tel"
+                    className="form-control"
+                    placeholder="10-digit mobile number"
+                    value={staffMobile}
+                    onChange={(e) => setStaffMobile(e.target.value.replace(/\D/g, '').substring(0, 10))}
+                    required
+                  />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Email Address</label>
+                  <input
+                    type="email"
+                    className="form-control"
+                    placeholder="Enter email address"
+                    value={staffEmail}
+                    onChange={(e) => setStaffEmail(e.target.value)}
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                    <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Subject Specialist</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="e.g. Physics"
+                      value={staffSubject}
+                      onChange={(e) => setStaffSubject(e.target.value)}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                    <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Designation *</label>
+                    <select
+                      className="form-control"
+                      value={staffRole}
+                      onChange={(e) => setStaffRole(e.target.value)}
+                    >
+                      <option value="Teacher">Teacher / Lecturer</option>
+                      <option value="Accountant">Accountant</option>
+                      <option value="Admin Staff">Admin Staff</option>
+                      <option value="Assistant">Assistant</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Residential Address *</label>
+                  <textarea
+                    className="form-control"
+                    rows="2"
+                    placeholder="Enter residential address"
+                    value={staffAddress}
+                    onChange={(e) => setStaffAddress(e.target.value)}
+                    style={{ resize: 'none', fontFamily: 'inherit' }}
+                    required
+                  />
+                </div>
+
+                <button type="submit" className="btn btn-primary" style={{ padding: '0.65rem', fontWeight: '800', marginTop: '0.5rem' }}>
+                  Next: Verify Mobile
+                </button>
+              </form>
+            )}
+
+            {/* Step 2: WhatsApp OTP Verification */}
+            {staffStep === 'otp' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <div style={{ textAlign: 'center', fontSize: '0.82rem', color: '#475569', lineHeight: '1.4' }}>
+                  We sent an OTP code via WhatsApp to <strong style={{ color: 'var(--primary)' }}>{staffMobile}</strong>.
+                  <br />Please enter it below to verify your number.
+                </div>
+                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569', textAlign: 'center' }}>Enter 4-Digit Verification Code</label>
+                  <input
+                    type="text"
+                    maxLength={4}
+                    className="form-control"
+                    placeholder="e.g. 1234"
+                    value={staffOtpInput}
+                    onChange={(e) => {
+                      setStaffOtpError('');
+                      setStaffOtpInput(e.target.value.replace(/\D/g, '').substring(0, 4));
+                    }}
+                    style={{ textAlign: 'center', fontSize: '1.2rem', fontWeight: '800', letterSpacing: '0.2em', width: '150px', alignSelf: 'center' }}
+                  />
+                  {staffOtpError && <span style={{ color: '#ef4444', fontSize: '0.74rem', fontWeight: '700', textAlign: 'center' }}>❌ {staffOtpError}</span>}
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      if (!staffOtpInput.trim() || !staffOtpCode) {
+                        setStaffOtpError('Please enter the verification code.');
+                        return;
+                      }
+                      if (staffOtpInput === staffOtpCode) {
+                        setIsStaffMobileVerified(true);
+                        setStaffStep('password');
+                      } else {
+                        setStaffOtpError('Incorrect code. Please check your verification code.');
+                      }
+                    }}
+                    className="btn btn-primary"
+                    style={{ flex: 1, padding: '0.65rem', fontWeight: '800' }}
+                  >
+                    Verify Code
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const otp = Math.floor(1000 + Math.random() * 9000).toString();
+                      setStaffOtpCode(otp);
+                      const msg = `BrainBridge Staff Verification: Your OTP code is ${otp}. Please enter this code to verify your mobile number.`;
+                      try {
+                        dbService.sendWhatsAppMessage(staffMobile, msg);
+                      } catch (e) {
+                        console.error("WhatsApp trigger blocked or failed:", e);
+                      }
+                    }}
+                    className="btn btn-secondary"
+                    style={{ padding: '0.65rem 1rem', fontWeight: '800' }}
+                  >
+                    Resend Code
+                  </button>
+                </div>
+
+                <button 
+                  onClick={() => setStaffStep('profile')}
+                  style={{ background: 'none', border: 'none', color: '#64748b', fontSize: '0.78rem', cursor: 'pointer', textDecoration: 'underline', alignSelf: 'center' }}
+                >
+                  Go Back to Profile
+                </button>
+              </div>
+            )}
+
+            {/* Step 3: Create Password */}
+            {staffStep === 'password' && (
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                setStaffRegError('');
+
+                if (staffPassword !== staffConfirmPassword) {
+                  setStaffRegError('Passwords do not match.');
+                  return;
+                }
+
+                const passwordRegex = /^(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$&*-]).{8,}$/;
+                if (!passwordRegex.test(staffPassword)) {
+                  setStaffRegError('Password must contain at least 8 characters, an uppercase letter, a number, and a special character (!@#$&*-).');
+                  return;
+                }
+
+                try {
+                  setLoadingStaffReg(true);
+                  await dbService.addStaffAccount({
+                    name: staffName.trim(),
+                    mobile: staffMobile.trim(),
+                    email: staffEmail.trim(),
+                    subject: staffSubject.trim(),
+                    role: staffRole,
+                    address: staffAddress.trim(),
+                    password: staffPassword.trim()
+                  });
+
+                  if (activeTenant) {
+                    const ownerMsg = `BrainBridge: A new staff registration request from ${staffName} (${staffMobile}) is pending approval for ${activeTenant.name}.`;
+                    try {
+                      dbService.sendWhatsAppMessage(activeTenant.owner_whatsapp, ownerMsg);
+                    } catch (e) {
+                      console.error("WhatsApp trigger blocked or failed:", e);
+                    }
+                  }
+
+                  setStaffStep('success');
+                } catch (err) {
+                  setStaffRegError(err.message || 'Registration failed.');
+                } finally {
+                  setLoadingStaffReg(false);
+                }
+              }} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Create Password *</label>
+                  <input
+                    type="password"
+                    className="form-control"
+                    placeholder="Enter password"
+                    value={staffPassword}
+                    onChange={(e) => setStaffPassword(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Confirm Password *</label>
+                  <input
+                    type="password"
+                    className="form-control"
+                    placeholder="Confirm password"
+                    value={staffConfirmPassword}
+                    onChange={(e) => setStaffConfirmPassword(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <span style={{ fontSize: '0.68rem', color: '#64748b', lineHeight: '1.4' }}>
+                  Password must contain at least 8 characters, an uppercase letter, a number, and a special character (!@#$&*-).
+                </span>
+
+                <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+                  <button 
+                    type="submit" 
+                    className="btn btn-primary" 
+                    style={{ flex: 1, padding: '0.65rem', fontWeight: '800' }}
+                    disabled={loadingStaffReg}
+                  >
+                    {loadingStaffReg ? 'Submitting...' : 'Register as Staff'}
+                  </button>
+                  <button 
+                    type="button" 
+                    onClick={() => setStaffStep('otp')}
+                    className="btn btn-secondary" 
+                    style={{ padding: '0.65rem 1rem', fontWeight: '800' }}
+                  >
+                    Back
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* Step 4: Success Screen */}
+            {staffStep === 'success' && (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', padding: '1rem 0', textAlign: 'center' }}>
+                <div style={{ width: '56px', height: '56px', borderRadius: '50%', backgroundColor: 'rgba(16, 185, 129, 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#10b981' }}>
+                  <CheckCircle2 size={36} />
+                </div>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: '800', color: '#111827', margin: 0 }}>Registration Submitted</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.82rem', color: '#475569', lineHeight: '1.5', margin: 0 }}>
+                  <p>Your staff account profile has been submitted successfully!</p>
+                  <div style={{
+                    padding: '0.5rem 0.75rem',
+                    backgroundColor: 'rgba(245, 158, 11, 0.08)',
+                    border: '1px solid rgba(245, 158, 11, 0.2)',
+                    borderRadius: '8px',
+                    color: '#b45309',
+                    fontWeight: '700',
+                    fontSize: '0.78rem',
+                    margin: '0.5rem 0'
+                  }}>
+                    Status: Pending Approval
+                  </div>
+                  <p>The Tuition Owner has been notified. You will receive your Centre Code and login details via WhatsApp once approved.</p>
+                </div>
+                
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => {
+                    setShowStaffRegister(false);
+                    clearStaffForm();
+                  }}
+                  style={{ width: '100%', padding: '0.75rem', fontSize: '0.88rem', fontWeight: '800', marginTop: '1rem' }}
+                >
+                  Return to Login
+                </button>
+              </div>
+            )}
+
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -58,8 +58,24 @@ export const sendWhatsAppMessage = (mobileNumber, messageText) => {
     cleanNumber = '91' + cleanNumber;
   }
   const encodedText = encodeURIComponent(messageText);
-  const url = `https://api.whatsapp.com/send?phone=${cleanNumber}&text=${encodedText}`;
-  window.open(url, '_blank');
+  const whatsappScheme = `whatsapp://send?phone=${cleanNumber}&text=${encodedText}`;
+  const whatsappWebUrl = `https://api.whatsapp.com/send?phone=${cleanNumber}&text=${encodedText}`;
+  
+  try {
+    // Try to open using Capacitor _system target (opens system browser/app)
+    const opened = window.open(whatsappScheme, '_system') || window.open(whatsappWebUrl, '_system') || window.open(whatsappWebUrl, '_blank');
+    if (!opened) {
+      // Fallback if window.open returns null/falsy
+      window.location.href = whatsappWebUrl;
+    }
+  } catch (err) {
+    console.error("Failed to open WhatsApp window, trying location.href:", err);
+    try {
+      window.location.href = whatsappWebUrl;
+    } catch (e) {
+      console.error("Failed to navigate to WhatsApp URL:", e);
+    }
+  }
 };
 
 
@@ -251,8 +267,15 @@ export const dbService = {
     await dbService.logActivity(`Created new batch "${batch.name}"`);
     return runQuery(
       async () => {
-        const docRef = await addDoc(collection(db, "batches"), batch);
-        return { id: docRef.id, ...batch };
+        const docId = String(batch.name || '')
+          .trim()
+          .toLowerCase()
+          .replace(/\s+/g, '_')
+          .replace(/[^a-z0-9_-]/g, '');
+        const finalDocId = docId || generateUUID();
+        const docRef = doc(db, "batches", finalDocId);
+        await setDoc(docRef, batch);
+        return { id: finalDocId, ...batch };
       },
       () => {
         const batches = getLocalData('bb_batches', INITIAL_BATCHES);
@@ -1402,5 +1425,291 @@ export const dbService = {
 
   async updateTenantFeatures(tenantId, features) {
     return dbService.updateTenant(tenantId, { features });
+  },
+
+  async getSuperAdminStats() {
+    return runQuery(
+      async () => {
+        const querySnapshot = await getDocs(firestoreCollection(db, "tenants"));
+        const tenantsList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        const statsList = [];
+        let totalStudents = 0;
+        let totalTeachers = new Set();
+        let totalPending = 0;
+        let totalRejected = 0;
+        let totalActiveUsers = 0;
+
+        for (const t of tenantsList) {
+          const batchesSnap = await getDocs(firestoreCollection(db, "tenants", t.id, "batches"));
+          const studentsSnap = await getDocs(firestoreCollection(db, "tenants", t.id, "students"));
+          const inquiriesSnap = await getDocs(firestoreCollection(db, "tenants", t.id, "inquiries"));
+          const parentsSnap = await getDocs(firestoreCollection(db, "tenants", t.id, "parent_accounts"));
+          
+          const feesSnap = await getDocs(firestoreCollection(db, "tenants", t.id, "fees"));
+          const attendanceSnap = await getDocs(firestoreCollection(db, "tenants", t.id, "attendance"));
+          const testsSnap = await getDocs(firestoreCollection(db, "tenants", t.id, "tests"));
+          const marksSnap = await getDocs(firestoreCollection(db, "tenants", t.id, "test_marks"));
+          const timetableSnap = await getDocs(firestoreCollection(db, "tenants", t.id, "timetable"));
+          const homeworkSnap = await getDocs(firestoreCollection(db, "tenants", t.id, "homework"));
+          const materialsSnap = await getDocs(firestoreCollection(db, "tenants", t.id, "study_material"));
+
+          const batches = batchesSnap.docs.map(d => d.data());
+          const students = studentsSnap.docs.map(d => d.data()).filter(s => !s.archived);
+          const inquiries = inquiriesSnap.docs.map(d => d.data());
+          const parents = parentsSnap.docs.map(d => d.data());
+
+          batches.forEach(b => {
+            if (b.teacher_name) totalTeachers.add(`${t.id}_${b.teacher_name}`);
+          });
+
+          const pendingCount = inquiries.filter(iq => iq.status === 'Pending').length;
+          const rejectedCount = inquiries.filter(iq => iq.status === 'Rejected').length;
+
+          const allData = {
+            tenant: t,
+            batches,
+            students,
+            inquiries,
+            parents,
+            fees: feesSnap.docs.map(d => d.data()),
+            attendance: attendanceSnap.docs.map(d => d.data()),
+            tests: testsSnap.docs.map(d => d.data()),
+            marks: marksSnap.docs.map(d => d.data()),
+            timetable: timetableSnap.docs.map(d => d.data()),
+            homework: homeworkSnap.docs.map(d => d.data()),
+            materials: materialsSnap.docs.map(d => d.data())
+          };
+
+          const sizeBytes = JSON.stringify(allData).length;
+
+          statsList.push({
+            tenantId: t.id,
+            tenantName: t.name,
+            studentsCount: students.length,
+            batchesCount: batches.length,
+            inquiriesCount: inquiries.length,
+            pendingInquiries: pendingCount,
+            rejectedInquiries: rejectedCount,
+            activeUsers: parents.length,
+            dataSizeKb: Math.round((sizeBytes / 1024) * 100) / 100
+          });
+
+          totalStudents += students.length;
+          totalPending += pendingCount;
+          totalRejected += rejectedCount;
+          totalActiveUsers += parents.length;
+        }
+
+        return {
+          totalTuitions: tenantsList.length,
+          totalOwners: tenantsList.length,
+          totalTeachers: totalTeachers.size,
+          totalStudents,
+          totalPending,
+          totalRejected,
+          totalActiveUsers,
+          tuitionWiseStats: statsList
+        };
+      },
+      () => {
+        const tenants = getLocalData('bb_tenants', INITIAL_TENANTS);
+        const statsList = [];
+        let totalStudents = 0;
+        let totalTeachers = new Set();
+        let totalPending = 0;
+        let totalRejected = 0;
+        let totalActiveUsers = 0;
+
+        tenants.forEach(t => {
+          const prefix = `bb_${t.id}_`;
+          const batches = JSON.parse(localStorage.getItem(prefix + 'batches') || '[]');
+          const students = JSON.parse(localStorage.getItem(prefix + 'students') || '[]').filter(s => !s.archived);
+          const inquiries = JSON.parse(localStorage.getItem(prefix + 'inquiries') || '[]');
+          const parents = JSON.parse(localStorage.getItem(prefix + 'parent_accounts') || '[]');
+
+          batches.forEach(b => {
+            if (b.teacher_name) totalTeachers.add(`${t.id}_${b.teacher_name}`);
+          });
+
+          const pendingCount = inquiries.filter(iq => iq.status === 'Pending').length;
+          const rejectedCount = inquiries.filter(iq => iq.status === 'Rejected').length;
+
+          let sizeBytes = 0;
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && (key.startsWith(prefix) || key === `bb_tenants`)) {
+              sizeBytes += (localStorage.getItem(key) || '').length;
+            }
+          }
+
+          statsList.push({
+            tenantId: t.id,
+            tenantName: t.name,
+            studentsCount: students.length,
+            batchesCount: batches.length,
+            inquiriesCount: inquiries.length,
+            pendingInquiries: pendingCount,
+            rejectedInquiries: rejectedCount,
+            activeUsers: parents.length,
+            dataSizeKb: Math.round((sizeBytes / 1024) * 100) / 100
+          });
+
+          totalStudents += students.length;
+          totalPending += pendingCount;
+          totalRejected += rejectedCount;
+          totalActiveUsers += parents.length;
+        });
+
+        return {
+          totalTuitions: tenants.length,
+          totalOwners: tenants.length,
+          totalTeachers: totalTeachers.size,
+          totalStudents,
+          totalPending,
+          totalRejected,
+          totalActiveUsers,
+          tuitionWiseStats: statsList
+        };
+      }
+    );
+  },
+
+  // --- STAFF / TEACHER PORTAL AUTH ---
+  async getStaffAccounts() {
+    return runQuery(
+      async () => {
+        const querySnapshot = await getDocs(collection(db, "staff_accounts"));
+        return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      },
+      () => getLocalData('bb_staff_accounts', [])
+    );
+  },
+
+  async addStaffAccount(staff) {
+    const newStaff = {
+      ...staff,
+      status: 'Pending',
+      must_change_password: true,
+      created_at: new Date().toISOString()
+    };
+    return runQuery(
+      async () => {
+        const docRef = await addDoc(collection(db, "staff_accounts"), newStaff);
+        return { id: docRef.id, ...newStaff };
+      },
+      () => {
+        const list = getLocalData('bb_staff_accounts', []);
+        const created = { ...newStaff, id: generateUUID() };
+        list.unshift(created);
+        saveLocalData('bb_staff_accounts', list);
+        return created;
+      }
+    );
+  },
+
+  async updateStaffAccountStatus(id, status) {
+    return runQuery(
+      async () => {
+        const docRef = doc(db, "staff_accounts", id);
+        const updateData = { status };
+        if (status === 'Approved') {
+          updateData.must_change_password = true;
+        }
+        await updateDoc(docRef, updateData);
+        return true;
+      },
+      () => {
+        const list = getLocalData('bb_staff_accounts', []);
+        const idx = list.findIndex(s => s.id === id);
+        if (idx !== -1) {
+          list[idx].status = status;
+          if (status === 'Approved') {
+            list[idx].must_change_password = true;
+          }
+          saveLocalData('bb_staff_accounts', list);
+          return true;
+        }
+        return false;
+      }
+    );
+  },
+
+  async verifyStaffLogin(username, password) {
+    const cleanUsername = String(username || '').trim().toLowerCase();
+    const cleanPassword = String(password || '').trim();
+
+    if (!cleanUsername || !cleanPassword) {
+      throw new Error("Login code/mobile and password are required.");
+    }
+
+    return runQuery(
+      async () => {
+        const q = query(
+          collection(db, "staff_accounts"), 
+          where("status", "==", "Approved")
+        );
+        const querySnapshot = await getDocs(q);
+        
+        let matchedStaff = null;
+        querySnapshot.forEach(doc => {
+          const data = doc.data();
+          const mob = String(data.mobile || '').trim().toLowerCase();
+          const email = String(data.email || '').trim().toLowerCase();
+          const name = String(data.name || '').trim().toLowerCase();
+          if (mob === cleanUsername || email === cleanUsername || name === cleanUsername) {
+            if (String(data.password || '').trim() === cleanPassword) {
+              matchedStaff = { id: doc.id, ...data };
+            }
+          }
+        });
+
+        if (!matchedStaff) {
+          throw new Error("Invalid staff credentials or account is not approved yet.");
+        }
+        return matchedStaff;
+      },
+      () => {
+        const list = getLocalData('bb_staff_accounts', []);
+        const matched = list.find(s => {
+          if (s.status !== 'Approved') return false;
+          const mob = String(s.mobile || '').trim().toLowerCase();
+          const email = String(s.email || '').trim().toLowerCase();
+          const name = String(s.name || '').trim().toLowerCase();
+          return (mob === cleanUsername || email === cleanUsername || name === cleanUsername) && 
+                 String(s.password || '').trim() === cleanPassword;
+        });
+
+        if (!matched) {
+          throw new Error("Invalid staff credentials or account is not approved yet.");
+        }
+        return matched;
+      }
+    );
+  },
+
+  async updateStaffPassword(staffId, newPassword) {
+    const cleanPassword = String(newPassword || '').trim();
+    return runQuery(
+      async () => {
+        const docRef = doc(db, "staff_accounts", staffId);
+        await updateDoc(docRef, { 
+          password: cleanPassword, 
+          must_change_password: false 
+        });
+        return true;
+      },
+      () => {
+        const list = getLocalData('bb_staff_accounts', []);
+        const idx = list.findIndex(s => s.id === staffId);
+        if (idx !== -1) {
+          list[idx].password = cleanPassword;
+          list[idx].must_change_password = false;
+          saveLocalData('bb_staff_accounts', list);
+          return true;
+        }
+        return false;
+      }
+    );
   }
 };

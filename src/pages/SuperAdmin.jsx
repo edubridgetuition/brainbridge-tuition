@@ -1,12 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import { dbService } from '../database/dbService';
-import { Plus, Edit2, Trash2, Eye, LogOut, Shield, Database, MessageSquare, Key } from 'lucide-react';
+import { 
+  Plus, 
+  Edit2, 
+  Trash2, 
+  Eye, 
+  LogOut, 
+  Shield, 
+  Database, 
+  MessageSquare, 
+  Key,
+  Users,
+  GraduationCap,
+  Clock,
+  XCircle,
+  Activity,
+  RefreshCw
+} from 'lucide-react';
 
 export default function SuperAdmin({ onLogout, onInspectTenant }) {
   const [tenants, setTenants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingTenantId, setEditingTenantId] = useState(null);
+
+  // Console sub-tab state
+  const [activeConsoleTab, setActiveConsoleTab] = useState('dashboard'); // 'dashboard' or 'centers'
+  const [stats, setStats] = useState(null);
+  const [statsLoading, setStatsLoading] = useState(true);
 
   // Manage Rights State
   const [selectedTenantForRights, setSelectedTenantForRights] = useState(null);
@@ -29,12 +50,21 @@ export default function SuperAdmin({ onLogout, onInspectTenant }) {
   async function loadTenants() {
     try {
       setLoading(true);
-      const list = await dbService.getTenants();
+      setStatsLoading(true);
+      
+      // Load tenants and statistics in parallel
+      const [list, aggregatedStats] = await Promise.all([
+        dbService.getTenants(),
+        dbService.getSuperAdminStats()
+      ]);
+      
       setTenants(list);
+      setStats(aggregatedStats);
     } catch (err) {
-      console.error("Failed to load tenants:", err);
+      console.error("Failed to load tenants or statistics:", err);
     } finally {
       setLoading(false);
+      setStatsLoading(false);
     }
   }
 
@@ -75,6 +105,12 @@ export default function SuperAdmin({ onLogout, onInspectTenant }) {
       return;
     }
 
+    const passwordRegex = /^(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$&*-]).{8,}$/;
+    if (!passwordRegex.test(adminPassword)) {
+      setError('Password must contain at least 8 characters, an uppercase letter, a number, and a special character (!@#$&*-).');
+      return;
+    }
+
     try {
       const tenantData = {
         id: cleanCode,
@@ -107,6 +143,7 @@ export default function SuperAdmin({ onLogout, onInspectTenant }) {
     setWhatsapp(t.owner_whatsapp);
     setAdminPassword(t.admin_password || 'admin123');
     setShowAddForm(true);
+    setActiveConsoleTab('centers'); // switch view to edit
   };
 
   const handleManageRightsClick = (t) => {
@@ -136,6 +173,10 @@ export default function SuperAdmin({ onLogout, onInspectTenant }) {
       
       setSelectedTenantForRights(null);
       alert('Rights updated successfully!');
+      
+      // Refresh statistics
+      const updatedStats = await dbService.getSuperAdminStats();
+      setStats(updatedStats);
     } catch (err) {
       alert('Failed to save rights: ' + err.message);
     } finally {
@@ -156,7 +197,17 @@ export default function SuperAdmin({ onLogout, onInspectTenant }) {
   };
 
   return (
-    <div style={{ padding: '2rem', maxWidth: '1100px', margin: '0 auto' }}>
+    <div style={{ padding: '2rem', maxWidth: '1100px', margin: '0 auto', height: '100vh', overflowY: 'auto' }}>
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        .spin-animation {
+          animation: spin 1s linear infinite;
+        }
+      `}</style>
+
       {/* Header */}
       <div style={{
         display: 'flex',
@@ -167,7 +218,7 @@ export default function SuperAdmin({ onLogout, onInspectTenant }) {
         borderRadius: '16px',
         color: '#fff',
         boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
-        marginBottom: '2rem'
+        marginBottom: '2.5rem'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <Shield size={28} style={{ color: '#3b82f6' }} />
@@ -191,227 +242,522 @@ export default function SuperAdmin({ onLogout, onInspectTenant }) {
         </button>
       </div>
 
-      {/* Main Grid */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-        {/* Toggle add form button */}
-        {!showAddForm && (
-          <button
-            onClick={() => setShowAddForm(true)}
-            className="btn btn-primary"
-            style={{
-              alignSelf: 'flex-start',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '0.75rem 1.5rem',
-              fontWeight: '800',
-              fontSize: '0.9rem'
-            }}
-          >
-            <Plus size={18} /> Register New Tuition Owner
-          </button>
-        )}
+      {/* View Tabs Selector */}
+      <div style={{ 
+        display: 'flex', 
+        borderBottom: '1px solid var(--border-color)', 
+        marginBottom: '2rem', 
+        gap: '0.5rem' 
+      }}>
+        <button 
+          onClick={() => setActiveConsoleTab('dashboard')} 
+          style={{
+            padding: '0.75rem 1.25rem',
+            background: 'none',
+            border: 'none',
+            borderBottom: activeConsoleTab === 'dashboard' ? '3px solid var(--primary)' : '3px solid transparent',
+            color: activeConsoleTab === 'dashboard' ? 'var(--primary)' : 'var(--text-secondary)',
+            fontWeight: '800',
+            fontSize: '0.95rem',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            transition: 'var(--transition-smooth)'
+          }}
+        >
+          <Activity size={18} /> Dashboard Stats
+        </button>
+        <button 
+          onClick={() => setActiveConsoleTab('centers')} 
+          style={{
+            padding: '0.75rem 1.25rem',
+            background: 'none',
+            border: 'none',
+            borderBottom: activeConsoleTab === 'centers' ? '3px solid var(--primary)' : '3px solid transparent',
+            color: activeConsoleTab === 'centers' ? 'var(--primary)' : 'var(--text-secondary)',
+            fontWeight: '800',
+            fontSize: '0.95rem',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            transition: 'var(--transition-smooth)'
+          }}
+        >
+          <Database size={18} /> Tuition Centers ({tenants.length})
+        </button>
+      </div>
 
-        {/* Add/Edit Form Panel */}
-        {showAddForm && (
-          <div className="card" style={{ padding: '2rem', border: '1px solid #bfdbfe' }}>
-            <h3 style={{ fontSize: '1.2rem', fontWeight: '800', color: 'var(--primary)', marginBottom: '1.5rem' }}>
-              {editingTenantId ? `Edit: ${name}` : 'Register New Tuition Center'}
-            </h3>
-
-            <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                <label style={{ fontSize: '0.8rem', fontWeight: '800', color: '#475569' }}>Tuition Code (Unique Alphanumeric)*</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  placeholder="e.g. sharmaclasses"
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  disabled={!!editingTenantId}
-                  style={{ textTransform: 'lowercase' }}
-                  required
-                />
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                <label style={{ fontSize: '0.8rem', fontWeight: '800', color: '#475569' }}>Tuition / Company Name*</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  placeholder="e.g. Sharma Coaching Classes"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                <label style={{ fontSize: '0.8rem', fontWeight: '800', color: '#475569' }}>Owner WhatsApp Number (With Country Code e.g. 9876500000)*</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  placeholder="e.g. 9876500000"
-                  value={whatsapp}
-                  onChange={(e) => setWhatsapp(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                <label style={{ fontSize: '0.8rem', fontWeight: '800', color: '#475569' }}>Custom Admin Password*</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  placeholder="Password for Tuition Owner to log in (default: admin123)"
-                  value={adminPassword}
-                  onChange={(e) => setAdminPassword(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', gridColumn: 'span 2' }}>
-                <label style={{ fontSize: '0.8rem', fontWeight: '800', color: '#475569' }}>Logo Image URL</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  placeholder="e.g. /logo.png or http link to logo"
-                  value={logoUrl}
-                  onChange={(e) => setLogoUrl(e.target.value)}
-                />
-              </div>
-
-              {error && <div style={{ color: '#ef4444', fontWeight: '800', fontSize: '0.85rem', gridColumn: 'span 2' }}>❌ {error}</div>}
-              {success && <div style={{ color: '#10b981', fontWeight: '800', fontSize: '0.85rem', gridColumn: 'span 2' }}>✅ {success}</div>}
-
-              <div style={{ gridColumn: 'span 2', display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
-                <button type="submit" className="btn btn-primary" style={{ padding: '0.65rem 1.5rem', fontWeight: '800' }}>
-                  {editingTenantId ? 'Save Changes' : 'Register Center'}
-                </button>
-                <button type="button" onClick={resetForm} className="btn btn-secondary" style={{ padding: '0.65rem 1.5rem', fontWeight: '800' }}>
-                  Cancel
-                </button>
-              </div>
-            </form>
+      {/* RENDER TAB 1: DASHBOARD STATS */}
+      {activeConsoleTab === 'dashboard' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <h2 style={{ fontSize: '1.2rem', fontWeight: '800', color: 'var(--text-primary)', margin: 0 }}>System Performance & Analytics</h2>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '0.2rem 0 0 0' }}>Real-time usage statistics across all centers</p>
+            </div>
+            <button 
+              onClick={loadTenants} 
+              className="btn btn-secondary" 
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.55rem 1rem', fontSize: '0.8rem', fontWeight: '700' }}
+              disabled={statsLoading}
+            >
+              <RefreshCw size={14} className={statsLoading ? 'spin-animation' : ''} />
+              <span>{statsLoading ? 'Refreshing...' : 'Refresh Stats'}</span>
+            </button>
           </div>
-        )}
 
-        {/* Tuition Centers List Card */}
-        <div className="card" style={{ padding: '2rem' }}>
-          <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#1e3a8a', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Database size={20} /> Registered Tuition Owners ({tenants.length})
-          </h3>
-
-          {loading ? (
-            <div style={{ padding: '3rem', textAlign: 'center', color: '#64748b' }}>Loading registered tenants...</div>
-          ) : tenants.length === 0 ? (
-            <div style={{ padding: '3rem', textAlign: 'center', color: '#64748b', border: '1px dashed #cbd5e1', borderRadius: '12px' }}>
-              No tuition owners registered yet. Click "Register New Tuition Owner" above to add one.
-            </div>
+          {statsLoading ? (
+            <div style={{ padding: '4rem', textAlign: 'center', color: 'var(--text-secondary)' }}>Calculating system statistics...</div>
+          ) : !stats ? (
+            <div style={{ padding: '4rem', textAlign: 'center', color: 'var(--danger)' }}>Failed to calculate statistics.</div>
           ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                <thead>
-                  <tr style={{ borderBottom: '2px solid #e2e8f0', color: '#475569', fontSize: '0.85rem', fontWeight: '800' }}>
-                    <th style={{ padding: '0.75rem 1rem' }}>Logo</th>
-                    <th style={{ padding: '0.75rem 1rem' }}>Tuition Code</th>
-                    <th style={{ padding: '0.75rem 1rem' }}>Company / Center Name</th>
-                    <th style={{ padding: '0.75rem 1rem' }}>WhatsApp Contact</th>
-                    <th style={{ padding: '0.75rem 1rem' }}>Admin Password</th>
-                    <th style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {tenants.map((t) => (
-                    <tr key={t.id} style={{ borderBottom: '1px solid #f1f5f9', fontSize: '0.9rem', color: '#0f172a' }}>
-                      <td style={{ padding: '0.75rem 1rem' }}>
-                        <img
-                          src={t.logo_url}
-                          alt="logo"
-                          onError={(e) => { e.target.src = '/logo.png'; }}
-                          style={{ width: '32px', height: '32px', borderRadius: '8px', objectFit: 'contain', border: '1px solid #cbd5e1' }}
-                        />
-                      </td>
-                      <td style={{ padding: '0.75rem 1rem', fontWeight: '800', color: '#0284c7' }}>{t.id}</td>
-                      <td style={{ padding: '0.75rem 1rem', fontWeight: '700' }}>{t.name}</td>
-                      <td style={{ padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: '0.4rem', borderBottom: 'none' }}>
-                        <MessageSquare size={14} style={{ color: '#10b981' }} />
-                        <span>{t.owner_whatsapp}</span>
-                      </td>
-                      <td style={{ padding: '0.75rem 1rem', color: '#64748b' }}><code>{t.admin_password || 'admin123'}</code></td>
-                      <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
-                          <button
-                            onClick={() => handleManageRightsClick(t)}
-                            className="btn"
-                            style={{
-                              backgroundColor: '#f8fafc',
-                              borderColor: '#cbd5e1',
-                              color: '#475569',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '0.25rem',
-                              padding: '0.35rem 0.75rem',
-                              fontSize: '0.78rem',
-                              fontWeight: '700'
-                            }}
-                            title="Manage Module & Widget Rights"
-                          >
-                            <Key size={14} /> Rights
-                          </button>
-                          <button
-                            onClick={() => onInspectTenant(t)}
-                            className="btn"
-                            style={{
-                              backgroundColor: '#eff6ff',
-                              borderColor: '#bfdbfe',
-                              color: '#2563eb',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '0.25rem',
-                              padding: '0.35rem 0.75rem',
-                              fontSize: '0.78rem',
-                              fontWeight: '700'
-                            }}
-                            title="Log in to inspect this center portal"
-                          >
-                            <Eye size={14} /> Inspect
-                          </button>
-                          <button
-                            onClick={() => handleEditClick(t)}
-                            className="btn btn-secondary"
-                            style={{
-                              padding: '0.35rem 0.65rem',
-                              fontSize: '0.78rem',
-                              fontWeight: '700'
-                            }}
-                          >
-                            <Edit2 size={14} />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteClick(t.id, t.name)}
-                            className="btn"
-                            style={{
-                              backgroundColor: '#fee2e2',
-                              borderColor: '#fecaca',
-                              color: '#dc2626',
-                              padding: '0.35rem 0.65rem',
-                              fontSize: '0.78rem',
-                              fontWeight: '700'
-                            }}
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <>
+              {/* Stat Tiles Grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem' }}>
+                
+                {/* 1. Total Tuitions */}
+                <div className="card" style={{
+                  padding: '1.5rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '1rem',
+                  border: '1px solid var(--border-color)',
+                  boxShadow: 'var(--shadow-sm)',
+                  background: 'var(--bg-card)',
+                  position: 'relative'
+                }}>
+                  <div style={{ width: '44px', height: '44px', borderRadius: '10px', backgroundColor: 'rgba(37,99,235,0.06)', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Shield size={20} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.72rem', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Total Tuitions</div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: '900', color: 'var(--text-primary)', marginTop: '0.15rem' }}>{stats.totalTuitions}</div>
+                  </div>
+                </div>
+
+                {/* 2. Total Owners */}
+                <div className="card" style={{
+                  padding: '1.5rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '1rem',
+                  border: '1px solid var(--border-color)',
+                  boxShadow: 'var(--shadow-sm)',
+                  background: 'var(--bg-card)'
+                }}>
+                  <div style={{ width: '44px', height: '44px', borderRadius: '10px', backgroundColor: 'rgba(16,185,129,0.06)', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Users size={20} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.72rem', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Total Owners</div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: '900', color: 'var(--text-primary)', marginTop: '0.15rem' }}>{stats.totalOwners}</div>
+                  </div>
+                </div>
+
+                {/* 3. Total Teachers */}
+                <div className="card" style={{
+                  padding: '1.5rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '1rem',
+                  border: '1px solid var(--border-color)',
+                  boxShadow: 'var(--shadow-sm)',
+                  background: 'var(--bg-card)'
+                }}>
+                  <div style={{ width: '44px', height: '44px', borderRadius: '10px', backgroundColor: 'rgba(139,92,246,0.06)', color: '#8b5cf6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Key size={20} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.72rem', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Total Teachers</div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: '900', color: 'var(--text-primary)', marginTop: '0.15rem' }}>{stats.totalTeachers}</div>
+                  </div>
+                </div>
+
+                {/* 4. Total Students */}
+                <div className="card" style={{
+                  padding: '1.5rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '1rem',
+                  border: '1px solid var(--border-color)',
+                  boxShadow: 'var(--shadow-sm)',
+                  background: 'var(--bg-card)'
+                }}>
+                  <div style={{ width: '44px', height: '44px', borderRadius: '10px', backgroundColor: 'rgba(236,72,153,0.06)', color: '#ec4899', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <GraduationCap size={20} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.72rem', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Total Students</div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: '900', color: 'var(--text-primary)', marginTop: '0.15rem' }}>{stats.totalStudents}</div>
+                  </div>
+                </div>
+
+                {/* 5. Pending Approvals */}
+                <div className="card" style={{
+                  padding: '1.5rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '1rem',
+                  border: '1px solid var(--border-color)',
+                  boxShadow: 'var(--shadow-sm)',
+                  background: 'var(--bg-card)'
+                }}>
+                  <div style={{ width: '44px', height: '44px', borderRadius: '10px', backgroundColor: 'rgba(245,158,11,0.06)', color: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Clock size={20} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.72rem', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Pending Inquiries</div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: '900', color: 'var(--text-primary)', marginTop: '0.15rem' }}>{stats.totalPending}</div>
+                  </div>
+                </div>
+
+                {/* 6. Rejected Requests */}
+                <div className="card" style={{
+                  padding: '1.5rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '1rem',
+                  border: '1px solid var(--border-color)',
+                  boxShadow: 'var(--shadow-sm)',
+                  background: 'var(--bg-card)'
+                }}>
+                  <div style={{ width: '44px', height: '44px', borderRadius: '10px', backgroundColor: 'rgba(239,68,68,0.06)', color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <XCircle size={20} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.72rem', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Rejected Inquiries</div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: '900', color: 'var(--text-primary)', marginTop: '0.15rem' }}>{stats.totalRejected}</div>
+                  </div>
+                </div>
+
+                {/* 7. Active Users */}
+                <div className="card" style={{
+                  padding: '1.5rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '1rem',
+                  border: '1px solid var(--border-color)',
+                  boxShadow: 'var(--shadow-sm)',
+                  background: 'var(--bg-card)'
+                }}>
+                  <div style={{ width: '44px', height: '44px', borderRadius: '10px', backgroundColor: 'rgba(14,165,233,0.06)', color: '#0ea5e9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Activity size={20} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.72rem', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Active Portals</div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: '900', color: 'var(--text-primary)', marginTop: '0.15rem' }}>{stats.totalActiveUsers}</div>
+                  </div>
+                </div>
+
+                {/* 8. Total Size */}
+                <div className="card" style={{
+                  padding: '1.5rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '1rem',
+                  border: '1px solid var(--border-color)',
+                  boxShadow: 'var(--shadow-sm)',
+                  background: 'var(--bg-card)'
+                }}>
+                  <div style={{ width: '44px', height: '44px', borderRadius: '10px', backgroundColor: 'rgba(75,85,99,0.06)', color: '#4b5563', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Database size={20} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.72rem', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Est. DB Size</div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: '900', color: 'var(--text-primary)', marginTop: '0.15rem' }}>
+                      {(() => {
+                        const totalSize = stats.tuitionWiseStats.reduce((acc, curr) => acc + curr.dataSizeKb, 0);
+                        return totalSize > 1024 
+                          ? `${Math.round((totalSize / 1024) * 100) / 100} MB` 
+                          : `${Math.round(totalSize * 100) / 100} KB`;
+                      })()}
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Tuition Wise breakdown table */}
+              <div className="card" style={{ padding: '2rem' }}>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--primary)', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Database size={18} /> Tuition Wise Storage & Usage Breakdown
+                </h3>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '2px solid var(--border-color)', color: 'var(--text-secondary)', fontSize: '0.82rem', fontWeight: '800' }}>
+                        <th style={{ padding: '0.75rem 1rem' }}>Tuition Name</th>
+                        <th style={{ padding: '0.75rem 1rem' }}>Tuition Code</th>
+                        <th style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>Students</th>
+                        <th style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>Batches</th>
+                        <th style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>Active Portals</th>
+                        <th style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>Pending Inquiries</th>
+                        <th style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>Data Size</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {stats.tuitionWiseStats.map((item) => (
+                        <tr key={item.tenantId} style={{ borderBottom: '1px solid var(--border-color)', fontSize: '0.88rem', color: 'var(--text-primary)' }}>
+                          <td style={{ padding: '0.75rem 1rem', fontWeight: '700' }}>{item.tenantName}</td>
+                          <td style={{ padding: '0.75rem 1rem', fontWeight: '800', color: '#0284c7' }}>{item.tenantId}</td>
+                          <td style={{ padding: '0.75rem 1rem', textAlign: 'center', fontWeight: '600' }}>{item.studentsCount}</td>
+                          <td style={{ padding: '0.75rem 1rem', textAlign: 'center', fontWeight: '600' }}>{item.batchesCount}</td>
+                          <td style={{ padding: '0.75rem 1rem', textAlign: 'center', fontWeight: '600' }}>{item.activeUsers}</td>
+                          <td style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>
+                            <span className="badge" style={{ 
+                              backgroundColor: item.pendingInquiries > 0 ? 'rgba(245,158,11,0.1)' : 'rgba(16,185,129,0.1)',
+                              color: item.pendingInquiries > 0 ? '#d97706' : '#059669',
+                              fontWeight: '700',
+                              fontSize: '0.75rem',
+                              padding: '0.2rem 0.5rem',
+                              borderRadius: '6px'
+                            }}>
+                              {item.pendingInquiries} pending
+                            </span>
+                          </td>
+                          <td style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: '800', color: 'var(--text-secondary)' }}>
+                            {item.dataSizeKb} KB
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
           )}
         </div>
-      </div>
+      )}
+
+      {/* RENDER TAB 2: TUITION CENTERS LIST */}
+      {activeConsoleTab === 'centers' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+          
+          {/* Toggle Add Form Button */}
+          {!showAddForm && (
+            <button
+              onClick={() => setShowAddForm(true)}
+              className="btn btn-primary"
+              style={{
+                alignSelf: 'flex-start',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.75rem 1.5rem',
+                fontWeight: '800',
+                fontSize: '0.9rem'
+              }}
+            >
+              <Plus size={18} /> Register New Tuition Owner
+            </button>
+          )}
+
+          {/* Add/Edit Form Panel */}
+          {showAddForm && (
+            <div className="card" style={{ padding: '2rem', border: '1px solid #bfdbfe' }}>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: '800', color: 'var(--primary)', marginBottom: '1.5rem' }}>
+                {editingTenantId ? `Edit: ${name}` : 'Register New Tuition Center'}
+              </h3>
+
+              <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                  <label style={{ fontSize: '0.8rem', fontWeight: '800', color: '#475569' }}>Tuition Code (Unique Alphanumeric)*</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="e.g. sharmaclasses"
+                    value={code}
+                    onChange={(e) => setCode(e.target.value)}
+                    disabled={!!editingTenantId}
+                    style={{ textTransform: 'lowercase' }}
+                    required
+                  />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                  <label style={{ fontSize: '0.8rem', fontWeight: '800', color: '#475569' }}>Tuition / Company Name*</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="e.g. Sharma Coaching Classes"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                  <label style={{ fontSize: '0.8rem', fontWeight: '800', color: '#475569' }}>Owner WhatsApp Number (With Country Code e.g. 9876500000)*</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="e.g. 9876500000"
+                    value={whatsapp}
+                    onChange={(e) => setWhatsapp(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                  <label style={{ fontSize: '0.8rem', fontWeight: '800', color: '#475569' }}>Custom Admin Password*</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="e.g. Pass123!"
+                    value={adminPassword}
+                    onChange={(e) => setAdminPassword(e.target.value)}
+                    required
+                  />
+                  <span style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '0.1rem', lineHeight: '1.4' }}>
+                    Password must contain at least 8 characters, an uppercase letter, a number, and a special character (!@#$&*-).
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', gridColumn: 'span 2' }}>
+                  <label style={{ fontSize: '0.8rem', fontWeight: '800', color: '#475569' }}>Logo Image URL</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="e.g. /logo.png or http link to logo"
+                    value={logoUrl}
+                    onChange={(e) => setLogoUrl(e.target.value)}
+                  />
+                </div>
+
+                {error && <div style={{ color: '#ef4444', fontWeight: '800', fontSize: '0.85rem', gridColumn: 'span 2' }}>❌ {error}</div>}
+                {success && <div style={{ color: '#10b981', fontWeight: '800', fontSize: '0.85rem', gridColumn: 'span 2' }}>✅ {success}</div>}
+
+                <div style={{ gridColumn: 'span 2', display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
+                  <button type="submit" className="btn btn-primary" style={{ padding: '0.65rem 1.5rem', fontWeight: '800' }}>
+                    {editingTenantId ? 'Save Changes' : 'Register Center'}
+                  </button>
+                  <button type="button" onClick={resetForm} className="btn btn-secondary" style={{ padding: '0.65rem 1.5rem', fontWeight: '800' }}>
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* Tuition Centers List Card */}
+          <div className="card" style={{ padding: '2rem' }}>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#1e3a8a', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Database size={20} /> Registered Tuition Owners ({tenants.length})
+            </h3>
+
+            {loading ? (
+              <div style={{ padding: '3rem', textAlign: 'center', color: '#64748b' }}>Loading registered tenants...</div>
+            ) : tenants.length === 0 ? (
+              <div style={{ padding: '3rem', textAlign: 'center', color: '#64748b', border: '1px dashed #cbd5e1', borderRadius: '12px' }}>
+                No tuition owners registered yet. Click "Register New Tuition Owner" above to add one.
+              </div>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '2px solid #e2e8f0', color: '#475569', fontSize: '0.85rem', fontWeight: '800' }}>
+                      <th style={{ padding: '0.75rem 1rem' }}>Logo</th>
+                      <th style={{ padding: '0.75rem 1rem' }}>Tuition Code</th>
+                      <th style={{ padding: '0.75rem 1rem' }}>Company / Center Name</th>
+                      <th style={{ padding: '0.75rem 1rem' }}>WhatsApp Contact</th>
+                      <th style={{ padding: '0.75rem 1rem' }}>Admin Password</th>
+                      <th style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tenants.map((t) => (
+                      <tr key={t.id} style={{ borderBottom: '1px solid #f1f5f9', fontSize: '0.9rem', color: '#0f172a' }}>
+                        <td style={{ padding: '0.75rem 1rem' }}>
+                          <img
+                            src={t.logo_url}
+                            alt="logo"
+                            onError={(e) => { e.target.src = '/logo.png'; }}
+                            style={{ width: '32px', height: '32px', borderRadius: '8px', objectFit: 'contain', border: '1px solid #cbd5e1' }}
+                          />
+                        </td>
+                        <td style={{ padding: '0.75rem 1rem', fontWeight: '800', color: '#0284c7' }}>{t.id}</td>
+                        <td style={{ padding: '0.75rem 1rem', fontWeight: '700' }}>{t.name}</td>
+                        <td style={{ padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: '0.4rem', borderBottom: 'none' }}>
+                          <MessageSquare size={14} style={{ color: '#10b981' }} />
+                          <span>{t.owner_whatsapp}</span>
+                        </td>
+                        <td style={{ padding: '0.75rem 1rem', color: '#64748b' }}><code>{t.admin_password || 'admin123'}</code></td>
+                        <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>
+                          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                            <button
+                              onClick={() => handleManageRightsClick(t)}
+                              className="btn"
+                              style={{
+                                backgroundColor: '#f8fafc',
+                                borderColor: '#cbd5e1',
+                                color: '#475569',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.25rem',
+                                padding: '0.35rem 0.75rem',
+                                fontSize: '0.78rem',
+                                fontWeight: '700'
+                              }}
+                              title="Manage Module & Widget Rights"
+                            >
+                              <Key size={14} /> Rights
+                            </button>
+                            <button
+                              onClick={() => onInspectTenant(t)}
+                              className="btn"
+                              style={{
+                                backgroundColor: '#eff6ff',
+                                borderColor: '#bfdbfe',
+                                color: '#2563eb',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.25rem',
+                                padding: '0.35rem 0.75rem',
+                                fontSize: '0.78rem',
+                                fontWeight: '700'
+                              }}
+                              title="Log in to inspect this center portal"
+                            >
+                              <Eye size={14} /> Inspect
+                            </button>
+                            <button
+                              onClick={() => handleEditClick(t)}
+                              className="btn btn-secondary"
+                              style={{
+                                padding: '0.35rem 0.65rem',
+                                fontSize: '0.78rem',
+                                fontWeight: '700'
+                              }}
+                            >
+                              <Edit2 size={14} />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteClick(t.id, t.name)}
+                              className="btn"
+                              style={{
+                                backgroundColor: '#fee2e2',
+                                borderColor: '#fecaca',
+                                color: '#dc2626',
+                                padding: '0.35rem 0.65rem',
+                                fontSize: '0.78rem',
+                                fontWeight: '700'
+                              }}
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Manage Rights Modal */}
       {selectedTenantForRights && (
