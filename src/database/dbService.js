@@ -152,6 +152,7 @@ const DEFAULT_FEATURES = {
   materials: true,
   branding: true,
   inquiries: true,
+  teacher_login: true,
   db_fees: true,
   db_attendance: true,
   db_tests: true,

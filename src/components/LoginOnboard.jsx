@@ -101,6 +101,12 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
     }
   }, [activeTenant, showInquiryForm]);
 
+  useEffect(() => {
+    if (activeTenant && activeTenant.features?.teacher_login === false && activeTab === 'admin') {
+      setActiveTab('parent_login');
+    }
+  }, [activeTenant, activeTab]);
+
   const clearMessages = () => {
     setError('');
     setSuccess('');
@@ -559,52 +565,54 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
           )}
 
           {/* Tab Switcher */}
-          <div style={{
-            display: 'flex',
-            width: '100%',
-            backgroundColor: '#f1f5f9',
-            padding: '4px',
-            borderRadius: '12px',
-            marginBottom: '1.5rem',
-            border: '1px solid #e2e8f0'
-          }}>
-            <button
-              onClick={() => handleTabChange('parent_login')}
-              style={{
-                flex: 1,
-                padding: '0.55rem 0.25rem',
-                fontSize: '0.74rem',
-                fontWeight: '700',
-                borderRadius: '8px',
-                border: 'none',
-                backgroundColor: activeTab === 'parent_login' ? '#ffffff' : 'transparent',
-                color: activeTab === 'parent_login' ? '#1e3a8a' : '#64748b',
-                boxShadow: activeTab === 'parent_login' ? '0 2px 6px rgba(0,0,0,0.05)' : 'none',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              Student Login
-            </button>
-            <button
-              onClick={() => handleTabChange('admin')}
-              style={{
-                flex: 1,
-                padding: '0.55rem 0.25rem',
-                fontSize: '0.74rem',
-                fontWeight: '700',
-                borderRadius: '8px',
-                border: 'none',
-                backgroundColor: activeTab === 'admin' ? '#ffffff' : 'transparent',
-                color: activeTab === 'admin' ? '#1e3a8a' : '#64748b',
-                boxShadow: activeTab === 'admin' ? '0 2px 6px rgba(0,0,0,0.05)' : 'none',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              Teacher Login
-            </button>
-          </div>
+          {(!activeTenant || activeTenant.features?.teacher_login !== false) && (
+            <div style={{
+              display: 'flex',
+              width: '100%',
+              backgroundColor: '#f1f5f9',
+              padding: '4px',
+              borderRadius: '12px',
+              marginBottom: '1.5rem',
+              border: '1px solid #e2e8f0'
+            }}>
+              <button
+                onClick={() => handleTabChange('parent_login')}
+                style={{
+                  flex: 1,
+                  padding: '0.55rem 0.25rem',
+                  fontSize: '0.74rem',
+                  fontWeight: '700',
+                  borderRadius: '8px',
+                  border: 'none',
+                  backgroundColor: activeTab === 'parent_login' ? '#ffffff' : 'transparent',
+                  color: activeTab === 'parent_login' ? '#1e3a8a' : '#64748b',
+                  boxShadow: activeTab === 'parent_login' ? '0 2px 6px rgba(0,0,0,0.05)' : 'none',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                Student Login
+              </button>
+              <button
+                onClick={() => handleTabChange('admin')}
+                style={{
+                  flex: 1,
+                  padding: '0.55rem 0.25rem',
+                  fontSize: '0.74rem',
+                  fontWeight: '700',
+                  borderRadius: '8px',
+                  border: 'none',
+                  backgroundColor: activeTab === 'admin' ? '#ffffff' : 'transparent',
+                  color: activeTab === 'admin' ? '#1e3a8a' : '#64748b',
+                  boxShadow: activeTab === 'admin' ? '0 2px 6px rgba(0,0,0,0.05)' : 'none',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                Teacher Login
+              </button>
+            </div>
+          )}
 
           {/* Forms */}
           {activeTab === 'admin' && (
@@ -874,6 +882,10 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
                   const tenant = await dbService.verifyTenantCode(cleanCode);
                   if (!tenant) {
                     setStaffRegError('Invalid Tuition Code. Please contact your tuition owner.');
+                    return;
+                  }
+                  if (tenant.features?.teacher_login === false) {
+                    setStaffRegError('Staff registration is disabled for this Tuition Center.');
                     return;
                   }
                   // Set active tenant in system

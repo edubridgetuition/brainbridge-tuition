@@ -826,7 +826,8 @@ export default function SuperAdmin({ onLogout, onInspectTenant }) {
                     { key: 'homework', label: 'Homework' },
                     { key: 'materials', label: 'Study Materials' },
                     { key: 'branding', label: 'Custom Branding' },
-                    { key: 'inquiries', label: 'Admission Inquiries' }
+                    { key: 'inquiries', label: 'Admission Inquiries' },
+                    { key: 'teacher_login', label: 'Teacher Login & Staff Sign Up' }
                   ].map(item => (
                     <label key={item.key} style={{
                       display: 'flex',
