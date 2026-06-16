@@ -589,7 +589,7 @@ export default function Dashboard({ setActiveTab, currentUser, verifyAction, act
       }
       
       if (isStaff) {
-        if (key === 'db_fees' || key === 'fee_reminder') return false;
+        if (key === 'db_fees' || key === 'fee_reminder' || key === 'db_analytics') return false;
         return activeTenant.features[key] !== false;
       } else {
         return activeTenant.features[key] !== false;
