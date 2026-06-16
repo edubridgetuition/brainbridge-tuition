@@ -197,21 +197,15 @@ const getCurrentAdmin = () => {
 };
 
 // Fallback logic for database outages / offline mode
-let useLocalStorageFallback = false;
 const forceLocalMode = localStorage.getItem('bb_db_mode') === 'local';
 
 const runQuery = async (firebaseQueryFn, localStorageFallbackFn) => {
-  if (isFirebaseConfigured && !useLocalStorageFallback && !forceLocalMode) {
+  if (isFirebaseConfigured && !forceLocalMode) {
     try {
-      const result = await Promise.race([
-        firebaseQueryFn(),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Firebase request timeout')), 2500))
-      ]);
-      return result;
+      return await firebaseQueryFn();
     } catch (error) {
-      console.warn("Firebase query failed or timed out, falling back to LocalStorage:", error);
-      useLocalStorageFallback = true;
-      return localStorageFallbackFn();
+      console.error("Firebase query failed:", error);
+      throw error;
     }
   }
   return localStorageFallbackFn();

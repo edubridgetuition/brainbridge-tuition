@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { initializeFirestore } from "firebase/firestore";
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "",
@@ -20,6 +20,9 @@ export const isFirebaseConfigured =
 export const app = isFirebaseConfigured ? initializeApp(firebaseConfig) : null;
 export const db = isFirebaseConfigured 
   ? initializeFirestore(app, {
+      localCache: persistentLocalCache({
+        tabManager: persistentMultipleTabManager()
+      }),
       experimentalAutoDetectLongPolling: true
     }) 
   : null;
