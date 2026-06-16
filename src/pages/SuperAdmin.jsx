@@ -1152,53 +1152,122 @@ export default function SuperAdmin({ onLogout, onInspectTenant }) {
               {/* Dashboard Widgets Section */}
               <div>
                 <h4 style={{ fontSize: '0.85rem', fontWeight: '800', color: '#475569', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  Dashboard Widget Visibility
+                  Dashboard Widget Visibility Permissions
                 </h4>
                 <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '-0.3rem', marginBottom: '0.75rem' }}>
-                  Control which widgets are displayed on the home dashboard screen.
+                  Set Dashboard widget display permissions separately for Owner Admin and Teacher/Staff.
                 </p>
                 <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(2, 1fr)',
-                  gap: '0.75rem',
                   background: '#f8fafc',
                   padding: '1rem',
                   borderRadius: '12px',
-                  border: '1px solid #e2e8f0'
+                  border: '1px solid #e2e8f0',
+                  overflowX: 'auto'
                 }}>
-                  {[
-                    { key: 'db_fees', label: 'Fee Stats & Payments' },
-                    { key: 'db_attendance', label: 'Attendance Rate Card' },
-                    { key: 'db_tests', label: 'Test Scores Card' },
-                    { key: 'db_homework', label: 'Recent Homework List' },
-                    { key: 'db_materials', label: 'Study Materials List' },
-                    { key: 'db_testimonials', label: 'Parent Testimonials List' },
-                    { key: 'fee_reminder', label: 'Fees Reminder Simulator Alert' }
-                  ].map(item => (
-                    <label key={item.key} style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.6rem',
-                      fontSize: '0.88rem',
-                      fontWeight: '600',
-                      color: '#334155',
-                      cursor: 'pointer',
-                      padding: '0.25rem 0'
-                    }}>
-                      <input
-                        type="checkbox"
-                        checked={!!tempFeatures[item.key]}
-                        onChange={(e) => handleFeatureToggle(item.key, e.target.checked)}
-                        style={{
-                          width: '18px',
-                          height: '18px',
-                          cursor: 'pointer',
-                          accentColor: '#1655e0'
-                        }}
-                      />
-                      {item.label}
-                    </label>
-                  ))}
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1.5px solid #cbd5e1', color: '#475569', fontWeight: '800', textAlign: 'left' }}>
+                        <th style={{ padding: '0.5rem' }}>Widget Name / Action</th>
+                        <th style={{ padding: '0.5rem', textAlign: 'center', width: '100px' }}>Owner Admin</th>
+                        <th style={{ padding: '0.5rem', textAlign: 'center', width: '110px' }}>Teacher / Staff</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        { 
+                          label: 'Fee Stats & Payments', 
+                          ownerKey: 'owner_db_fees', 
+                          staffKey: 'staff_db_fees',
+                          defaultOwner: true,
+                          defaultStaff: false
+                        },
+                        { 
+                          label: 'Attendance Rate Card', 
+                          ownerKey: 'owner_db_attendance', 
+                          staffKey: 'staff_db_attendance',
+                          defaultOwner: true,
+                          defaultStaff: true
+                        },
+                        { 
+                          label: 'Test Scores Card', 
+                          ownerKey: 'owner_db_tests', 
+                          staffKey: 'staff_db_tests',
+                          defaultOwner: true,
+                          defaultStaff: true
+                        },
+                        { 
+                          label: 'Recent Homework List', 
+                          ownerKey: 'owner_db_homework', 
+                          staffKey: 'staff_db_homework',
+                          defaultOwner: true,
+                          defaultStaff: true
+                        },
+                        { 
+                          label: 'Study Materials List', 
+                          ownerKey: 'owner_db_materials', 
+                          staffKey: 'staff_db_materials',
+                          defaultOwner: true,
+                          defaultStaff: true
+                        },
+                        { 
+                          label: 'Parent Testimonials List', 
+                          ownerKey: 'owner_db_testimonials', 
+                          staffKey: 'staff_db_testimonials',
+                          defaultOwner: true,
+                          defaultStaff: true
+                        },
+                        { 
+                          label: 'Fees Reminder Simulator Alert', 
+                          ownerKey: 'owner_fee_reminder', 
+                          staffKey: 'staff_fee_reminder',
+                          defaultOwner: true,
+                          defaultStaff: false
+                        }
+                      ].map(item => {
+                        const ownerVal = tempFeatures[item.ownerKey] !== undefined 
+                          ? tempFeatures[item.ownerKey] 
+                          : item.defaultOwner;
+                          
+                        const staffVal = tempFeatures[item.staffKey] !== undefined 
+                          ? tempFeatures[item.staffKey] 
+                          : item.defaultStaff;
+
+                        return (
+                          <tr key={item.label} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '0.65rem 0.5rem', fontWeight: '700', color: '#334155' }}>
+                              {item.label}
+                            </td>
+                            <td style={{ padding: '0.65rem 0.5rem', textAlign: 'center' }}>
+                              <input
+                                type="checkbox"
+                                checked={!!ownerVal}
+                                onChange={(e) => handleFeatureToggle(item.ownerKey, e.target.checked)}
+                                style={{
+                                  width: '18px',
+                                  height: '18px',
+                                  cursor: 'pointer',
+                                  accentColor: '#1655e0'
+                                }}
+                              />
+                            </td>
+                            <td style={{ padding: '0.65rem 0.5rem', textAlign: 'center' }}>
+                              <input
+                                type="checkbox"
+                                checked={!!staffVal}
+                                onChange={(e) => handleFeatureToggle(item.staffKey, e.target.checked)}
+                                style={{
+                                  width: '18px',
+                                  height: '18px',
+                                  cursor: 'pointer',
+                                  accentColor: '#1655e0'
+                                }}
+                              />
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               </div>
 

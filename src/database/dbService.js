@@ -194,7 +194,21 @@ const DEFAULT_FEATURES = {
   db_tests: true,
   db_homework: true,
   db_materials: true,
-  db_testimonials: true
+  db_testimonials: true,
+  owner_db_fees: true,
+  owner_db_attendance: true,
+  owner_db_tests: true,
+  owner_db_homework: true,
+  owner_db_materials: true,
+  owner_db_testimonials: true,
+  staff_db_fees: false,
+  staff_db_attendance: true,
+  staff_db_tests: true,
+  staff_db_homework: true,
+  staff_db_materials: true,
+  staff_db_testimonials: true,
+  owner_fee_reminder: true,
+  staff_fee_reminder: false
 };
 
 const INITIAL_TENANTS = [

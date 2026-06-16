@@ -576,7 +576,26 @@ export default function Dashboard({ setActiveTab, currentUser, verifyAction, act
   });
 
   const isFeatureEnabled = (key) => {
+    if (currentUser?.role === 'superadmin') return true;
     if (!activeTenant || !activeTenant.features) return true;
+    
+    if (key.startsWith('db_') || key === 'fee_reminder') {
+      const isStaff = currentUser?.role === 'admin' && !!currentUser.staffId;
+      const rolePrefix = isStaff ? 'staff_' : 'owner_';
+      const roleKey = rolePrefix + key;
+      
+      if (activeTenant.features[roleKey] !== undefined) {
+        return activeTenant.features[roleKey];
+      }
+      
+      if (isStaff) {
+        if (key === 'db_fees' || key === 'fee_reminder') return false;
+        return activeTenant.features[key] !== false;
+      } else {
+        return activeTenant.features[key] !== false;
+      }
+    }
+    
     return activeTenant.features[key] !== false;
   };
 
