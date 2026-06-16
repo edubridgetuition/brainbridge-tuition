@@ -184,6 +184,23 @@ function App() {
             return ownerPending || ownerApproved || ownerRejected || ownerAll || ownerQr;
           }
         }
+
+        if (key === 'staff') {
+          const isStaff = currentUser?.role === 'admin' && !!currentUser.staffId;
+          if (isStaff) {
+            const staffPending = features.staff_staff_pending !== undefined ? features.staff_staff_pending : false;
+            const staffActive = features.staff_staff_active !== undefined ? features.staff_staff_active : false;
+            const staffRejected = features.staff_staff_rejected !== undefined ? features.staff_staff_rejected : false;
+            const staffAll = features.staff_staff_all !== undefined ? features.staff_staff_all : false;
+            return staffPending || staffActive || staffRejected || staffAll;
+          } else {
+            const ownerPending = features.owner_staff_pending !== undefined ? features.owner_staff_pending : true;
+            const ownerActive = features.owner_staff_active !== undefined ? features.owner_staff_active : true;
+            const ownerRejected = features.owner_staff_rejected !== undefined ? features.owner_staff_rejected : true;
+            const ownerAll = features.owner_staff_all !== undefined ? features.owner_staff_all : true;
+            return ownerPending || ownerActive || ownerRejected || ownerAll;
+          }
+        }
         return true;
       };
 

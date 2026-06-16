@@ -157,6 +157,26 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
       }
     }
 
+    // Additional check for staff (Staff Management)
+    if (featureKey === 'staff') {
+      const isStaff = currentUser?.role === 'admin' && !!currentUser.staffId;
+      if (isStaff) {
+        const staffPending = activeTenant.features.staff_staff_pending !== undefined ? activeTenant.features.staff_staff_pending : false;
+        const staffActive = activeTenant.features.staff_staff_active !== undefined ? activeTenant.features.staff_staff_active : false;
+        const staffRejected = activeTenant.features.staff_staff_rejected !== undefined ? activeTenant.features.staff_staff_rejected : false;
+        const staffAll = activeTenant.features.staff_staff_all !== undefined ? activeTenant.features.staff_staff_all : false;
+        
+        return staffPending || staffActive || staffRejected || staffAll;
+      } else {
+        const ownerPending = activeTenant.features.owner_staff_pending !== undefined ? activeTenant.features.owner_staff_pending : true;
+        const ownerActive = activeTenant.features.owner_staff_active !== undefined ? activeTenant.features.owner_staff_active : true;
+        const ownerRejected = activeTenant.features.owner_staff_rejected !== undefined ? activeTenant.features.owner_staff_rejected : true;
+        const ownerAll = activeTenant.features.owner_staff_all !== undefined ? activeTenant.features.owner_staff_all : true;
+        
+        return ownerPending || ownerActive || ownerRejected || ownerAll;
+      }
+    }
+
     return true;
   };
 
@@ -203,7 +223,7 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
       items: [
         { id: 'students', label: 'Admissions', icon: Users, role: 'admin' },
         { id: 'inquiries', label: 'Inquiries', icon: FileText, role: 'admin' },
-        { id: 'staff', label: 'Staff Management', icon: UserCheck, role: 'owner' },
+        { id: 'staff', label: 'Staff Management', icon: UserCheck, role: 'admin' },
         { id: 'fees', label: 'Fees', icon: CreditCard },
         { id: 'tests', label: 'Test Marks', icon: FileSpreadsheet }
       ].filter(item => isFeatureEnabled(item.id))
@@ -231,7 +251,7 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
         ...(currentUser?.role === 'superadmin' ? [{ id: 'manage_centers', label: 'Manage Tuition Centre', icon: Shield }] : []),
         { id: 'timetable', label: 'Timetable', icon: Calendar },
         { id: 'inquiries', label: 'Inquiries', icon: FileText },
-        { id: 'staff', label: 'Staff Management', icon: UserCheck, role: 'owner' },
+        { id: 'staff', label: 'Staff Management', icon: UserCheck, role: 'admin' },
         { id: 'tests', label: 'Test Marks', icon: FileSpreadsheet },
         { id: 'homework', label: 'Homework', icon: ClipboardList },
         { id: 'materials', label: 'Study Material', icon: Download }

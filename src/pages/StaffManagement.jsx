@@ -10,6 +10,50 @@ export default function StaffManagement({ currentUser, verifyAction, activeTenan
   const [selectedStaffForView, setSelectedStaffForView] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
 
+  const getFeature = (key, defaultVal) => {
+    if (!activeTenant || !activeTenant.features) return defaultVal;
+    if (activeTenant.features[key] !== undefined) return activeTenant.features[key];
+    return defaultVal;
+  };
+
+  const isStaff = currentUser?.role === 'admin' && !!currentUser.staffId;
+
+  const showPending = isStaff
+    ? getFeature('staff_staff_pending', false)
+    : getFeature('owner_staff_pending', true);
+
+  const showActive = isStaff
+    ? getFeature('staff_staff_active', false)
+    : getFeature('owner_staff_active', true);
+
+  const showRejected = isStaff
+    ? getFeature('staff_staff_rejected', false)
+    : getFeature('owner_staff_rejected', true);
+
+  const showAll = isStaff
+    ? getFeature('staff_staff_all', false)
+    : getFeature('owner_staff_all', true);
+
+  useEffect(() => {
+    if (statusFilter === 'Pending' && !showPending) {
+      if (showActive) setStatusFilter('Approved');
+      else if (showRejected) setStatusFilter('Rejected');
+      else if (showAll) setStatusFilter('All');
+    } else if (statusFilter === 'Approved' && !showActive) {
+      if (showPending) setStatusFilter('Pending');
+      else if (showRejected) setStatusFilter('Rejected');
+      else if (showAll) setStatusFilter('All');
+    } else if (statusFilter === 'Rejected' && !showRejected) {
+      if (showPending) setStatusFilter('Pending');
+      else if (showActive) setStatusFilter('Approved');
+      else if (showAll) setStatusFilter('All');
+    } else if (statusFilter === 'All' && !showAll) {
+      if (showPending) setStatusFilter('Pending');
+      else if (showActive) setStatusFilter('Approved');
+      else if (showRejected) setStatusFilter('Rejected');
+    }
+  }, [showPending, showActive, showRejected, showAll, statusFilter]);
+
   useEffect(() => {
     loadStaffData();
   }, []);
@@ -116,7 +160,13 @@ export default function StaffManagement({ currentUser, verifyAction, activeTenan
       {/* Filter Tabs */}
       <div className="filters-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div style={{ display: 'flex', gap: '0.5rem', backgroundColor: '#f1f5f9', padding: '4px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-          {['Pending', 'Approved', 'Rejected', 'All'].map(status => {
+          {['Pending', 'Approved', 'Rejected', 'All'].filter(status => {
+            if (status === 'Pending') return showPending;
+            if (status === 'Approved') return showActive;
+            if (status === 'Rejected') return showRejected;
+            if (status === 'All') return showAll;
+            return true;
+          }).map(status => {
             const count = status === 'All' ? staffList.length : staffList.filter(s => s.status === status).length;
             const isActive = statusFilter === status;
             return (
