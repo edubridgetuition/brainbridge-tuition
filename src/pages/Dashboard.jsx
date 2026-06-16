@@ -580,15 +580,29 @@ export default function Dashboard({ setActiveTab, currentUser, verifyAction, act
     return activeTenant.features[key] !== false;
   };
 
-  const headerTitle = (currentUser?.role === 'admin' || currentUser?.role === 'superadmin')
-    ? (currentUser.staffId ? currentUser.designation || (activeTenant?.custom_owner_title || 'Owner admin') : (activeTenant?.custom_owner_title || 'Owner admin')) 
-    : 'Home';
+  const headerTitle = currentUser?.role === 'superadmin'
+    ? 'Master admin'
+    : (currentUser?.role === 'admin')
+      ? (currentUser.staffId ? currentUser.designation || (activeTenant?.custom_owner_title || 'Owner admin') : (activeTenant?.custom_owner_title || 'Owner admin')) 
+      : 'Home';
 
   return (
     <div>
       <div className="page-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          {hasCustomLogo ? (
+          {currentUser?.role === 'superadmin' ? (
+            <img 
+              src="/logo.png" 
+              alt="BrainBridge Logo" 
+              style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '12px',
+                objectFit: 'contain',
+                boxShadow: '0 4px 12px rgba(15, 23, 42, 0.05)'
+              }}
+            />
+          ) : hasCustomLogo ? (
             <img 
               src={activeTenant.logo_url} 
               alt="Tuition Logo" 
@@ -625,9 +639,11 @@ export default function Dashboard({ setActiveTab, currentUser, verifyAction, act
           <div>
             <h1 className="page-title">{headerTitle}</h1>
             <p className="page-subtitle">
-              {currentUser?.staffId 
-                ? (activeTenant?.custom_teacher_subtitle || 'Welcome to tuition management system') 
-                : (activeTenant?.custom_owner_subtitle || 'Welcome to Admin panel')}
+              {currentUser?.role === 'superadmin'
+                ? 'Welcome to super admin panel'
+                : currentUser?.staffId 
+                  ? (activeTenant?.custom_teacher_subtitle || 'Welcome to tuition management system') 
+                  : (activeTenant?.custom_owner_subtitle || 'Welcome to Admin panel')}
             </p>
           </div>
         </div>
