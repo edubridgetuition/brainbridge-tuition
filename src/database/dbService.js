@@ -208,7 +208,10 @@ const DEFAULT_FEATURES = {
   staff_db_materials: true,
   staff_db_testimonials: true,
   owner_fee_reminder: true,
-  staff_fee_reminder: false
+  staff_fee_reminder: false,
+  db_analytics: true,
+  owner_db_analytics: true,
+  staff_db_analytics: false
 };
 
 const INITIAL_TENANTS = [

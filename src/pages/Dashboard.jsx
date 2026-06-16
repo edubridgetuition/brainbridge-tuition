@@ -834,99 +834,170 @@ export default function Dashboard({ setActiveTab, currentUser, verifyAction, act
           </div>
         )}
 
-      </div>
-
-      {/* Student Enrollment Analytics */}
-      <div className="card" style={{ marginTop: '2.5rem' }}>
-        
-        {/* Header Block */}
-        <div className="enrollment-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem', gap: '1rem' }}>
-          <div>
-            <h3 style={{ fontSize: '1.3rem', fontWeight: '800', fontFamily: 'var(--font-heading)', marginBottom: '0.4rem' }}>📈 Enrollment Analytics</h3>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', margin: 0 }}>
-              Track joining progress using weekly, monthly, and date-wise interactive pie metrics.
-            </p>
-          </div>
+         {/* Student Enrollment Analytics */}
+      {isFeatureEnabled('db_analytics') && (
+        <div className="card" style={{ marginTop: '2.5rem' }}>
           
-          {/* Segment Toggle */}
-          <div className="enrollment-toggle" style={{ display: 'flex', backgroundColor: 'rgba(0,0,0,0.03)', padding: '0.2rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', flexShrink: 0 }}>
-            {['Monthly', 'Weekly', 'Date-wise'].map(mode => (
-              <button
-                key={mode}
-                type="button"
-                className="btn"
-                onClick={() => setEnrollmentFilter(mode)}
-                style={{
-                  padding: '0.35rem 0.75rem',
-                  fontSize: '0.75rem',
-                  fontWeight: '700',
-                  borderRadius: 'var(--radius-sm)',
-                  backgroundColor: enrollmentFilter === mode ? '#ffffff' : 'transparent',
-                  color: enrollmentFilter === mode ? 'var(--primary)' : 'var(--text-secondary)',
-                  border: 'none',
-                  boxShadow: enrollmentFilter === mode ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-                  transition: 'var(--transition-smooth)',
-                  cursor: 'pointer'
-                }}
-              >
-                {mode}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Donut Chart & Legends Grid */}
-        <div className="analytics-chart-layout">
-          
-          {/* Left: Custom SVG Donut Chart */}
-          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
-            {/* Soft background radial glow for luxury depth */}
-            <div style={{ 
-              position: 'absolute', 
-              width: '160px', 
-              height: '160px', 
-              background: 'radial-gradient(circle, rgba(37, 99, 235, 0.08) 0%, transparent 70%)',
-              zIndex: 0
-            }} />
+          {/* Header Block */}
+          <div className="enrollment-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem', gap: '1rem' }}>
+            <div>
+              <h3 style={{ fontSize: '1.3rem', fontWeight: '800', fontFamily: 'var(--font-heading)', marginBottom: '0.4rem' }}>📈 Enrollment Analytics</h3>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', margin: 0 }}>
+                Track joining progress using weekly, monthly, and date-wise interactive pie metrics.
+              </p>
+            </div>
             
-            <svg 
-              width="220" 
-              height="220" 
-              viewBox="0 0 120 120" 
-              style={{ transform: 'rotate(-90deg)', zIndex: 1 }}
-            >
-              {/* Placeholder background track */}
-              <circle
-                cx="60"
-                cy="60"
-                r="35"
-                fill="transparent"
-                stroke="rgba(0, 0, 0, 0.03)"
-                strokeWidth="10"
-              />
-              
-              {/* Active Segments rendering */}
-              {(() => {
-                const total = enrollmentData.reduce((sum, d) => sum + d.count, 0);
-                const circ = 2 * Math.PI * 35;
-                let accumulated = 0;
-                
-                if (total === 0) {
-                  return (
-                    <circle
-                      cx="60"
-                      cy="60"
-                      r="35"
-                      fill="transparent"
-                      stroke="rgba(0,0,0,0.06)"
-                      strokeWidth="10"
-                    />
-                  );
-                }
+            {/* Segment Toggle */}
+            <div className="enrollment-toggle" style={{ display: 'flex', backgroundColor: 'rgba(0,0,0,0.03)', padding: '0.2rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', flexShrink: 0 }}>
+              {['Monthly', 'Weekly', 'Date-wise'].map(mode => (
+                <button
+                  key={mode}
+                  type="button"
+                  className="btn"
+                  onClick={() => setEnrollmentFilter(mode)}
+                  style={{
+                    padding: '0.35rem 0.75rem',
+                    fontSize: '0.75rem',
+                    fontWeight: '700',
+                    borderRadius: 'var(--radius-sm)',
+                    backgroundColor: enrollmentFilter === mode ? '#ffffff' : 'transparent',
+                    color: enrollmentFilter === mode ? 'var(--primary)' : 'var(--text-secondary)',
+                    border: 'none',
+                    boxShadow: enrollmentFilter === mode ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                    transition: 'var(--transition-smooth)',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {mode}
+                </button>
+              ))}
+            </div>
+          </div>
 
+          {/* Donut Chart & Legends Grid */}
+          <div className="analytics-chart-layout">
+            
+            {/* Left: Custom SVG Donut Chart */}
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
+              {/* Soft background radial glow for luxury depth */}
+              <div style={{ 
+                position: 'absolute', 
+                width: '160px', 
+                height: '160px', 
+                background: 'radial-gradient(circle, rgba(37, 99, 235, 0.08) 0%, transparent 70%)',
+                zIndex: 0
+              }} />
+              
+              <svg 
+                width="220" 
+                height="220" 
+                viewBox="0 0 120 120" 
+                style={{ transform: 'rotate(-90deg)', zIndex: 1 }}
+              >
+                {/* Placeholder background track */}
+                <circle
+                  cx="60"
+                  cy="60"
+                  r="35"
+                  fill="transparent"
+                  stroke="rgba(0, 0, 0, 0.03)"
+                  strokeWidth="10"
+                />
+                
+                {/* Active Segments rendering */}
+                {(() => {
+                  const total = enrollmentData.reduce((sum, d) => sum + d.count, 0);
+                  const circ = 2 * Math.PI * 35;
+                  let accumulated = 0;
+                  
+                  if (total === 0) {
+                    return (
+                      <circle
+                        cx="60"
+                        cy="60"
+                        r="35"
+                        fill="transparent"
+                        stroke="rgba(0,0,0,0.06)"
+                        strokeWidth="10"
+                      />
+                    );
+                  }
+
+                  const luxuryPalette = [
+                    '#2563eb', // Royal Blue
+                    '#4f46e5', // Indigo Accent
+                    '#06b6d4', // Cyan
+                    '#d97706', // Amber Gold
+                    '#10b981', // Emerald
+                    '#f43f5e', // Rose Red
+                    '#8b5cf6', // Purple
+                    '#64748b'  // Slate Gray
+                  ];
+
+                  return enrollmentData.map((d, index) => {
+                    const percent = d.count / total;
+                    const strokeLen = percent * circ;
+                    const offset = circ - (accumulated * circ);
+                    accumulated += percent;
+
+                    return (
+                      <circle
+                        key={d.label}
+                        cx="60"
+                        cy="60"
+                        r="35"
+                        fill="transparent"
+                        stroke={luxuryPalette[index % luxuryPalette.length]}
+                        strokeWidth="10"
+                        strokeDasharray={`${strokeLen} ${circ - strokeLen}`}
+                        strokeDashoffset={offset}
+                        strokeLinecap="round"
+                        style={{ transition: 'stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1)' }}
+                        className="pie-segment"
+                      />
+                    );
+                  });
+                })()}
+              </svg>
+
+              {/* Central Total Indicator Card */}
+              <div style={{
+                position: 'absolute',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 2
+              }}>
+                <span style={{ 
+                  fontFamily: 'var(--font-heading)', 
+                  fontSize: '2.2rem', 
+                  fontWeight: '800', 
+                  color: 'var(--text-primary)',
+                  lineHeight: 1
+                }}>
+                  {enrollmentData.reduce((sum, d) => sum + d.count, 0)}
+                </span>
+                <span style={{ 
+                  fontSize: '0.75rem', 
+                  fontWeight: '800', 
+                  color: 'var(--text-secondary)',
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                  marginTop: '0.35rem'
+                }}>
+                  Admissions
+                </span>
+              </div>
+            </div>
+
+            {/* Right: Legends Detail Ledger List */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.95rem', maxHeight: '220px', overflowY: 'auto', paddingRight: '0.75rem' }}>
+              {(() => {
+                const total = enrollmentData.reduce((sum, d) => sum + d.count, 0) || 1;
                 const luxuryPalette = [
                   '#2563eb', // Royal Blue
-                  '#4f46e5', // Indigo Accent
+                  '#4f46e5', // Indigo
                   '#06b6d4', // Cyan
                   '#d97706', // Amber Gold
                   '#10b981', // Emerald
@@ -935,137 +1006,68 @@ export default function Dashboard({ setActiveTab, currentUser, verifyAction, act
                   '#64748b'  // Slate Gray
                 ];
 
+                if (enrollmentData.length === 0) {
+                  return <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem', textAlign: 'center', padding: '1.5rem' }}>No data logged.</div>;
+                }
+
                 return enrollmentData.map((d, index) => {
-                  const percent = d.count / total;
-                  const strokeLen = percent * circ;
-                  const offset = circ - (accumulated * circ);
-                  accumulated += percent;
+                  const pct = Math.round((d.count / total) * 100);
+                  const color = luxuryPalette[index % luxuryPalette.length];
 
                   return (
-                    <circle
+                    <div 
                       key={d.label}
-                      cx="60"
-                      cy="60"
-                      r="35"
-                      fill="transparent"
-                      stroke={luxuryPalette[index % luxuryPalette.length]}
-                      strokeWidth="10"
-                      strokeDasharray={`${strokeLen} ${circ - strokeLen}`}
-                      strokeDashoffset={offset}
-                      strokeLinecap="round"
-                      style={{ transition: 'stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1)' }}
-                      className="pie-segment"
-                    />
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '0.75rem 1rem',
+                        backgroundColor: 'rgba(0,0,0,0.01)',
+                        borderRadius: 'var(--radius-md)',
+                        border: '1px solid var(--border-color)',
+                        transition: 'var(--transition-smooth)'
+                      }}
+                      className="legend-item"
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                        {/* Colored marker ring */}
+                        <div style={{ 
+                          width: '10px', 
+                          height: '10px', 
+                          borderRadius: '50%', 
+                          backgroundColor: color,
+                          boxShadow: `0 0 8px ${color}`
+                        }} />
+                        <span style={{ fontSize: '0.88rem', fontWeight: '700', color: 'var(--text-primary)' }}>
+                          {d.label}
+                        </span>
+                      </div>
+                      
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                        <span style={{ fontSize: '0.82rem', fontWeight: '800', color: 'var(--text-secondary)' }}>
+                          {d.count} {d.count === 1 ? 'student' : 'students'}
+                        </span>
+                        <span style={{ 
+                          fontSize: '0.75rem', 
+                          fontWeight: '800', 
+                          backgroundColor: 'rgba(37,99,235,0.05)',
+                          color: 'var(--primary)',
+                          padding: '0.15rem 0.45rem',
+                          borderRadius: '4px'
+                        }}>
+                          {pct}%
+                        </span>
+                      </div>
+                    </div>
                   );
                 });
               })()}
-            </svg>
-
-            {/* Central Total Indicator Card */}
-            <div style={{
-              position: 'absolute',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 2
-            }}>
-              <span style={{ 
-                fontFamily: 'var(--font-heading)', 
-                fontSize: '2.2rem', 
-                fontWeight: '800', 
-                color: 'var(--text-primary)',
-                lineHeight: 1
-              }}>
-                {enrollmentData.reduce((sum, d) => sum + d.count, 0)}
-              </span>
-              <span style={{ 
-                fontSize: '0.75rem', 
-                fontWeight: '800', 
-                color: 'var(--text-secondary)',
-                letterSpacing: '0.08em',
-                textTransform: 'uppercase',
-                marginTop: '0.35rem'
-              }}>
-                Admissions
-              </span>
             </div>
-          </div>
 
-          {/* Right: Legends Detail Ledger List */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.95rem', maxHeight: '220px', overflowY: 'auto', paddingRight: '0.75rem' }}>
-            {(() => {
-              const total = enrollmentData.reduce((sum, d) => sum + d.count, 0) || 1;
-              const luxuryPalette = [
-                '#2563eb', // Royal Blue
-                '#4f46e5', // Indigo
-                '#06b6d4', // Cyan
-                '#d97706', // Amber Gold
-                '#10b981', // Emerald
-                '#f43f5e', // Rose Red
-                '#8b5cf6', // Purple
-                '#64748b'  // Slate Gray
-              ];
-
-              if (enrollmentData.length === 0) {
-                return <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem', textAlign: 'center', padding: '1.5rem' }}>No data logged.</div>;
-              }
-
-              return enrollmentData.map((d, index) => {
-                const pct = Math.round((d.count / total) * 100);
-                const color = luxuryPalette[index % luxuryPalette.length];
-
-                return (
-                  <div 
-                    key={d.label}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '0.75rem 1rem',
-                      backgroundColor: 'rgba(0,0,0,0.01)',
-                      borderRadius: 'var(--radius-md)',
-                      border: '1px solid var(--border-color)',
-                      transition: 'var(--transition-smooth)'
-                    }}
-                    className="legend-item"
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-                      {/* Colored marker ring */}
-                      <div style={{ 
-                        width: '10px', 
-                        height: '10px', 
-                        borderRadius: '50%', 
-                        backgroundColor: color,
-                        boxShadow: `0 0 8px ${color}`
-                      }} />
-                      <span style={{ fontSize: '0.88rem', fontWeight: '700', color: 'var(--text-primary)' }}>
-                        {d.label}
-                      </span>
-                    </div>
-                    
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-                      <span style={{ fontSize: '0.82rem', fontWeight: '800', color: 'var(--text-secondary)' }}>
-                        {d.count} {d.count === 1 ? 'student' : 'students'}
-                      </span>
-                      <span style={{ 
-                        fontSize: '0.75rem', 
-                        fontWeight: '800', 
-                        backgroundColor: 'rgba(37,99,235,0.05)',
-                        color: 'var(--primary)',
-                        padding: '0.15rem 0.45rem',
-                        borderRadius: '4px'
-                      }}>
-                        {pct}%
-                      </span>
-                    </div>
-                  </div>
-                );
-              });
-            })()}
           </div>
 
         </div>
+      )}
 
       </div>
 

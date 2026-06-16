@@ -1222,6 +1222,13 @@ export default function SuperAdmin({ onLogout, onInspectTenant }) {
                           staffKey: 'staff_fee_reminder',
                           defaultOwner: true,
                           defaultStaff: false
+                        },
+                        { 
+                          label: 'Enrollment Analytics Chart', 
+                          ownerKey: 'owner_db_analytics', 
+                          staffKey: 'staff_db_analytics',
+                          defaultOwner: true,
+                          defaultStaff: false
                         }
                       ].map(item => {
                         const ownerVal = tempFeatures[item.ownerKey] !== undefined 
