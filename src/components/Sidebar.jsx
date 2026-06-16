@@ -113,7 +113,51 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
 
   const isFeatureEnabled = (featureKey) => {
     if (!activeTenant || !activeTenant.features) return true;
-    return activeTenant.features[featureKey] !== false;
+    if (activeTenant.features[featureKey] === false) return false;
+
+    // Additional check for students (Admissions)
+    if (featureKey === 'students') {
+      const isStaff = currentUser?.role === 'admin' && !!currentUser.staffId;
+      if (isStaff) {
+        const staffDir = activeTenant.features.staff_students_directory !== undefined ? activeTenant.features.staff_students_directory : (activeTenant.features.students_directory !== false);
+        const staffSum = activeTenant.features.staff_students_summary !== undefined ? activeTenant.features.staff_students_summary : (activeTenant.features.students_summary !== false);
+        const staffReg = activeTenant.features.staff_students_register !== undefined ? activeTenant.features.staff_students_register : (activeTenant.features.students_register !== false);
+        const staffBat = activeTenant.features.staff_students_create_batch !== undefined ? activeTenant.features.staff_students_create_batch : (activeTenant.features.students_create_batch !== false);
+        
+        return staffDir || staffSum || staffReg || staffBat;
+      } else {
+        const ownerDir = activeTenant.features.owner_students_directory !== undefined ? activeTenant.features.owner_students_directory : (activeTenant.features.students_directory !== false);
+        const ownerSum = activeTenant.features.owner_students_summary !== undefined ? activeTenant.features.owner_students_summary : (activeTenant.features.students_summary !== false);
+        const ownerReg = activeTenant.features.owner_students_register !== undefined ? activeTenant.features.owner_students_register : (activeTenant.features.students_register !== false);
+        const ownerBat = activeTenant.features.owner_students_create_batch !== undefined ? activeTenant.features.owner_students_create_batch : (activeTenant.features.students_create_batch !== false);
+        
+        return ownerDir || ownerSum || ownerReg || ownerBat;
+      }
+    }
+
+    // Additional check for inquiries (Admission Inquiries)
+    if (featureKey === 'inquiries') {
+      const isStaff = currentUser?.role === 'admin' && !!currentUser.staffId;
+      if (isStaff) {
+        const staffPending = activeTenant.features.staff_inquiry_pending !== undefined ? activeTenant.features.staff_inquiry_pending : (activeTenant.features.inquiry_pending !== false);
+        const staffApproved = activeTenant.features.staff_inquiry_approved !== undefined ? activeTenant.features.staff_inquiry_approved : (activeTenant.features.inquiry_approved !== false);
+        const staffRejected = activeTenant.features.staff_inquiry_rejected !== undefined ? activeTenant.features.staff_inquiry_rejected : (activeTenant.features.inquiry_rejected !== false);
+        const staffAll = activeTenant.features.staff_inquiry_all !== undefined ? activeTenant.features.staff_inquiry_all : (activeTenant.features.inquiry_all !== false);
+        const staffQr = activeTenant.features.staff_inquiry_qrcode !== undefined ? activeTenant.features.staff_inquiry_qrcode : (activeTenant.features.inquiry_qrcode !== false);
+        
+        return staffPending || staffApproved || staffRejected || staffAll || staffQr;
+      } else {
+        const ownerPending = activeTenant.features.owner_inquiry_pending !== undefined ? activeTenant.features.owner_inquiry_pending : (activeTenant.features.inquiry_pending !== false);
+        const ownerApproved = activeTenant.features.owner_inquiry_approved !== undefined ? activeTenant.features.owner_inquiry_approved : (activeTenant.features.inquiry_approved !== false);
+        const ownerRejected = activeTenant.features.owner_inquiry_rejected !== undefined ? activeTenant.features.owner_inquiry_rejected : (activeTenant.features.inquiry_rejected !== false);
+        const ownerAll = activeTenant.features.owner_inquiry_all !== undefined ? activeTenant.features.owner_inquiry_all : (activeTenant.features.inquiry_all !== false);
+        const ownerQr = activeTenant.features.owner_inquiry_qrcode !== undefined ? activeTenant.features.owner_inquiry_qrcode : (activeTenant.features.inquiry_qrcode !== false);
+        
+        return ownerPending || ownerApproved || ownerRejected || ownerAll || ownerQr;
+      }
+    }
+
+    return true;
   };
 
   const hasCustomLogo = currentUser?.role === 'superadmin' 

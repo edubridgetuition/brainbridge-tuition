@@ -146,11 +146,52 @@ function App() {
   useEffect(() => {
     if (activeTenant && activeTenant.features) {
       const features = activeTenant.features;
-      if (activeTab !== 'dashboard' && activeTab !== 'manage_centers' && features[activeTab] === false) {
+      const isFeatureEnabled = (key) => {
+        if (features[key] === false) return false;
+        
+        if (key === 'students') {
+          const isStaff = currentUser?.role === 'admin' && !!currentUser.staffId;
+          if (isStaff) {
+            const staffDir = features.staff_students_directory !== undefined ? features.staff_students_directory : (features.students_directory !== false);
+            const staffSum = features.staff_students_summary !== undefined ? features.staff_students_summary : (features.students_summary !== false);
+            const staffReg = features.staff_students_register !== undefined ? features.staff_students_register : (features.students_register !== false);
+            const staffBat = features.staff_students_create_batch !== undefined ? features.staff_students_create_batch : (features.students_create_batch !== false);
+            return staffDir || staffSum || staffReg || staffBat;
+          } else {
+            const ownerDir = features.owner_students_directory !== undefined ? features.owner_students_directory : (features.students_directory !== false);
+            const ownerSum = features.owner_students_summary !== undefined ? features.owner_students_summary : (features.students_summary !== false);
+            const ownerReg = features.owner_students_register !== undefined ? features.owner_students_register : (features.students_register !== false);
+            const ownerBat = features.owner_students_create_batch !== undefined ? features.owner_students_create_batch : (features.students_create_batch !== false);
+            return ownerDir || ownerSum || ownerReg || ownerBat;
+          }
+        }
+
+        if (key === 'inquiries') {
+          const isStaff = currentUser?.role === 'admin' && !!currentUser.staffId;
+          if (isStaff) {
+            const staffPending = features.staff_inquiry_pending !== undefined ? features.staff_inquiry_pending : (features.inquiry_pending !== false);
+            const staffApproved = features.staff_inquiry_approved !== undefined ? features.staff_inquiry_approved : (features.inquiry_approved !== false);
+            const staffRejected = features.staff_inquiry_rejected !== undefined ? features.staff_inquiry_rejected : (features.inquiry_rejected !== false);
+            const staffAll = features.staff_inquiry_all !== undefined ? features.staff_inquiry_all : (features.inquiry_all !== false);
+            const staffQr = features.staff_inquiry_qrcode !== undefined ? features.staff_inquiry_qrcode : (features.inquiry_qrcode !== false);
+            return staffPending || staffApproved || staffRejected || staffAll || staffQr;
+          } else {
+            const ownerPending = features.owner_inquiry_pending !== undefined ? features.owner_inquiry_pending : (features.inquiry_pending !== false);
+            const ownerApproved = features.owner_inquiry_approved !== undefined ? features.owner_inquiry_approved : (features.inquiry_approved !== false);
+            const ownerRejected = features.owner_inquiry_rejected !== undefined ? features.owner_inquiry_rejected : (features.inquiry_rejected !== false);
+            const ownerAll = features.owner_inquiry_all !== undefined ? features.owner_inquiry_all : (features.inquiry_all !== false);
+            const ownerQr = features.owner_inquiry_qrcode !== undefined ? features.owner_inquiry_qrcode : (features.inquiry_qrcode !== false);
+            return ownerPending || ownerApproved || ownerRejected || ownerAll || ownerQr;
+          }
+        }
+        return true;
+      };
+
+      if (activeTab !== 'dashboard' && activeTab !== 'manage_centers' && !isFeatureEnabled(activeTab)) {
         setActiveTab('dashboard');
       }
     }
-  }, [activeTenant, activeTab]);
+  }, [activeTenant, activeTab, currentUser]);
 
   useEffect(() => {
     if (currentUser && currentUser.role === 'superadmin') {

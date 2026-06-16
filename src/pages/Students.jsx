@@ -58,8 +58,29 @@ export default function Students({ currentUser, verifyAction, activeTenant }) {
     loadData();
   }, []);
 
-  const showDirectory = !activeTenant || activeTenant.features?.students_directory !== false;
-  const showSummary = !activeTenant || activeTenant.features?.students_summary !== false;
+  const getFeature = (key, defaultVal) => {
+    if (!activeTenant || !activeTenant.features) return defaultVal;
+    if (activeTenant.features[key] !== undefined) return activeTenant.features[key];
+    return defaultVal;
+  };
+
+  const isStaff = currentUser?.role === 'admin' && !!currentUser.staffId;
+
+  const showDirectory = isStaff
+    ? getFeature('staff_students_directory', getFeature('students_directory', true))
+    : getFeature('owner_students_directory', getFeature('students_directory', true));
+
+  const showSummary = isStaff
+    ? getFeature('staff_students_summary', getFeature('students_summary', true))
+    : getFeature('owner_students_summary', getFeature('students_summary', true));
+
+  const showCreateBatch = isStaff
+    ? getFeature('staff_students_create_batch', getFeature('students_create_batch', true))
+    : getFeature('owner_students_create_batch', getFeature('students_create_batch', true));
+
+  const showRegisterStudent = isStaff
+    ? getFeature('staff_students_register', getFeature('students_register', true))
+    : getFeature('owner_students_register', getFeature('students_register', true));
 
   useEffect(() => {
     if (!showDirectory && activeSubTab === 'students') {
@@ -269,13 +290,13 @@ export default function Students({ currentUser, verifyAction, activeTenant }) {
         </div>
         {activeSubTab === 'students' && (
           <div style={{ display: 'flex', gap: '0.75rem' }}>
-            {(!activeTenant || activeTenant.features?.students_create_batch !== false) && (
+            {showCreateBatch && (
               <button className="btn btn-secondary" onClick={() => setShowBatchModal(true)} style={{ border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 <Plus size={16} />
                 <span>Create Batch</span>
               </button>
             )}
-            {(!activeTenant || activeTenant.features?.students_register !== false) && (
+            {showRegisterStudent && (
               <button className="btn btn-primary" onClick={() => {
                 setIsEditing(false);
                 setEditingStudentId(null);

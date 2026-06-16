@@ -862,47 +862,94 @@ export default function SuperAdmin({ onLogout, onInspectTenant }) {
                   Admissions Page Permissions
                 </h4>
                 <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '-0.3rem', marginBottom: '0.75rem' }}>
-                  Enable or disable specific sub-tabs and actions on the Admissions page.
+                  Set Admissions page permissions separately for Owner Admin and Teacher/Staff.
                 </p>
                 <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(2, 1fr)',
-                  gap: '0.75rem',
                   background: '#f8fafc',
                   padding: '1rem',
                   borderRadius: '12px',
-                  border: '1px solid #e2e8f0'
+                  border: '1px solid #e2e8f0',
+                  overflowX: 'auto'
                 }}>
-                  {[
-                    { key: 'students_directory', label: 'Student Directory' },
-                    { key: 'students_summary', label: 'Admission Summary' },
-                    { key: 'students_register', label: 'Register Student Action' },
-                    { key: 'students_create_batch', label: 'Create Batch Action' }
-                  ].map(item => (
-                    <label key={item.key} style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.6rem',
-                      fontSize: '0.88rem',
-                      fontWeight: '600',
-                      color: '#334155',
-                      cursor: 'pointer',
-                      padding: '0.25rem 0'
-                    }}>
-                      <input
-                        type="checkbox"
-                        checked={!!tempFeatures[item.key]}
-                        onChange={(e) => handleFeatureToggle(item.key, e.target.checked)}
-                        style={{
-                          width: '18px',
-                          height: '18px',
-                          cursor: 'pointer',
-                          accentColor: '#1655e0'
-                        }}
-                      />
-                      {item.label}
-                    </label>
-                  ))}
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1.5px solid #cbd5e1', color: '#475569', fontWeight: '800', textAlign: 'left' }}>
+                        <th style={{ padding: '0.5rem' }}>Permission / Feature Name</th>
+                        <th style={{ padding: '0.5rem', textAlign: 'center', width: '100px' }}>Owner Admin</th>
+                        <th style={{ padding: '0.5rem', textAlign: 'center', width: '110px' }}>Teacher / Staff</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        { 
+                          label: 'Student Directory', 
+                          ownerKey: 'owner_students_directory', 
+                          staffKey: 'staff_students_directory',
+                          legacyKey: 'students_directory'
+                        },
+                        { 
+                          label: 'Admission Summary', 
+                          ownerKey: 'owner_students_summary', 
+                          staffKey: 'staff_students_summary',
+                          legacyKey: 'students_summary'
+                        },
+                        { 
+                          label: 'Register Student Action', 
+                          ownerKey: 'owner_students_register', 
+                          staffKey: 'staff_students_register',
+                          legacyKey: 'students_register'
+                        },
+                        { 
+                          label: 'Create Batch Action', 
+                          ownerKey: 'owner_students_create_batch', 
+                          staffKey: 'staff_students_create_batch',
+                          legacyKey: 'students_create_batch'
+                        }
+                      ].map(item => {
+                        const ownerVal = tempFeatures[item.ownerKey] !== undefined 
+                          ? tempFeatures[item.ownerKey] 
+                          : (tempFeatures[item.legacyKey] !== false);
+                          
+                        const staffVal = tempFeatures[item.staffKey] !== undefined 
+                          ? tempFeatures[item.staffKey] 
+                          : (tempFeatures[item.legacyKey] !== false);
+
+                        return (
+                          <tr key={item.label} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '0.65rem 0.5rem', fontWeight: '700', color: '#334155' }}>
+                              {item.label}
+                            </td>
+                            <td style={{ padding: '0.65rem 0.5rem', textAlign: 'center' }}>
+                              <input
+                                type="checkbox"
+                                checked={!!ownerVal}
+                                onChange={(e) => handleFeatureToggle(item.ownerKey, e.target.checked)}
+                                style={{
+                                  width: '18px',
+                                  height: '18px',
+                                  cursor: 'pointer',
+                                  accentColor: '#1655e0'
+                                }}
+                              />
+                            </td>
+                            <td style={{ padding: '0.65rem 0.5rem', textAlign: 'center' }}>
+                              <input
+                                type="checkbox"
+                                checked={!!staffVal}
+                                onChange={(e) => handleFeatureToggle(item.staffKey, e.target.checked)}
+                                style={{
+                                  width: '18px',
+                                  height: '18px',
+                                  cursor: 'pointer',
+                                  accentColor: '#1655e0'
+                                }}
+                              />
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               </div>
 
@@ -912,48 +959,100 @@ export default function SuperAdmin({ onLogout, onInspectTenant }) {
                   Admission Inquiries Page Permissions
                 </h4>
                 <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '-0.3rem', marginBottom: '0.75rem' }}>
-                  Enable or disable specific sub-tabs and actions on the Inquiries page.
+                  Set Inquiries page permissions separately for Owner Admin and Teacher/Staff.
                 </p>
                 <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(2, 1fr)',
-                  gap: '0.75rem',
                   background: '#f8fafc',
                   padding: '1rem',
                   borderRadius: '12px',
-                  border: '1px solid #e2e8f0'
+                  border: '1px solid #e2e8f0',
+                  overflowX: 'auto'
                 }}>
-                  {[
-                    { key: 'inquiry_pending', label: 'Pending Inquiries' },
-                    { key: 'inquiry_approved', label: 'Approved Inquiries' },
-                    { key: 'inquiry_rejected', label: 'Rejected Inquiries' },
-                    { key: 'inquiry_all', label: 'All Inquiries Tab' },
-                    { key: 'inquiry_qrcode', label: 'Inquiry QR Code Generator' }
-                  ].map(item => (
-                    <label key={item.key} style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.6rem',
-                      fontSize: '0.88rem',
-                      fontWeight: '600',
-                      color: '#334155',
-                      cursor: 'pointer',
-                      padding: '0.25rem 0'
-                    }}>
-                      <input
-                        type="checkbox"
-                        checked={!!tempFeatures[item.key]}
-                        onChange={(e) => handleFeatureToggle(item.key, e.target.checked)}
-                        style={{
-                          width: '18px',
-                          height: '18px',
-                          cursor: 'pointer',
-                          accentColor: '#1655e0'
-                        }}
-                      />
-                      {item.label}
-                    </label>
-                  ))}
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1.5px solid #cbd5e1', color: '#475569', fontWeight: '800', textAlign: 'left' }}>
+                        <th style={{ padding: '0.5rem' }}>Permission / Feature Name</th>
+                        <th style={{ padding: '0.5rem', textAlign: 'center', width: '100px' }}>Owner Admin</th>
+                        <th style={{ padding: '0.5rem', textAlign: 'center', width: '110px' }}>Teacher / Staff</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        { 
+                          label: 'Pending Inquiries', 
+                          ownerKey: 'owner_inquiry_pending', 
+                          staffKey: 'staff_inquiry_pending',
+                          legacyKey: 'inquiry_pending'
+                        },
+                        { 
+                          label: 'Approved Inquiries', 
+                          ownerKey: 'owner_inquiry_approved', 
+                          staffKey: 'staff_inquiry_approved',
+                          legacyKey: 'inquiry_approved'
+                        },
+                        { 
+                          label: 'Rejected Inquiries', 
+                          ownerKey: 'owner_inquiry_rejected', 
+                          staffKey: 'staff_inquiry_rejected',
+                          legacyKey: 'inquiry_rejected'
+                        },
+                        { 
+                          label: 'All Inquiries Tab', 
+                          ownerKey: 'owner_inquiry_all', 
+                          staffKey: 'staff_inquiry_all',
+                          legacyKey: 'inquiry_all'
+                        },
+                        { 
+                          label: 'Inquiry QR Code Generator', 
+                          ownerKey: 'owner_inquiry_qrcode', 
+                          staffKey: 'staff_inquiry_qrcode',
+                          legacyKey: 'inquiry_qrcode'
+                        }
+                      ].map(item => {
+                        const ownerVal = tempFeatures[item.ownerKey] !== undefined 
+                          ? tempFeatures[item.ownerKey] 
+                          : (tempFeatures[item.legacyKey] !== false);
+                          
+                        const staffVal = tempFeatures[item.staffKey] !== undefined 
+                          ? tempFeatures[item.staffKey] 
+                          : (tempFeatures[item.legacyKey] !== false);
+
+                        return (
+                          <tr key={item.label} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '0.65rem 0.5rem', fontWeight: '700', color: '#334155' }}>
+                              {item.label}
+                            </td>
+                            <td style={{ padding: '0.65rem 0.5rem', textAlign: 'center' }}>
+                              <input
+                                type="checkbox"
+                                checked={!!ownerVal}
+                                onChange={(e) => handleFeatureToggle(item.ownerKey, e.target.checked)}
+                                style={{
+                                  width: '18px',
+                                  height: '18px',
+                                  cursor: 'pointer',
+                                  accentColor: '#1655e0'
+                                }}
+                              />
+                            </td>
+                            <td style={{ padding: '0.65rem 0.5rem', textAlign: 'center' }}>
+                              <input
+                                type="checkbox"
+                                checked={!!staffVal}
+                                onChange={(e) => handleFeatureToggle(item.staffKey, e.target.checked)}
+                                style={{
+                                  width: '18px',
+                                  height: '18px',
+                                  cursor: 'pointer',
+                                  accentColor: '#1655e0'
+                                }}
+                              />
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               </div>
 

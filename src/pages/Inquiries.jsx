@@ -49,11 +49,33 @@ export default function Inquiries({ currentUser, verifyAction, activeTenant }) {
     loadData();
   }, []);
 
-  const showPending = !activeTenant || activeTenant.features?.inquiry_pending !== false;
-  const showApproved = !activeTenant || activeTenant.features?.inquiry_approved !== false;
-  const showRejected = !activeTenant || activeTenant.features?.inquiry_rejected !== false;
-  const showAll = !activeTenant || activeTenant.features?.inquiry_all !== false;
-  const showQrCode = !activeTenant || activeTenant.features?.inquiry_qrcode !== false;
+  const getFeature = (key, defaultVal) => {
+    if (!activeTenant || !activeTenant.features) return defaultVal;
+    if (activeTenant.features[key] !== undefined) return activeTenant.features[key];
+    return defaultVal;
+  };
+
+  const isStaff = currentUser?.role === 'admin' && !!currentUser.staffId;
+
+  const showPending = isStaff
+    ? getFeature('staff_inquiry_pending', getFeature('inquiry_pending', true))
+    : getFeature('owner_inquiry_pending', getFeature('inquiry_pending', true));
+
+  const showApproved = isStaff
+    ? getFeature('staff_inquiry_approved', getFeature('inquiry_approved', true))
+    : getFeature('owner_inquiry_approved', getFeature('inquiry_approved', true));
+
+  const showRejected = isStaff
+    ? getFeature('staff_inquiry_rejected', getFeature('inquiry_rejected', true))
+    : getFeature('owner_inquiry_rejected', getFeature('inquiry_rejected', true));
+
+  const showAll = isStaff
+    ? getFeature('staff_inquiry_all', getFeature('inquiry_all', true))
+    : getFeature('owner_inquiry_all', getFeature('inquiry_all', true));
+
+  const showQrCode = isStaff
+    ? getFeature('staff_inquiry_qrcode', getFeature('inquiry_qrcode', true))
+    : getFeature('owner_inquiry_qrcode', getFeature('inquiry_qrcode', true));
 
   useEffect(() => {
     if (statusFilter === 'Pending' && !showPending) {
