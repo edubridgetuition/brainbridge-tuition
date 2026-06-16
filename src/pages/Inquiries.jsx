@@ -49,6 +49,32 @@ export default function Inquiries({ currentUser, verifyAction, activeTenant }) {
     loadData();
   }, []);
 
+  const showPending = !activeTenant || activeTenant.features?.inquiry_pending !== false;
+  const showApproved = !activeTenant || activeTenant.features?.inquiry_approved !== false;
+  const showRejected = !activeTenant || activeTenant.features?.inquiry_rejected !== false;
+  const showAll = !activeTenant || activeTenant.features?.inquiry_all !== false;
+  const showQrCode = !activeTenant || activeTenant.features?.inquiry_qrcode !== false;
+
+  useEffect(() => {
+    if (statusFilter === 'Pending' && !showPending) {
+      if (showApproved) setStatusFilter('Approved');
+      else if (showRejected) setStatusFilter('Rejected');
+      else if (showAll) setStatusFilter('All');
+    } else if (statusFilter === 'Approved' && !showApproved) {
+      if (showPending) setStatusFilter('Pending');
+      else if (showRejected) setStatusFilter('Rejected');
+      else if (showAll) setStatusFilter('All');
+    } else if (statusFilter === 'Rejected' && !showRejected) {
+      if (showPending) setStatusFilter('Pending');
+      else if (showApproved) setStatusFilter('Approved');
+      else if (showAll) setStatusFilter('All');
+    } else if (statusFilter === 'All' && !showAll) {
+      if (showPending) setStatusFilter('Pending');
+      else if (showApproved) setStatusFilter('Approved');
+      else if (showRejected) setStatusFilter('Rejected');
+    }
+  }, [showPending, showApproved, showRejected, showAll, statusFilter]);
+
   const handleRegisterInputChange = (e) => {
     const { name, value } = e.target;
     setRegisterForm(prev => ({ ...prev, [name]: value }));
@@ -175,17 +201,25 @@ export default function Inquiries({ currentUser, verifyAction, activeTenant }) {
           <p className="page-subtitle">Track prospective student inquiries, generate entry QR codes, and convert to active students.</p>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <button className="btn btn-primary" onClick={() => setShowQrModal(true)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', boxShadow: '0 4px 12px rgba(37, 99, 235, 0.15)' }}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><path d="M7 17h.01"/><path d="M17 7h.01"/><path d="M7 7h.01"/><path d="M17 17h.01"/></svg>
-            <span>Inquiry QR Code</span>
-          </button>
+          {showQrCode && (
+            <button className="btn btn-primary" onClick={() => setShowQrModal(true)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', boxShadow: '0 4px 12px rgba(37, 99, 235, 0.15)' }}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><path d="M7 17h.01"/><path d="M17 7h.01"/><path d="M7 7h.01"/><path d="M17 17h.01"/></svg>
+              <span>Inquiry QR Code</span>
+            </button>
+          )}
         </div>
       </div>
 
       {/* Filter Tabs Row */}
       <div className="filters-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div style={{ display: 'flex', gap: '0.5rem', backgroundColor: '#f1f5f9', padding: '4px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-          {['Pending', 'Approved', 'Rejected', 'All'].map(status => {
+          {['Pending', 'Approved', 'Rejected', 'All'].filter(status => {
+            if (status === 'Pending') return showPending;
+            if (status === 'Approved') return showApproved;
+            if (status === 'Rejected') return showRejected;
+            if (status === 'All') return showAll;
+            return true;
+          }).map(status => {
             const count = status === 'All' ? inquiries.length : inquiries.filter(iq => iq.status === status).length;
             const isActive = statusFilter === status;
             return (

@@ -906,6 +906,57 @@ export default function SuperAdmin({ onLogout, onInspectTenant }) {
                 </div>
               </div>
 
+              {/* Admission Inquiries Page Permissions */}
+              <div>
+                <h4 style={{ fontSize: '0.85rem', fontWeight: '800', color: '#475569', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Admission Inquiries Page Permissions
+                </h4>
+                <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '-0.3rem', marginBottom: '0.75rem' }}>
+                  Enable or disable specific sub-tabs and actions on the Inquiries page.
+                </p>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(2, 1fr)',
+                  gap: '0.75rem',
+                  background: '#f8fafc',
+                  padding: '1rem',
+                  borderRadius: '12px',
+                  border: '1px solid #e2e8f0'
+                }}>
+                  {[
+                    { key: 'inquiry_pending', label: 'Pending Inquiries' },
+                    { key: 'inquiry_approved', label: 'Approved Inquiries' },
+                    { key: 'inquiry_rejected', label: 'Rejected Inquiries' },
+                    { key: 'inquiry_all', label: 'All Inquiries Tab' },
+                    { key: 'inquiry_qrcode', label: 'Inquiry QR Code Generator' }
+                  ].map(item => (
+                    <label key={item.key} style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.6rem',
+                      fontSize: '0.88rem',
+                      fontWeight: '600',
+                      color: '#334155',
+                      cursor: 'pointer',
+                      padding: '0.25rem 0'
+                    }}>
+                      <input
+                        type="checkbox"
+                        checked={!!tempFeatures[item.key]}
+                        onChange={(e) => handleFeatureToggle(item.key, e.target.checked)}
+                        style={{
+                          width: '18px',
+                          height: '18px',
+                          cursor: 'pointer',
+                          accentColor: '#1655e0'
+                        }}
+                      />
+                      {item.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
               {/* Dashboard Widgets Section */}
               <div>
                 <h4 style={{ fontSize: '0.85rem', fontWeight: '800', color: '#475569', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
