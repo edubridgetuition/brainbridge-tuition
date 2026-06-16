@@ -112,6 +112,7 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
   };
 
   const isFeatureEnabled = (featureKey) => {
+    if (currentUser?.role === 'superadmin') return true;
     if (!activeTenant || !activeTenant.features) return true;
     if (activeTenant.features[featureKey] === false) return false;
 
@@ -188,6 +189,7 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
     : (activeTenant ? activeTenant.name : "BrainBridge");
 
   const shouldShowItem = (item) => {
+    if (currentUser?.role === 'superadmin') return true;
     if (item.role === 'admin' && currentUser?.role !== 'admin') return false;
     if (item.role === 'owner' && (currentUser?.role !== 'admin' || currentUser?.staffId)) return false;
     return true;
@@ -231,7 +233,7 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
   ];
 
   // --- MOBILE BOTTOM TABS ---
-  const mobileTabs = (currentUser?.role === 'admin' 
+  const mobileTabs = (currentUser?.role === 'admin' || currentUser?.role === 'superadmin'
     ? [
         { id: 'dashboard', label: 'Home', icon: LayoutDashboard },
         { id: 'students', label: 'Admissions', icon: Users },

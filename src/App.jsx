@@ -147,6 +147,7 @@ function App() {
     if (activeTenant && activeTenant.features) {
       const features = activeTenant.features;
       const isFeatureEnabled = (key) => {
+        if (currentUser?.role === 'superadmin') return true;
         if (features[key] === false) return false;
         
         if (key === 'students') {
