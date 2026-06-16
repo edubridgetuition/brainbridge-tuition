@@ -144,6 +144,10 @@ const INITIAL_TIMETABLE = [
 
 const DEFAULT_FEATURES = {
   students: true,
+  students_directory: true,
+  students_summary: true,
+  students_register: true,
+  students_create_batch: true,
   timetable: true,
   attendance: true,
   fees: true,

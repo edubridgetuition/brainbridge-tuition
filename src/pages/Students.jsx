@@ -58,6 +58,17 @@ export default function Students({ currentUser, verifyAction, activeTenant }) {
     loadData();
   }, []);
 
+  const showDirectory = !activeTenant || activeTenant.features?.students_directory !== false;
+  const showSummary = !activeTenant || activeTenant.features?.students_summary !== false;
+
+  useEffect(() => {
+    if (!showDirectory && activeSubTab === 'students') {
+      setActiveSubTab('summary');
+    } else if (!showSummary && activeSubTab === 'summary') {
+      setActiveSubTab('students');
+    }
+  }, [showDirectory, showSummary, activeSubTab]);
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -258,63 +269,73 @@ export default function Students({ currentUser, verifyAction, activeTenant }) {
         </div>
         {activeSubTab === 'students' && (
           <div style={{ display: 'flex', gap: '0.75rem' }}>
-            <button className="btn btn-secondary" onClick={() => setShowBatchModal(true)} style={{ border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <Plus size={16} />
-              <span>Create Batch</span>
-            </button>
-            <button className="btn btn-primary" onClick={() => {
-              setIsEditing(false);
-              setEditingStudentId(null);
-              setShowModal(true);
-            }}>
-              <Plus size={18} />
-              <span>Register Student</span>
-            </button>
+            {(!activeTenant || activeTenant.features?.students_create_batch !== false) && (
+              <button className="btn btn-secondary" onClick={() => setShowBatchModal(true)} style={{ border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <Plus size={16} />
+                <span>Create Batch</span>
+              </button>
+            )}
+            {(!activeTenant || activeTenant.features?.students_register !== false) && (
+              <button className="btn btn-primary" onClick={() => {
+                setIsEditing(false);
+                setEditingStudentId(null);
+                setShowModal(true);
+              }}>
+                <Plus size={18} />
+                <span>Register Student</span>
+              </button>
+            )}
           </div>
         )}
       </div>
 
       {/* Sub-tabs Toggle */}
-      <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', marginBottom: '2.5rem', gap: '2rem' }}>
-        <button
-          type="button"
-          onClick={() => setActiveSubTab('students')}
-          style={{
-            padding: '0.85rem 0.25rem',
-            fontSize: '0.98rem',
-            fontWeight: '800',
-            color: activeSubTab === 'students' ? 'var(--primary)' : 'var(--text-secondary)',
-            border: 'none',
-            background: 'none',
-            borderBottom: activeSubTab === 'students' ? '3px solid var(--primary)' : '3px solid transparent',
-            cursor: 'pointer',
-            transition: 'var(--transition-smooth)',
-            marginBottom: '-2px',
-            fontFamily: 'var(--font-body)'
-          }}
-        >
-          Student Directory
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveSubTab('summary')}
-          style={{
-            padding: '0.85rem 0.25rem',
-            fontSize: '0.98rem',
-            fontWeight: '800',
-            color: activeSubTab === 'summary' ? 'var(--primary)' : 'var(--text-secondary)',
-            border: 'none',
-            background: 'none',
-            borderBottom: activeSubTab === 'summary' ? '3px solid var(--primary)' : '3px solid transparent',
-            cursor: 'pointer',
-            transition: 'var(--transition-smooth)',
-            marginBottom: '-2px',
-            fontFamily: 'var(--font-body)'
-          }}
-        >
-          Admissions Summary
-        </button>
-      </div>
+      {(showDirectory || showSummary) && (
+        <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', marginBottom: '2.5rem', gap: '2rem' }}>
+          {showDirectory && (
+            <button
+              type="button"
+              onClick={() => setActiveSubTab('students')}
+              style={{
+                padding: '0.85rem 0.25rem',
+                fontSize: '0.98rem',
+                fontWeight: '800',
+                color: activeSubTab === 'students' ? 'var(--primary)' : 'var(--text-secondary)',
+                border: 'none',
+                background: 'none',
+                borderBottom: activeSubTab === 'students' ? '3px solid var(--primary)' : '3px solid transparent',
+                cursor: 'pointer',
+                transition: 'var(--transition-smooth)',
+                marginBottom: '-2px',
+                fontFamily: 'var(--font-body)'
+              }}
+            >
+              Student Directory
+            </button>
+          )}
+          {showSummary && (
+            <button
+              type="button"
+              onClick={() => setActiveSubTab('summary')}
+              style={{
+                padding: '0.85rem 0.25rem',
+                fontSize: '0.98rem',
+                fontWeight: '800',
+                color: activeSubTab === 'summary' ? 'var(--primary)' : 'var(--text-secondary)',
+                border: 'none',
+                background: 'none',
+                borderBottom: activeSubTab === 'summary' ? '3px solid var(--primary)' : '3px solid transparent',
+                cursor: 'pointer',
+                transition: 'var(--transition-smooth)',
+                marginBottom: '-2px',
+                fontFamily: 'var(--font-body)'
+              }}
+            >
+              Admissions Summary
+            </button>
+          )}
+        </div>
+      )}
 
       {activeSubTab === 'students' && (
         <>
