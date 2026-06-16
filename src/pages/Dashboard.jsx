@@ -634,7 +634,7 @@ export default function Dashboard({ setActiveTab, currentUser, verifyAction, act
       </div>
 
       {/* Parent App Due Date Alert Banner */}
-      {isFeatureEnabled('db_fees') && dueRecordsList.length > 0 && (
+      {isFeatureEnabled('fee_reminder') && dueRecordsList.length > 0 && (
         <div className="simulator-banner">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
             <div style={{

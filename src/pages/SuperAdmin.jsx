@@ -879,7 +879,8 @@ export default function SuperAdmin({ onLogout, onInspectTenant }) {
                     { key: 'db_tests', label: 'Test Scores Card' },
                     { key: 'db_homework', label: 'Recent Homework List' },
                     { key: 'db_materials', label: 'Study Materials List' },
-                    { key: 'db_testimonials', label: 'Parent Testimonials List' }
+                    { key: 'db_testimonials', label: 'Parent Testimonials List' },
+                    { key: 'fee_reminder', label: 'Fees Reminder Simulator Alert' }
                   ].map(item => (
                     <label key={item.key} style={{
                       display: 'flex',
