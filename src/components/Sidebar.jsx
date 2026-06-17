@@ -311,7 +311,14 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
               border: '1px solid #bfdbfe'
             }} />
           )}
-          <span className="brand-name">{brandName}</span>
+          {brandName === "EduBridge – Tuition ERP" ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0px' }}>
+              <span className="brand-name" style={{ fontSize: '1.45rem', fontWeight: '800', lineHeight: '1.1' }}>EduBridge</span>
+              <span style={{ fontSize: '0.65rem', fontWeight: '800', color: '#475569', letterSpacing: '0.04em', textTransform: 'uppercase', marginTop: '2px' }}>Tuition ERP</span>
+            </div>
+          ) : (
+            <span className="brand-name" style={{ fontSize: brandName.length > 15 ? '1.35rem' : '1.75rem', wordBreak: 'break-word', lineHeight: '1.2' }}>{brandName}</span>
+          )}
         </div>
 
         {/* Superadmin Tenant Selector dropdown in Desktop view */}
