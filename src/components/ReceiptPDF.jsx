@@ -38,12 +38,12 @@ export default function ReceiptPDF({ receiptData, onClose }) {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#6366f1' }}>
                 <GraduationCap size={32} />
-                <span style={{ fontSize: '1.75rem', fontWeight: '800', tracking: '-0.02em', color: '#0f172a' }}>BrainBridge</span>
+                <span style={{ fontSize: '1.75rem', fontWeight: '800', tracking: '-0.02em', color: '#0f172a' }}>EduBridge</span>
               </div>
               <p style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '0.5rem', lineHeight: '1.4' }}>
                 102, Silver Arcade, Vijay Nagar<br />
                 Indore, MP - 452010<br />
-                Email: support@brainbridge.com | Tel: +91 98765 43210
+                Email: support@edubridge.com | Tel: +91 98765 43210
               </p>
             </div>
             <div style={{ textAlign: 'right' }}>
@@ -104,7 +104,7 @@ export default function ReceiptPDF({ receiptData, onClose }) {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: '3rem', borderTop: '1px dashed #e2e8f0', paddingTop: '1.5rem' }}>
             <div style={{ fontSize: '0.75rem', color: '#94a3b8', maxWidth: '350px', lineHeight: '1.4' }}>
               * This is a computer-generated invoice and does not require a physical signature.<br />
-              * Thank you for choosing BrainBridge Academy!
+              * Thank you for choosing EduBridge Academy!
             </div>
             <div style={{ textAlign: 'center' }}>
               <div style={{ width: '150px', height: '40px', borderBottom: '1px solid #cbd5e1', marginBottom: '0.25rem' }}></div>

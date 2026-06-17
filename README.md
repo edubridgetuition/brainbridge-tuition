@@ -1,12 +1,12 @@
-# BrainBridge Tuition Class Management System
+# EduBridge – Tuition ERP
 
-BrainBridge is a premium, highly responsive web application designed for modern tuition classes to streamline student management, attendance tracking, fee collection, exam scoring, and class scheduling.
+EduBridge – Tuition ERP is a premium, highly responsive web application designed for modern tuition classes to streamline student management, attendance tracking, fee collection, exam scoring, and class scheduling.
 
 ---
 
 ## 🗄️ Database & Storage Architecture
 
-BrainBridge has a dual-mode database service built into the [dbService.js](file:///src/database/dbService.js) layer. This allows you to run the application immediately without server setups, while being fully ready to connect to a production cloud database.
+EduBridge – Tuition ERP has a dual-mode database service built into the [dbService.js](file:///src/database/dbService.js) layer. This allows you to run the application immediately without server setups, while being fully ready to connect to a production cloud database.
 
 ### 1. LocalStorage Fallback Mode (Default)
 * If no Supabase credentials are configured in your `.env` file, the application automatically runs in **LocalStorage Mode**.
@@ -25,7 +25,7 @@ Follow these simple steps to move your data storage to the cloud:
 
 ### Step 1: Create a Supabase Project
 1. Go to [supabase.com](https://supabase.com) and sign up for a free account.
-2. Click **New Project** and select a name (e.g., `BrainBridge Tuition`) and database password.
+2. Click **New Project** and select a name (e.g., `EduBridge Tuition`) and database password.
 3. Choose a server location closest to you and click **Create New Project**.
 
 ### Step 2: Run the Database Schema SQL

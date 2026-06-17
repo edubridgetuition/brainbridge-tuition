@@ -808,7 +808,7 @@ export default function Students({ currentUser, verifyAction, activeTenant }) {
                     </span>
                     {selectedStudentForDetail.parent_mobile && selectedStudentForDetail.parent_mobile !== 'N/A' && (
                       <button 
-                        onClick={() => sendWhatsAppMessage(selectedStudentForDetail.parent_mobile, `Hello, this is from BrainBridge Tuition regarding ${selectedStudentForDetail.name}.`)}
+                        onClick={() => sendWhatsAppMessage(selectedStudentForDetail.parent_mobile, `Hello, this is from EduBridge – Tuition ERP regarding ${selectedStudentForDetail.name}.`)}
                         style={{
                           background: 'none',
                           border: 'none',

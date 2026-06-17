@@ -61,7 +61,7 @@ export default function ForcedPasswordChange({ currentUser, onPasswordChanged, o
     }
   };
 
-  const brandingName = activeTenant?.name || 'BrainBridge';
+  const brandingName = activeTenant?.name || 'EduBridge – Tuition ERP';
 
   return (
     <div style={{

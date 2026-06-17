@@ -215,7 +215,7 @@ const DEFAULT_FEATURES = {
 };
 
 const INITIAL_TENANTS = [
-  { id: 'owner_a', name: 'BrainBridge Tuition', logo_url: '/logo.png', owner_whatsapp: '9876500000', admin_password: 'admin123', features: { ...DEFAULT_FEATURES }, created_at: new Date().toISOString() },
+  { id: 'owner_a', name: 'EduBridge Tuition', logo_url: '/logo.png', owner_whatsapp: '9876500000', admin_password: 'admin123', features: { ...DEFAULT_FEATURES }, created_at: new Date().toISOString() },
   { id: 'owner_b', name: 'Elite Coaching', logo_url: '/logo.png', owner_whatsapp: '9876500001', admin_password: 'admin123', features: { ...DEFAULT_FEATURES }, created_at: new Date().toISOString() }
 ];
 

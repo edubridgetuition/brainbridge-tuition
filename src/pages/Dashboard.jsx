@@ -232,7 +232,7 @@ export default function Dashboard({ setActiveTab, currentUser, verifyAction, act
   }
 
   const hasCustomLogo = activeTenant && activeTenant.logo_url && activeTenant.logo_url !== '' && activeTenant.logo_url !== '/logo.png';
-  const brandName = activeTenant ? activeTenant.name : "BrainBridge";
+  const brandName = activeTenant ? activeTenant.name : "EduBridge – Tuition ERP";
 
   if (currentUser?.role === 'parent') {
     const isFeatureEnabled = (key) => {
@@ -612,7 +612,7 @@ export default function Dashboard({ setActiveTab, currentUser, verifyAction, act
           {currentUser?.role === 'superadmin' ? (
             <img 
               src="/logo.png" 
-              alt="BrainBridge Logo" 
+              alt="EduBridge Logo" 
               style={{
                 width: '48px',
                 height: '48px',
@@ -1099,8 +1099,8 @@ export default function Dashboard({ setActiveTab, currentUser, verifyAction, act
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <div style={{ width: '22px', height: '22px', background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '10px', fontWeight: '800' }}>BB</div>
-                    <span style={{ fontWeight: '800', fontSize: '0.85rem', color: '#fff', letterSpacing: '0.02em' }}>BRAINBRIDGE APP</span>
+                    <div style={{ width: '22px', height: '22px', background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '10px', fontWeight: '800' }}>EB</div>
+                    <span style={{ fontWeight: '800', fontSize: '0.85rem', color: '#fff', letterSpacing: '0.02em' }}>EDUBRIDGE APP</span>
                   </div>
                   <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>now</span>
                 </div>
@@ -1137,7 +1137,7 @@ export default function Dashboard({ setActiveTab, currentUser, verifyAction, act
               </button>
               <button className="btn btn-primary" onClick={() => {
                 if (activeSimulatedRecord) {
-                  const message = `Dear Parent, this is a reminder from BrainBridge Tuition that the fee of ₹${activeSimulatedRecord.amount} for ${activeSimulatedRecord.studentName} is due. Please pay as soon as possible. Thank you.`;
+                  const message = `Dear Parent, this is a reminder from EduBridge – Tuition ERP that the fee of ₹${activeSimulatedRecord.amount} for ${activeSimulatedRecord.studentName} is due. Please pay as soon as possible. Thank you.`;
                   sendWhatsAppMessage(activeSimulatedRecord.parentMobile, message);
                 }
                 setShowNotificationModal(false);

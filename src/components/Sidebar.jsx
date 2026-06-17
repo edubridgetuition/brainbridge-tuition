@@ -185,8 +185,8 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
     ? false 
     : (activeTenant && activeTenant.logo_url && activeTenant.logo_url !== '' && activeTenant.logo_url !== '/logo.png');
   const brandName = currentUser?.role === 'superadmin' 
-    ? "BrainBridge" 
-    : (activeTenant ? activeTenant.name : "BrainBridge");
+    ? "EduBridge – Tuition ERP" 
+    : (activeTenant ? activeTenant.name : "EduBridge – Tuition ERP");
 
   const shouldShowItem = (item) => {
     if (currentUser?.role === 'superadmin') return true;

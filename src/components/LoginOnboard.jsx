@@ -537,7 +537,7 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
             marginBottom: '0.25rem',
             textAlign: 'center'
           }}>
-            BrainBridge
+            EduBridge – Tuition ERP
           </h2>
           <p style={{
             fontSize: '0.82rem',
@@ -1104,7 +1104,7 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
                   });
 
                   if (activeTenant) {
-                    const ownerMsg = `BrainBridge: A new staff registration request from ${staffName} (${staffMobile}) is pending approval for ${activeTenant.name}.`;
+                    const ownerMsg = `EduBridge: A new staff registration request from ${staffName} (${staffMobile}) is pending approval for ${activeTenant.name}.`;
                     try {
                       dbService.sendWhatsAppMessage(activeTenant.owner_whatsapp, ownerMsg);
                     } catch (e) {

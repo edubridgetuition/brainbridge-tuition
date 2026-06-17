@@ -238,7 +238,7 @@ export default function Fees({ currentUser, verifyAction }) {
                               onClick={() => {
                                 const studentInfo = students.find(s => s.id === record.student_id);
                                 const parentMobile = studentInfo?.parent_mobile || studentInfo?.mobile || '';
-                                const message = `Dear Parent, this is a reminder from BrainBridge Tuition that the outstanding fee of ₹${record.amount} for ${student.name} was due on ${formatDateDisplay(record.due_date)}. Please pay as soon as possible. Thank you.`;
+                                const message = `Dear Parent, this is a reminder from EduBridge – Tuition ERP that the outstanding fee of ₹${record.amount} for ${student.name} was due on ${formatDateDisplay(record.due_date)}. Please pay as soon as possible. Thank you.`;
                                 sendWhatsAppMessage(parentMobile, message);
                               }}
                               style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', gap: '0.35rem', borderColor: '#25d366', color: '#25d366' }}

@@ -201,7 +201,7 @@ export default function InquiryForm({ tenantId }) {
 
   const showCustomBranding = tenant && tenant.features?.branding !== false;
   const brandLogo = showCustomBranding ? tenant.logo_url : "/logo.png";
-  const brandName = showCustomBranding ? tenant.name : "BrainBridge";
+  const brandName = showCustomBranding ? tenant.name : "EduBridge – Tuition ERP";
 
   return (
     <div style={{

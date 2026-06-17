@@ -417,7 +417,7 @@ export default function Attendance({ currentUser, verifyAction }) {
                                 <button 
                                   onClick={() => {
                                     const batchName = getBatchName(student.batch_id);
-                                    const message = `Dear Parent, this is to inform you that your child ${student.name} was ABSENT today (${formatDateDisplay(selectedDate)}) in the ${batchName} class. Please ensure they attend regularly. Thank you, BrainBridge Tuition.`;
+                                    const message = `Dear Parent, this is to inform you that your child ${student.name} was ABSENT today (${formatDateDisplay(selectedDate)}) in the ${batchName} class. Please ensure they attend regularly. Thank you, EduBridge – Tuition ERP.`;
                                     sendWhatsAppMessage(student.parent_mobile, message);
                                   }}
                                   style={{

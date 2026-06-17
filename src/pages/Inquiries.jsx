@@ -711,7 +711,7 @@ export default function Inquiries({ currentUser, verifyAction, activeTenant }) {
       {/* 📱 INQUIRY QR CODE MODAL */}
       {showQrModal && (() => {
         const baseOrigin = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-          ? 'https://brainbridge-tuition.web.app'
+          ? 'https://edubridge-tuition.web.app'
           : window.location.origin;
         const inquiryLink = `${baseOrigin}/?inquiry=${activeTenant?.id || 'owner_a'}`;
         const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(inquiryLink)}`;

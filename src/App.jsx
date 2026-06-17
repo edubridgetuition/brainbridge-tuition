@@ -303,7 +303,7 @@ function App() {
   const handleSendOtp = () => {
     if (!currentUser?.inspectTenant) return;
     const { name, owner_whatsapp } = currentUser.inspectTenant;
-    const message = `BrainBridge Security: Super Admin is requesting authorization to edit records. Verification Code: ${otpCode}. Please share this code with the Admin to proceed.`;
+    const message = `EduBridge Security: Super Admin is requesting authorization to edit records. Verification Code: ${otpCode}. Please share this code with the Admin to proceed.`;
     dbService.sendWhatsAppMessage(owner_whatsapp, message);
   };
 
@@ -353,7 +353,7 @@ function App() {
           animation: 'pulseScale 2s infinite ease-in-out',
           overflow: 'hidden'
         }}>
-          <img src="/logo.png" alt="BrainBridge Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          <img src="/logo.png" alt="EduBridge Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         </div>
         <h1 style={{
           fontSize: '2.2rem',
@@ -364,7 +364,7 @@ function App() {
           WebkitTextFillColor: 'transparent',
           margin: 0
         }}>
-          BrainBridge
+          EduBridge – Tuition ERP
         </h1>
         <p style={{
           fontSize: '0.85rem',
@@ -383,7 +383,7 @@ function App() {
   if (loadingTenant) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'radial-gradient(circle at 10% 20%, #eff6ff 0%, #dbeafe 90%)', color: '#1e3a8a', fontWeight: '800' }}>
-        Loading BrainBridge Portal...
+        Loading EduBridge Portal...
       </div>
     );
   }
@@ -591,7 +591,7 @@ function App() {
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
-                  <span style={{ fontWeight: '800', fontSize: '0.8rem', color: '#3b82f6', letterSpacing: '0.05em' }}>BRAINBRIDGE APP</span>
+                  <span style={{ fontWeight: '800', fontSize: '0.8rem', color: '#3b82f6', letterSpacing: '0.05em' }}>EDUBRIDGE APP</span>
                   <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>now</span>
                 </div>
                 <h4 style={{ fontSize: '0.88rem', fontWeight: '700', color: '#fff', margin: 0 }}>{activeNotification.title}</h4>
@@ -623,8 +623,8 @@ function App() {
             ? false 
             : (activeTenant && activeTenant.logo_url && activeTenant.logo_url !== '' && activeTenant.logo_url !== '/logo.png');
           const brandName = currentUser?.role === 'superadmin' 
-            ? "BrainBridge" 
-            : (activeTenant ? activeTenant.name : "BrainBridge");
+            ? "EduBridge – Tuition ERP" 
+            : (activeTenant ? activeTenant.name : "EduBridge – Tuition ERP");
           return (
             <div className="brand-container-mobile" style={{ display: 'flex', alignItems: 'center' }}>
               {hasCustomLogo ? (

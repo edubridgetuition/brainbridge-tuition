@@ -91,7 +91,7 @@ export default function StaffManagement({ currentUser, verifyAction, activeTenan
         
         // 3. Compose and trigger WhatsApp message to staff with login details
         const tenantCode = dbService.getTenantCode() || '';
-        const whatsappMsg = `Hello ${name},\n\nYour staff account request has been approved at ${activeTenant?.name || 'BrainBridge'}.\n\nYou can now log in using the following details:\n\n🏢 Centre Code: ${tenantCode}\n📱 Mobile: ${mobile}\n🔑 Password: ${password}\n\nNote: You will be prompted to change your password immediately upon your first login.\n\nLink: ${window.location.origin}`;
+        const whatsappMsg = `Hello ${name},\n\nYour staff account request has been approved at ${activeTenant?.name || 'EduBridge – Tuition ERP'}.\n\nYou can now log in using the following details:\n\n🏢 Centre Code: ${tenantCode}\n📱 Mobile: ${mobile}\n🔑 Password: ${password}\n\nNote: You will be prompted to change your password immediately upon your first login.\n\nLink: ${window.location.origin}`;
         
         dbService.sendWhatsAppMessage(mobile, whatsappMsg);
         

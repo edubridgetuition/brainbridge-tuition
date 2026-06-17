@@ -1,4 +1,4 @@
--- BrainBridge Database Schema Setup for Supabase / PostgreSQL
+-- EduBridge Database Schema Setup for Supabase / PostgreSQL
 -- Copy and run this script in your Supabase SQL Editor (supabase.com -> Project -> SQL Editor -> New Query)
 
 -- 1. Create Batches table
