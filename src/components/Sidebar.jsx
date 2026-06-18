@@ -311,7 +311,7 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
               border: '1px solid #bfdbfe'
             }} />
           )}
-          {brandName === "EduBridge – Tuition ERP" ? (
+          {brandName.includes("EduBridge") && (brandName.includes("Tuition") || brandName.includes("ERP")) ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0px' }}>
               <span className="brand-name" style={{ fontSize: '1.45rem', fontWeight: '800', lineHeight: '1.1' }}>EduBridge</span>
               <span style={{ fontSize: '0.65rem', fontWeight: '800', color: '#475569', letterSpacing: '0.04em', textTransform: 'uppercase', marginTop: '2px' }}>Tuition ERP</span>
