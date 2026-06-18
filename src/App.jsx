@@ -16,6 +16,7 @@ import StaffManagement from './pages/StaffManagement';
 import ForcedPasswordChange from './components/ForcedPasswordChange';
 import { GraduationCap } from 'lucide-react';
 import { dbService } from './database/dbService';
+import { Capacitor } from '@capacitor/core';
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -75,6 +76,20 @@ function App() {
     }, 2500);
     return () => clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    if (Capacitor.isNativePlatform()) {
+      import('@capacitor/status-bar').then(({ StatusBar }) => {
+        if (currentUser) {
+          StatusBar.setBackgroundColor({ color: '#ffffff' });
+          StatusBar.setStyle({ style: 'DARK' });
+        } else {
+          StatusBar.setBackgroundColor({ color: '#eff6ff' });
+          StatusBar.setStyle({ style: 'DARK' });
+        }
+      }).catch(err => console.error('Status Bar error:', err));
+    }
+  }, [currentUser]);
 
   useEffect(() => {
     if (currentUser && !currentUser.isInspecting && currentUser.role !== 'superadmin') {
