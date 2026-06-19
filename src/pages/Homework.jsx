@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, ClipboardList, Calendar, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, ClipboardList, Calendar, AlertCircle, Image, X, Eye } from 'lucide-react';
 import { dbService, formatDateDisplay } from '../database/dbService';
 
 export default function Homework({ currentUser, verifyAction }) {
@@ -15,6 +15,29 @@ export default function Homework({ currentUser, verifyAction }) {
   const [batchId, setBatchId] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [formError, setFormError] = useState('');
+  const [image, setImage] = useState('');
+  const [selectedImage, setSelectedImage] = useState(null);
+
+  const handleImageChange = (e) => {
+    setFormError('');
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 50 * 1024) {
+      setFormError('Image size must be less than 50KB');
+      e.target.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImage(reader.result);
+    };
+    reader.onerror = () => {
+      setFormError('Failed to read image file');
+    };
+    reader.readAsDataURL(file);
+  };
 
   const isAdmin = currentUser?.role === 'admin';
 
@@ -55,13 +78,15 @@ export default function Homework({ currentUser, verifyAction }) {
           subject: subject.trim(),
           title: title.trim(),
           description: description.trim(),
-          due_date: dueDate
+          due_date: dueDate,
+          image: image || null
         });
         setHomeworkList(prev => [newHw, ...prev]);
         setSubject('');
         setTitle('');
         setDescription('');
         setDueDate('');
+        setImage('');
         setShowAddForm(false);
       } catch (err) {
         setFormError(err.message || 'Failed to add homework.');
@@ -167,6 +192,79 @@ export default function Homework({ currentUser, verifyAction }) {
               <input type="date" className="form-control" value={dueDate} onChange={e => setDueDate(e.target.value)} required />
             </div>
 
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>Upload Image (Max 50KB)</span>
+                {image && (
+                  <button type="button" onClick={() => setImage('')} style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: '0.75rem', padding: 0 }}>
+                    Remove
+                  </button>
+                )}
+              </label>
+              
+              {!image ? (
+                <div style={{ position: 'relative', height: '42px' }}>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    style={{
+                      position: 'absolute',
+                      width: '100%',
+                      height: '100%',
+                      opacity: 0,
+                      cursor: 'pointer',
+                      zIndex: 2
+                    }}
+                  />
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem',
+                    border: '1px dashed var(--border-color)',
+                    borderRadius: 'var(--radius-md)',
+                    height: '100%',
+                    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+                    fontSize: '0.8rem',
+                    color: 'var(--text-secondary)'
+                  }}>
+                    <Image size={16} /> Choose image...
+                  </div>
+                </div>
+              ) : (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '0.35rem 0.5rem',
+                  height: '42px',
+                  backgroundColor: 'rgba(255, 255, 255, 0.02)'
+                }}>
+                  <img src={image} alt="Preview" style={{ height: '30px', width: '30px', objectFit: 'cover', borderRadius: '4px' }} />
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                    Image selected
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setImage('')}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--text-muted)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              )}
+            </div>
+
             <div style={{ gridColumn: 'span 2', display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
               <button type="button" className="btn btn-secondary" onClick={() => setShowAddForm(false)}>Cancel</button>
               <button type="submit" className="btn btn-primary">Publish Homework</button>
@@ -222,6 +320,54 @@ export default function Homework({ currentUser, verifyAction }) {
 
                   <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#1e3a8a', marginBottom: '0.4rem' }}>{h.title}</h3>
                   <p style={{ fontSize: '0.85rem', color: '#64748b', whiteSpace: 'pre-wrap', lineHeight: '1.4' }}>{h.description}</p>
+                  {h.image && (
+                    <div 
+                      style={{ 
+                        marginTop: '0.85rem', 
+                        position: 'relative', 
+                        cursor: 'zoom-in',
+                        borderRadius: '8px',
+                        overflow: 'hidden',
+                        border: '1px solid var(--border-color)'
+                      }} 
+                      onClick={() => setSelectedImage(h.image)}
+                    >
+                      <img 
+                        src={h.image} 
+                        alt="Homework Attachment" 
+                        style={{ 
+                          width: '100%', 
+                          maxHeight: '180px', 
+                          objectFit: 'cover',
+                          transition: 'transform 0.2s ease'
+                        }}
+                        onMouseOver={e => {
+                          e.currentTarget.style.transform = 'scale(1.02)';
+                        }}
+                        onMouseOut={e => {
+                          e.currentTarget.style.transform = 'scale(1)';
+                        }}
+                      />
+                      <div style={{
+                        position: 'absolute',
+                        bottom: '8px',
+                        right: '8px',
+                        backgroundColor: 'rgba(15, 23, 42, 0.75)',
+                        color: '#ffffff',
+                        padding: '0.25rem 0.5rem',
+                        borderRadius: '4px',
+                        fontSize: '0.7rem',
+                        fontWeight: '600',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.25rem',
+                        backdropFilter: 'blur(2px)',
+                        pointerEvents: 'none'
+                      }}>
+                        <Eye size={12} /> View Image
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div style={{ 
@@ -252,6 +398,64 @@ export default function Homework({ currentUser, verifyAction }) {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Image Lightbox Modal */}
+      {selectedImage && (
+        <div 
+          onClick={() => setSelectedImage(null)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            backgroundColor: 'rgba(15, 23, 42, 0.85)',
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backdropFilter: 'blur(4px)',
+            cursor: 'zoom-out',
+            animation: 'fadeIn 0.2s ease'
+          }}
+        >
+          <div style={{ position: 'relative', maxWidth: '90%', maxHeight: '90%', display: 'flex', flexDirection: 'column', alignItems: 'center' }} onClick={e => e.stopPropagation()}>
+            <img 
+              src={selectedImage} 
+              alt="Homework Enlarged" 
+              style={{ 
+                maxWidth: '100%', 
+                maxHeight: '80vh', 
+                objectFit: 'contain', 
+                borderRadius: '8px', 
+                boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5)' 
+              }} 
+            />
+            <button
+              onClick={() => setSelectedImage(null)}
+              style={{
+                marginTop: '1rem',
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                color: '#ffffff',
+                padding: '0.5rem 1.25rem',
+                borderRadius: '9999px',
+                fontSize: '0.88rem',
+                cursor: 'pointer',
+                fontWeight: '600',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                transition: 'background-color 0.2s'
+              }}
+              onMouseOver={e => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'}
+              onMouseOut={e => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'}
+            >
+              <X size={16} /> Close Preview
+            </button>
+          </div>
         </div>
       )}
     </div>
