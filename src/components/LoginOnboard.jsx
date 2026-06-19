@@ -1483,6 +1483,7 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
                     placeholder="Email address (e.g. owner@example.com)"
                     value={ownerEmail}
                     onChange={(e) => setOwnerEmail(e.target.value)}
+                    required
                   />
                 </div>
 
