@@ -60,6 +60,16 @@ export default function Fees({ currentUser, verifyAction, activeTenant }) {
     : false;
 
   useEffect(() => {
+    const handleCloseModals = () => {
+      setActiveReceipt(null);
+      setSelectedFeeRecord(null);
+      setEditingFeeRecord(null);
+    };
+    document.addEventListener('close-modals', handleCloseModals);
+    return () => document.removeEventListener('close-modals', handleCloseModals);
+  }, []);
+
+  useEffect(() => {
     async function loadFeeData() {
       try {
         const [feeList, studentList] = await Promise.all([

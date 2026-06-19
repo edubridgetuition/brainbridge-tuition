@@ -37,6 +37,15 @@ export default function Dashboard({ setActiveTab, currentUser, verifyAction, act
   const [attendanceDate, setAttendanceDate] = useState('-');
 
   useEffect(() => {
+    const handleCloseModals = () => {
+      setShowNotificationModal(false);
+      setShowAddTestimonialModal(false);
+    };
+    document.addEventListener('close-modals', handleCloseModals);
+    return () => document.removeEventListener('close-modals', handleCloseModals);
+  }, []);
+
+  useEffect(() => {
     async function loadDashboardData() {
       try {
         if (currentUser?.role === 'parent') {

@@ -59,6 +59,14 @@ export default function SuperAdmin({ onLogout, onInspectTenant }) {
   const [success, setSuccess] = useState('');
 
   useEffect(() => {
+    const handleCloseModals = () => {
+      setSelectedTenantForRights(null);
+    };
+    document.addEventListener('close-modals', handleCloseModals);
+    return () => document.removeEventListener('close-modals', handleCloseModals);
+  }, []);
+
+  useEffect(() => {
     loadTenants();
   }, []);
 

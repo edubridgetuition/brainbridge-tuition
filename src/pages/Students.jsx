@@ -62,6 +62,16 @@ export default function Students({ currentUser, verifyAction, activeTenant, auto
   });
 
   useEffect(() => {
+    const handleCloseModals = () => {
+      setShowModal(false);
+      setShowBatchModal(false);
+      setSelectedStudentForDetail(null);
+    };
+    document.addEventListener('close-modals', handleCloseModals);
+    return () => document.removeEventListener('close-modals', handleCloseModals);
+  }, []);
+
+  useEffect(() => {
     async function loadData() {
       try {
         const [studentList, batchList] = await Promise.all([

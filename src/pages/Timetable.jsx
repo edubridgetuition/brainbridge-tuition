@@ -30,6 +30,15 @@ export default function Timetable({ currentUser, verifyAction }) {
 
   // Load Initial Parameters
   useEffect(() => {
+    const handleCloseModals = () => {
+      setShowCreateModal(false);
+      setShowEditModal(false);
+    };
+    document.addEventListener('close-modals', handleCloseModals);
+    return () => document.removeEventListener('close-modals', handleCloseModals);
+  }, []);
+
+  useEffect(() => {
     async function loadData() {
       try {
         const batchList = await dbService.getBatches();

@@ -57,6 +57,14 @@ export default function TestMarks({ currentUser, verifyAction }) {
   }, [currentUser]);
 
   useEffect(() => {
+    const handleCloseModals = () => {
+      setShowCreateTestModal(false);
+    };
+    document.addEventListener('close-modals', handleCloseModals);
+    return () => document.removeEventListener('close-modals', handleCloseModals);
+  }, []);
+
+  useEffect(() => {
     async function loadTestData() {
       try {
         const [batchList, testList, studentList] = await Promise.all([

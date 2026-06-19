@@ -28,6 +28,16 @@ export default function Inquiries({ currentUser, verifyAction, activeTenant }) {
   });
 
   useEffect(() => {
+    const handleCloseModals = () => {
+      setSelectedInquiryForDetail(null);
+      setShowQrModal(false);
+      setShowRegisterModal(false);
+    };
+    document.addEventListener('close-modals', handleCloseModals);
+    return () => document.removeEventListener('close-modals', handleCloseModals);
+  }, []);
+
+  useEffect(() => {
     async function loadData() {
       try {
         setLoading(true);

@@ -5,7 +5,7 @@ import { Phone, MapPin, Check, X, Mail, BookOpen, UserCheck, Eye, EyeOff, Key } 
 export default function StaffManagement({ currentUser, verifyAction, activeTenant }) {
   const [staffList, setStaffList] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState('Pending'); // 'Pending', 'Approved', 'Rejected', 'All'
+  const [statusFilter, setStatusFilter] = useState('Approved'); // 'Pending', 'Approved', 'Rejected', 'All'
   const [selectedStaffForApproval, setSelectedStaffForApproval] = useState(null);
   const [selectedStaffForView, setSelectedStaffForView] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -57,6 +57,15 @@ export default function StaffManagement({ currentUser, verifyAction, activeTenan
       else if (showRejected) setStatusFilter('Rejected');
     }
   }, [showPending, showActive, showRejected, showAll, statusFilter]);
+
+  useEffect(() => {
+    const handleCloseModals = () => {
+      setSelectedStaffForApproval(null);
+      setSelectedStaffForView(null);
+    };
+    document.addEventListener('close-modals', handleCloseModals);
+    return () => document.removeEventListener('close-modals', handleCloseModals);
+  }, []);
 
   useEffect(() => {
     loadStaffData();
@@ -202,7 +211,7 @@ export default function StaffManagement({ currentUser, verifyAction, activeTenan
       {/* Filter Tabs */}
       <div className="filters-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div style={{ display: 'flex', gap: '0.5rem', backgroundColor: '#f1f5f9', padding: '4px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-          {['Pending', 'Approved', 'Rejected', 'All'].filter(status => {
+          {['Approved', 'Pending', 'Rejected', 'All'].filter(status => {
             if (status === 'Pending') return showPending;
             if (status === 'Approved') return showActive;
             if (status === 'Rejected') return showRejected;
@@ -235,8 +244,8 @@ export default function StaffManagement({ currentUser, verifyAction, activeTenan
                 <span style={{
                   fontSize: '0.72rem',
                   fontWeight: '800',
-                  backgroundColor: status === 'Pending' ? 'rgba(217, 119, 6, 0.12)' : status === 'Approved' ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)',
-                  color: status === 'Pending' ? '#b45309' : status === 'Approved' ? '#059669' : '#dc2626',
+                  backgroundColor: status === 'Pending' ? 'rgba(217, 119, 6, 0.12)' : status === 'Approved' ? 'rgba(16, 185, 129, 0.12)' : status === 'Rejected' ? 'rgba(239, 68, 68, 0.12)' : 'rgba(37, 99, 235, 0.12)',
+                  color: status === 'Pending' ? '#b45309' : status === 'Approved' ? '#059669' : status === 'Rejected' ? '#dc2626' : '#2563eb',
                   padding: '0.05rem 0.35rem',
                   borderRadius: '4px'
                 }}>

@@ -42,6 +42,14 @@ export default function Homework({ currentUser, verifyAction }) {
   const isAdmin = currentUser?.role === 'admin';
 
   useEffect(() => {
+    const handleCloseModals = () => {
+      setSelectedImage(null);
+    };
+    document.addEventListener('close-modals', handleCloseModals);
+    return () => document.removeEventListener('close-modals', handleCloseModals);
+  }, []);
+
+  useEffect(() => {
     fetchData();
   }, []);
 

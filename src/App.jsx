@@ -89,6 +89,17 @@ function App() {
   }, []);
 
   useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        document.dispatchEvent(new CustomEvent('close-modals'));
+        setOtpModalOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  useEffect(() => {
     if (Capacitor.isNativePlatform()) {
       import('@capacitor/status-bar').then(({ StatusBar }) => {
         if (currentUser) {
