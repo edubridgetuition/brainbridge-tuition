@@ -42,8 +42,18 @@ export default function ForcedPasswordChange({ currentUser, onPasswordChanged, o
 
     try {
       setLoading(true);
-      // Update password using the dbService handler
-      await dbService.updateStaffPassword(currentUser.staffId, newPassword.trim());
+      if (currentUser.staffId) {
+        // Update staff password using the dbService handler
+        await dbService.updateStaffPassword(currentUser.staffId, newPassword.trim());
+      } else if (activeTenant) {
+        // Update main tenant owner admin password
+        await dbService.updateTenant(activeTenant.id, {
+          admin_password: newPassword.trim(),
+          must_change_password: false
+        });
+      } else {
+        throw new Error("No active tenant configuration found to change password.");
+      }
       
       setSuccess('Password changed successfully! Entering workspace...');
       

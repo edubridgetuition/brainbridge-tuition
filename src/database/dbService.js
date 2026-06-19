@@ -1404,24 +1404,25 @@ export const dbService = {
   async addTenant(tenant) {
     const cleanId = String(tenant.id || '').trim().toLowerCase();
     const newTenant = {
+      status: 'Approved',
       ...tenant,
       id: cleanId,
       features: tenant.features || {
-        students: false,
-        timetable: false,
-        attendance: false,
-        fees: false,
-        tests: false,
-        homework: false,
-        materials: false,
-        branding: false,
-        inquiries: false,
-        db_fees: false,
-        db_attendance: false,
-        db_tests: false,
-        db_homework: false,
-        db_materials: false,
-        db_testimonials: false
+        students: true,
+        timetable: true,
+        attendance: true,
+        fees: true,
+        tests: true,
+        homework: true,
+        materials: true,
+        branding: true,
+        inquiries: true,
+        db_fees: true,
+        db_attendance: true,
+        db_tests: true,
+        db_homework: true,
+        db_materials: true,
+        db_testimonials: true
       },
       created_at: new Date().toISOString()
     };

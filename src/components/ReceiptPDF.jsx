@@ -41,8 +41,8 @@ export default function ReceiptPDF({ receiptData, onClose }) {
                 <span style={{ fontSize: '1.75rem', fontWeight: '800', tracking: '-0.02em', color: '#0f172a' }}>EduBridge</span>
               </div>
               <p style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '0.5rem', lineHeight: '1.4' }}>
-                102, Silver Arcade, Vijay Nagar<br />
-                Indore, MP - 452010<br />
+                1029, Vishnu Nagar, Near B S High School<br />
+                GHB, Chandkheda - 382424<br />
                 Email: support@edubridge.com | Tel: +91 98765 43210
               </p>
             </div>

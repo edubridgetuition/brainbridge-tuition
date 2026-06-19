@@ -15,7 +15,9 @@ import {
   Clock,
   XCircle,
   Activity,
-  RefreshCw
+  RefreshCw,
+  Check,
+  X
 } from 'lucide-react';
 
 export default function SuperAdmin({ onLogout, onInspectTenant }) {
@@ -199,6 +201,36 @@ export default function SuperAdmin({ onLogout, onInspectTenant }) {
       alert('Failed to save rights: ' + err.message);
     } finally {
       setSavingFeatures(false);
+    }
+  };
+
+  const handleApproveTenant = async (tenant) => {
+    try {
+      await dbService.updateTenant(tenant.id, { status: 'Approved' });
+      
+      const welcomeMsg = `EduBridge: Your Tuition Center "${tenant.name}" has been approved!\n\nYou can now log in using the details below:\nCentre Code: ${tenant.id}\nUsername: admin\nPassword: ${tenant.admin_password || 'admin123'}\nLink: ${window.location.origin}`;
+      try {
+        await dbService.sendWhatsAppMessage(tenant.owner_whatsapp, welcomeMsg);
+      } catch (waErr) {
+        console.error("WhatsApp notification failed to trigger:", waErr);
+      }
+
+      alert('Tuition Center approved successfully and owner has been notified via WhatsApp!');
+      loadTenants();
+    } catch (err) {
+      alert('Failed to approve Tuition Center: ' + err.message);
+    }
+  };
+
+  const handleRejectTenant = async (tenant) => {
+    if (window.confirm(`Are you sure you want to REJECT the registration for "${tenant.name}"?`)) {
+      try {
+        await dbService.updateTenant(tenant.id, { status: 'Rejected' });
+        alert('Tuition Center registration rejected.');
+        loadTenants();
+      } catch (err) {
+        alert('Failed to reject Tuition Center: ' + err.message);
+      }
     }
   };
 
@@ -655,6 +687,7 @@ export default function SuperAdmin({ onLogout, onInspectTenant }) {
                       <th style={{ padding: '0.75rem 1rem' }}>Company / Center Name</th>
                       <th style={{ padding: '0.75rem 1rem' }}>WhatsApp Contact</th>
                       <th style={{ padding: '0.75rem 1rem' }}>Admin Password</th>
+                      <th style={{ padding: '0.75rem 1rem' }}>Status</th>
                       <th style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>Actions</th>
                     </tr>
                   </thead>
@@ -670,50 +703,150 @@ export default function SuperAdmin({ onLogout, onInspectTenant }) {
                           />
                         </td>
                         <td style={{ padding: '0.75rem 1rem', fontWeight: '800', color: '#0284c7' }}>{t.id}</td>
-                        <td style={{ padding: '0.75rem 1rem', fontWeight: '700' }}>{t.name}</td>
-                        <td style={{ padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: '0.4rem', borderBottom: 'none' }}>
-                          <MessageSquare size={14} style={{ color: '#10b981' }} />
-                          <span>{t.owner_whatsapp}</span>
+                        <td style={{ padding: '0.75rem 1rem' }}>
+                          <div style={{ fontWeight: '700' }}>{t.name}</div>
+                          {t.owner_name && (
+                            <div style={{ fontSize: '0.72rem', color: '#475569', marginTop: '0.2rem' }}>
+                              Owner: <strong>{t.owner_name}</strong> {t.owner_dob && `(DOB: ${t.owner_dob})`}
+                            </div>
+                          )}
+                          {t.owner_address && (
+                            <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '0.1rem', whiteSpace: 'pre-wrap' }}>
+                              Addr: {t.owner_address}
+                            </div>
+                          )}
+                        </td>
+                        <td style={{ padding: '0.75rem 1rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                            <MessageSquare size={14} style={{ color: '#10b981' }} />
+                            <span>{t.owner_whatsapp}</span>
+                          </div>
                         </td>
                         <td style={{ padding: '0.75rem 1rem', color: '#64748b' }}><code>{t.admin_password || 'admin123'}</code></td>
+                        <td style={{ padding: '0.75rem 1rem' }}>
+                          {(() => {
+                            const status = t.status || 'Approved';
+                            const color = status === 'Approved' ? '#10b981' : status === 'Pending' ? '#f59e0b' : '#ef4444';
+                            const bgColor = status === 'Approved' ? 'rgba(16, 185, 129, 0.08)' : status === 'Pending' ? 'rgba(245, 158, 11, 0.08)' : 'rgba(239, 68, 68, 0.08)';
+                            const borderColor = status === 'Approved' ? 'rgba(16, 185, 129, 0.2)' : status === 'Pending' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(239, 68, 68, 0.2)';
+                            return (
+                              <span style={{
+                                display: 'inline-block',
+                                padding: '0.2rem 0.5rem',
+                                borderRadius: '6px',
+                                fontSize: '0.75rem',
+                                fontWeight: '800',
+                                color: color,
+                                backgroundColor: bgColor,
+                                border: `1px solid ${borderColor}`
+                              }}>
+                                {status}
+                              </span>
+                            );
+                          })()}
+                        </td>
                         <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>
                           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
-                            <button
-                              onClick={() => handleManageRightsClick(t)}
-                              className="btn"
-                              style={{
-                                backgroundColor: '#f8fafc',
-                                borderColor: '#cbd5e1',
-                                color: '#475569',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.25rem',
-                                padding: '0.35rem 0.75rem',
-                                fontSize: '0.78rem',
-                                fontWeight: '700'
-                              }}
-                              title="Manage Module & Widget Rights"
-                            >
-                              <Key size={14} /> Rights
-                            </button>
-                            <button
-                              onClick={() => onInspectTenant(t)}
-                              className="btn"
-                              style={{
-                                backgroundColor: '#eff6ff',
-                                borderColor: '#bfdbfe',
-                                color: '#2563eb',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.25rem',
-                                padding: '0.35rem 0.75rem',
-                                fontSize: '0.78rem',
-                                fontWeight: '700'
-                              }}
-                              title="Log in to inspect this center portal"
-                            >
-                              <Eye size={14} /> Inspect
-                            </button>
+                            {t.status === 'Pending' && (
+                              <>
+                                <button
+                                  onClick={() => handleApproveTenant(t)}
+                                  className="btn"
+                                  style={{
+                                    backgroundColor: '#ecfdf5',
+                                    borderColor: '#a7f3d0',
+                                    color: '#059669',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.25rem',
+                                    padding: '0.35rem 0.65rem',
+                                    fontSize: '0.78rem',
+                                    fontWeight: '700'
+                                  }}
+                                  title="Approve Center"
+                                >
+                                  <Check size={14} /> Approve
+                                </button>
+                                <button
+                                  onClick={() => handleRejectTenant(t)}
+                                  className="btn"
+                                  style={{
+                                    backgroundColor: '#fff5f5',
+                                    borderColor: '#fed7d7',
+                                    color: '#e53e3e',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.25rem',
+                                    padding: '0.35rem 0.65rem',
+                                    fontSize: '0.78rem',
+                                    fontWeight: '700'
+                                  }}
+                                  title="Reject Center"
+                                >
+                                  <X size={14} /> Reject
+                                </button>
+                              </>
+                            )}
+                            {t.status === 'Rejected' && (
+                              <button
+                                onClick={() => handleApproveTenant(t)}
+                                className="btn"
+                                style={{
+                                  backgroundColor: '#ecfdf5',
+                                  borderColor: '#a7f3d0',
+                                  color: '#059669',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.25rem',
+                                  padding: '0.35rem 0.65rem',
+                                  fontSize: '0.78rem',
+                                  fontWeight: '700'
+                                }}
+                                title="Approve Center"
+                              >
+                                <Check size={14} /> Approve
+                              </button>
+                            )}
+                            {(t.status === 'Approved' || !t.status) && (
+                              <>
+                                <button
+                                  onClick={() => handleManageRightsClick(t)}
+                                  className="btn"
+                                  style={{
+                                    backgroundColor: '#f8fafc',
+                                    borderColor: '#cbd5e1',
+                                    color: '#475569',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.25rem',
+                                    padding: '0.35rem 0.75rem',
+                                    fontSize: '0.78rem',
+                                    fontWeight: '700'
+                                  }}
+                                  title="Manage Module & Widget Rights"
+                                >
+                                  <Key size={14} /> Rights
+                                </button>
+                                <button
+                                  onClick={() => onInspectTenant(t)}
+                                  className="btn"
+                                  style={{
+                                    backgroundColor: '#eff6ff',
+                                    borderColor: '#bfdbfe',
+                                    color: '#2563eb',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.25rem',
+                                    padding: '0.35rem 0.75rem',
+                                    fontSize: '0.78rem',
+                                    fontWeight: '700'
+                                  }}
+                                  title="Log in to inspect this center portal"
+                                >
+                                  <Eye size={14} /> Inspect
+                                </button>
+                              </>
+                            )}
                             <button
                               onClick={() => handleEditClick(t)}
                               className="btn btn-secondary"

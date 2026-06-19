@@ -29,6 +29,40 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
   const [staffPassword, setStaffPassword] = useState('');
   const [staffConfirmPassword, setStaffConfirmPassword] = useState('');
 
+  // Owner Registration States
+  const [showOwnerRegister, setShowOwnerRegister] = useState(false);
+  const [ownerStep, setOwnerStep] = useState('form'); // 'form', 'success'
+  const [ownerTuitionName, setOwnerTuitionName] = useState('');
+  const [ownerTuitionCode, setOwnerTuitionCode] = useState('');
+  const [ownerName, setOwnerName] = useState('');
+  const [ownerDob, setOwnerDob] = useState('');
+  const [ownerWhatsapp, setOwnerWhatsapp] = useState('');
+  const [ownerEmail, setOwnerEmail] = useState('');
+  const [ownerAddress, setOwnerAddress] = useState('');
+  const [ownerLogo, setOwnerLogo] = useState('');
+  const [ownerPassword, setOwnerPassword] = useState('');
+  const [ownerConfirmPassword, setOwnerConfirmPassword] = useState('');
+  const [ownerRegError, setOwnerRegError] = useState('');
+  const [ownerRegSuccess, setOwnerRegSuccess] = useState('');
+  const [loadingOwnerReg, setLoadingOwnerReg] = useState(false);
+
+  const clearOwnerForm = () => {
+    setOwnerStep('form');
+    setOwnerTuitionName('');
+    setOwnerTuitionCode('');
+    setOwnerName('');
+    setOwnerDob('');
+    setOwnerWhatsapp('');
+    setOwnerEmail('');
+    setOwnerAddress('');
+    setOwnerLogo('');
+    setOwnerPassword('');
+    setOwnerConfirmPassword('');
+    setOwnerRegError('');
+    setOwnerRegSuccess('');
+    setLoadingOwnerReg(false);
+  };
+
   // OTP Verification States
   const [staffOtpCode, setStaffOtpCode] = useState('');
   const [staffOtpInput, setStaffOtpInput] = useState('');
@@ -112,6 +146,88 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
     setSuccess('');
   };
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('new-center') === 'true' || params.get('register') === 'owner') {
+      clearOwnerForm();
+      setShowOwnerRegister(true);
+    }
+  }, []);
+
+  const handleLogoChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.type !== 'image/png') {
+      setOwnerRegError('Please upload a PNG image for the logo.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setOwnerLogo(reader.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleOwnerRegisterSubmit = async (e) => {
+    e.preventDefault();
+    setOwnerRegError('');
+    setOwnerRegSuccess('');
+
+    if (!ownerTuitionName.trim() || !ownerTuitionCode.trim() || !ownerName.trim() || !ownerDob.trim() || !ownerWhatsapp.trim() || !ownerPassword.trim() || !ownerConfirmPassword.trim()) {
+      setOwnerRegError('Please fill in all required fields.');
+      return;
+    }
+
+    if (ownerPassword !== ownerConfirmPassword) {
+      setOwnerRegError('Passwords do not match.');
+      return;
+    }
+
+    const isPasswordSecure = ownerPassword.length >= 8 && /[A-Z]/.test(ownerPassword) && /[0-9]/.test(ownerPassword) && /[!@#$&*-]/.test(ownerPassword);
+    if (!isPasswordSecure) {
+      setOwnerRegError('Password must contain at least 8 characters, an uppercase letter, a number, and a special character (!@#$&*-).');
+      return;
+    }
+
+    try {
+      setLoadingOwnerReg(true);
+      const cleanCode = ownerTuitionCode.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
+      if (!cleanCode) {
+        setOwnerRegError('Tuition Code must contain alphanumeric characters, underscores, or hyphens.');
+        setLoadingOwnerReg(false);
+        return;
+      }
+
+      const existing = await dbService.verifyTenantCode(cleanCode);
+      if (existing) {
+        setOwnerRegError(`Tuition Code "${cleanCode}" is already taken. Please choose another code.`);
+        setLoadingOwnerReg(false);
+        return;
+      }
+
+      const tenantData = {
+        id: cleanCode,
+        name: ownerTuitionName.trim(),
+        owner_name: ownerName.trim(),
+        owner_dob: ownerDob.trim(),
+        owner_address: ownerAddress.trim(),
+        owner_whatsapp: ownerWhatsapp.trim(),
+        owner_email: ownerEmail.trim(),
+        logo_url: ownerLogo || '/logo.png',
+        admin_password: ownerPassword.trim(),
+        status: 'Pending',
+        must_change_password: true
+      };
+
+      await dbService.addTenant(tenantData);
+      setOwnerStep('success');
+    } catch (err) {
+      setOwnerRegError(err.message || 'Registration failed. Please try again.');
+    } finally {
+      setLoadingOwnerReg(false);
+    }
+  };
+
   const handleTabChange = (tab) => {
     setActiveTab(tab);
     setShowInquiryForm(false);
@@ -172,6 +288,15 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
         return;
       }
 
+      if (tenant.status === 'Pending') {
+        setError('Your Tuition Center registration is pending approval from the Master Admin.');
+        return;
+      }
+      if (tenant.status === 'Rejected') {
+        setError('Your Tuition Center registration has been rejected by the Master Admin.');
+        return;
+      }
+
       await onTenantCodeSubmit(cleanCode);
 
       if (!username.trim()) {
@@ -204,7 +329,8 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
         username: username.trim(),
         role: 'admin',
         studentId: null,
-        batchId: null
+        batchId: null,
+        must_change_password: tenant.must_change_password === true
       });
     } catch (err) {
       setError('Authentication failed. Please try again.');
@@ -235,6 +361,15 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
       const tenant = await dbService.verifyTenantCode(cleanCode);
       if (!tenant) {
         setError('Invalid Centre Name.');
+        return;
+      }
+
+      if (tenant.status === 'Pending') {
+        setError('Your Tuition Center registration is pending approval from the Master Admin.');
+        return;
+      }
+      if (tenant.status === 'Rejected') {
+        setError('Your Tuition Center registration has been rejected by the Master Admin.');
         return;
       }
 
@@ -1207,6 +1342,255 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
               </div>
             )}
 
+          </div>
+        </div>
+      )}
+
+      {showOwnerRegister && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.65)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 100000,
+          padding: '1rem'
+        }}>
+          <div className="card" style={{
+            width: '100%',
+            maxWidth: '460px',
+            padding: '2rem 1.5rem',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+            border: '1px solid #bfdbfe',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1.25rem',
+            backgroundColor: '#ffffff',
+            borderRadius: '16px',
+            maxHeight: '90vh',
+            overflowY: 'auto'
+          }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              borderBottom: '1px solid #cbd5e1',
+              paddingBottom: '0.75rem'
+            }}>
+              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '800', color: '#1e3a8a' }}>
+                {ownerStep === 'success' ? 'Registration Complete' : 'Register New Tuition Center'}
+              </h3>
+              {ownerStep !== 'success' && (
+                <button 
+                  type="button"
+                  onClick={() => { setShowOwnerRegister(false); clearOwnerForm(); }}
+                  style={{ 
+                    background: 'none', 
+                    border: 'none', 
+                    cursor: 'pointer', 
+                    color: '#94a3b8', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    padding: '4px',
+                    borderRadius: '50%',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  <X size={18} />
+                </button>
+              )}
+            </div>
+
+            {ownerRegError && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%', padding: '0.75rem 1rem', backgroundColor: 'var(--danger-bg)', border: '1px solid var(--danger-border)', borderRadius: '8px', color: 'var(--danger)', fontSize: '0.78rem', fontWeight: '600' }}>
+                <ShieldAlert size={16} style={{ flexShrink: 0 }} />
+                <span>{ownerRegError}</span>
+              </div>
+            )}
+
+            {ownerStep === 'form' && (
+              <form onSubmit={handleOwnerRegisterSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Tuition Class Name *</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Enter Tuition name (e.g. Akash Academy)"
+                    value={ownerTuitionName}
+                    onChange={(e) => setOwnerTuitionName(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Tuition Code *</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Tuition Code (e.g. ak007) - Alphanumeric"
+                    value={ownerTuitionCode}
+                    onChange={(e) => setOwnerTuitionCode(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))}
+                    required
+                  />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Owner's Full Name *</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Enter Owner's name"
+                    value={ownerName}
+                    onChange={(e) => setOwnerName(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Owner's Date of Birth *</label>
+                  <input
+                    type="date"
+                    className="form-control"
+                    value={ownerDob}
+                    onChange={(e) => setOwnerDob(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>WhatsApp Contact *</label>
+                  <input
+                    type="tel"
+                    className="form-control"
+                    placeholder="WhatsApp Number (with country code, e.g. +91...)"
+                    value={ownerWhatsapp}
+                    onChange={(e) => setOwnerWhatsapp(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Email Address</label>
+                  <input
+                    type="email"
+                    className="form-control"
+                    placeholder="Email address (e.g. owner@example.com)"
+                    value={ownerEmail}
+                    onChange={(e) => setOwnerEmail(e.target.value)}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Address *</label>
+                  <textarea
+                    className="form-control"
+                    rows="2"
+                    placeholder="Tuition Center Address"
+                    value={ownerAddress}
+                    onChange={(e) => setOwnerAddress(e.target.value)}
+                    style={{ resize: 'vertical' }}
+                    required
+                  />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Upload Logo (.png only)</label>
+                  <input
+                    type="file"
+                    accept="image/png"
+                    onChange={handleLogoChange}
+                    style={{ fontSize: '0.8rem' }}
+                  />
+                  {ownerLogo && (
+                    <img 
+                      src={ownerLogo} 
+                      alt="Preview" 
+                      style={{ width: '48px', height: '48px', objectFit: 'contain', border: '1px solid #cbd5e1', borderRadius: '6px', marginTop: '0.25rem' }} 
+                    />
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Admin Password *</label>
+                  <input
+                    type="password"
+                    className="form-control"
+                    placeholder="Enter password"
+                    value={ownerPassword}
+                    onChange={(e) => setOwnerPassword(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Confirm Password *</label>
+                  <input
+                    type="password"
+                    className="form-control"
+                    placeholder="Confirm password"
+                    value={ownerConfirmPassword}
+                    onChange={(e) => setOwnerConfirmPassword(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <span style={{ fontSize: '0.68rem', color: '#64748b', lineHeight: '1.4' }}>
+                  Password must contain at least 8 characters, an uppercase letter, a number, and a special character (!@#$&*-).
+                </span>
+
+                <button 
+                  type="submit" 
+                  className="btn btn-primary" 
+                  style={{ width: '100%', padding: '0.75rem', fontWeight: '800', marginTop: '0.5rem' }}
+                  disabled={loadingOwnerReg}
+                >
+                  {loadingOwnerReg ? 'Registering Center...' : 'Submit Registration'}
+                </button>
+              </form>
+            )}
+
+            {ownerStep === 'success' && (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', padding: '1rem 0', textAlign: 'center' }}>
+                <div style={{ width: '56px', height: '56px', borderRadius: '50%', backgroundColor: 'rgba(16, 185, 129, 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#10b981' }}>
+                  <CheckCircle2 size={36} />
+                </div>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: '800', color: '#111827', margin: 0 }}>Registration Submitted</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.82rem', color: '#475569', lineHeight: '1.5', margin: 0 }}>
+                  <p>Your Tuition Center registration has been submitted successfully!</p>
+                  <div style={{
+                    padding: '0.5rem 0.75rem',
+                    backgroundColor: 'rgba(245, 158, 11, 0.08)',
+                    border: '1px solid rgba(245, 158, 11, 0.2)',
+                    borderRadius: '8px',
+                    color: '#b45309',
+                    fontWeight: '700',
+                    fontSize: '0.78rem',
+                    margin: '0.5rem 0'
+                  }}>
+                    Status: Pending Approval
+                  </div>
+                  <p>Your registration is now pending review. You will receive your Center Code and login credentials via WhatsApp once approved by the Master Admin.</p>
+                </div>
+                
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => {
+                    setShowOwnerRegister(false);
+                    clearOwnerForm();
+                  }}
+                  style={{ width: '100%', padding: '0.75rem', fontSize: '0.88rem', fontWeight: '800', marginTop: '1rem' }}
+                >
+                  Return to Login
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
