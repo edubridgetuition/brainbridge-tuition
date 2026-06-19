@@ -186,7 +186,10 @@ export default function Fees({ currentUser, verifyAction, activeTenant }) {
       paymentDate: formatDateDisplay(feeRecord.payment_date),
       fromDate: feeRecord.from_date ? formatDateDisplay(feeRecord.from_date) : '',
       toDate: feeRecord.to_date ? formatDateDisplay(feeRecord.to_date) : '',
-      description: feeRecord.description || 'Monthly Tuition Fees'
+      description: feeRecord.description || 'Monthly Tuition Fees',
+      tenantName: activeTenant?.name || 'EduBridge',
+      tenantLogo: activeTenant?.logo_url || '',
+      tenantWhatsapp: activeTenant?.owner_whatsapp || ''
     });
   };
 
