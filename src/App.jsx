@@ -92,6 +92,22 @@ function App() {
   }, [currentUser]);
 
   useEffect(() => {
+    if (currentUser) {
+      // Prevent back button from going back to the login screen
+      window.history.pushState(null, '', window.location.href);
+      
+      const handlePopState = () => {
+        window.history.pushState(null, '', window.location.href);
+      };
+      
+      window.addEventListener('popstate', handlePopState);
+      return () => {
+        window.removeEventListener('popstate', handlePopState);
+      };
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
     if (currentUser && !currentUser.isInspecting && currentUser.role !== 'superadmin') {
       if (localStorage.getItem('bb_db_mode') === 'local') {
         localStorage.setItem('bb_db_mode', 'cloud');
