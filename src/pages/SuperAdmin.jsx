@@ -1119,6 +1119,7 @@ export default function SuperAdmin({ onLogout, onInspectTenant }) {
                     { key: 'tests', label: 'Test Marks' },
                     { key: 'homework', label: 'Homework' },
                     { key: 'materials', label: 'Study Materials' },
+                    { key: 'student_performance', label: 'Student Performance Module' },
                     { key: 'branding', label: 'Custom Branding' },
                     { key: 'inquiries', label: 'Admission Inquiries' },
                     { key: 'teacher_login', label: 'Teacher Login & Staff Sign Up' }
@@ -1403,6 +1404,182 @@ export default function SuperAdmin({ onLogout, onInspectTenant }) {
                         const staffVal = tempFeatures[item.staffKey] !== undefined 
                           ? tempFeatures[item.staffKey] 
                           : false;
+
+                        return (
+                          <tr key={item.label} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '0.65rem 0.5rem', fontWeight: '700', color: '#334155' }}>
+                              {item.label}
+                            </td>
+                            <td style={{ padding: '0.65rem 0.5rem', textAlign: 'center' }}>
+                              <input
+                                type="checkbox"
+                                checked={!!ownerVal}
+                                onChange={(e) => handleFeatureToggle(item.ownerKey, e.target.checked)}
+                                style={{
+                                  width: '18px',
+                                  height: '18px',
+                                  cursor: 'pointer',
+                                  accentColor: '#1655e0'
+                                }}
+                              />
+                            </td>
+                            <td style={{ padding: '0.65rem 0.5rem', textAlign: 'center' }}>
+                              <input
+                                type="checkbox"
+                                checked={!!staffVal}
+                                onChange={(e) => handleFeatureToggle(item.staffKey, e.target.checked)}
+                                style={{
+                                  width: '18px',
+                                  height: '18px',
+                                  cursor: 'pointer',
+                                  accentColor: '#1655e0'
+                                }}
+                              />
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Timetable Page Permissions */}
+              <div>
+                <h4 style={{ fontSize: '0.85rem', fontWeight: '800', color: '#475569', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Timetable Page Permissions
+                </h4>
+                <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '-0.3rem', marginBottom: '0.75rem' }}>
+                  Set Timetable access rights separately for Owner Admin and Teacher/Staff.
+                </p>
+                <div style={{
+                  background: '#f8fafc',
+                  padding: '1rem',
+                  borderRadius: '12px',
+                  border: '1px solid #e2e8f0',
+                  overflowX: 'auto',
+                  marginBottom: '1.5rem'
+                }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1.5px solid #cbd5e1', color: '#475569', fontWeight: '800', textAlign: 'left' }}>
+                        <th style={{ padding: '0.5rem' }}>Permission / Feature Name</th>
+                        <th style={{ padding: '0.5rem', textAlign: 'center', width: '100px' }}>Owner Admin</th>
+                        <th style={{ padding: '0.5rem', textAlign: 'center', width: '110px' }}>Teacher / Staff</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        { 
+                          label: 'Manual Timetable Scheduling', 
+                          ownerKey: 'owner_timetable_manual', 
+                          staffKey: 'staff_timetable_manual',
+                          defaultOwner: true,
+                          defaultStaff: true
+                        },
+                        { 
+                          label: 'AI Timetable Generator Tab', 
+                          ownerKey: 'owner_timetable_ai', 
+                          staffKey: 'staff_timetable_ai',
+                          defaultOwner: true,
+                          defaultStaff: false
+                        }
+                      ].map(item => {
+                        const ownerVal = tempFeatures[item.ownerKey] !== undefined 
+                          ? tempFeatures[item.ownerKey] 
+                          : item.defaultOwner;
+                          
+                        const staffVal = tempFeatures[item.staffKey] !== undefined 
+                          ? tempFeatures[item.staffKey] 
+                          : item.defaultStaff;
+
+                        return (
+                          <tr key={item.label} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '0.65rem 0.5rem', fontWeight: '700', color: '#334155' }}>
+                              {item.label}
+                            </td>
+                            <td style={{ padding: '0.65rem 0.5rem', textAlign: 'center' }}>
+                              <input
+                                type="checkbox"
+                                checked={!!ownerVal}
+                                onChange={(e) => handleFeatureToggle(item.ownerKey, e.target.checked)}
+                                style={{
+                                  width: '18px',
+                                  height: '18px',
+                                  cursor: 'pointer',
+                                  accentColor: '#1655e0'
+                                }}
+                              />
+                            </td>
+                            <td style={{ padding: '0.65rem 0.5rem', textAlign: 'center' }}>
+                              <input
+                                type="checkbox"
+                                checked={!!staffVal}
+                                onChange={(e) => handleFeatureToggle(item.staffKey, e.target.checked)}
+                                style={{
+                                  width: '18px',
+                                  height: '18px',
+                                  cursor: 'pointer',
+                                  accentColor: '#1655e0'
+                                }}
+                              />
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Student Performance Page Permissions */}
+              <div>
+                <h4 style={{ fontSize: '0.85rem', fontWeight: '800', color: '#475569', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Student Performance Page Permissions
+                </h4>
+                <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '-0.3rem', marginBottom: '0.75rem' }}>
+                  Set Student Performance page features separately for Owner Admin and Teacher/Staff.
+                </p>
+                <div style={{
+                  background: '#f8fafc',
+                  padding: '1rem',
+                  borderRadius: '12px',
+                  border: '1px solid #e2e8f0',
+                  overflowX: 'auto',
+                  marginBottom: '1.5rem'
+                }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1.5px solid #cbd5e1', color: '#475569', fontWeight: '800', textAlign: 'left' }}>
+                        <th style={{ padding: '0.5rem' }}>Permission / Feature Name</th>
+                        <th style={{ padding: '0.5rem', textAlign: 'center', width: '100px' }}>Owner Admin</th>
+                        <th style={{ padding: '0.5rem', textAlign: 'center', width: '110px' }}>Teacher / Staff</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        { 
+                          label: 'AI Base Performance Report (Charts & PDF)', 
+                          ownerKey: 'owner_perf_report', 
+                          staffKey: 'staff_perf_report',
+                          defaultOwner: true,
+                          defaultStaff: false
+                        },
+                        { 
+                          label: 'AI Analyze & Recommendations Feedback', 
+                          ownerKey: 'owner_perf_feedback', 
+                          staffKey: 'staff_perf_feedback',
+                          defaultOwner: true,
+                          defaultStaff: false
+                        }
+                      ].map(item => {
+                        const ownerVal = tempFeatures[item.ownerKey] !== undefined 
+                          ? tempFeatures[item.ownerKey] 
+                          : item.defaultOwner;
+                          
+                        const staffVal = tempFeatures[item.staffKey] !== undefined 
+                          ? tempFeatures[item.staffKey] 
+                          : item.defaultStaff;
 
                         return (
                           <tr key={item.label} style={{ borderBottom: '1px solid #f1f5f9' }}>

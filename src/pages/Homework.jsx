@@ -5,6 +5,7 @@ import { dbService, formatDateDisplay } from '../database/dbService';
 export default function Homework({ currentUser, verifyAction }) {
   const [homeworkList, setHomeworkList] = useState([]);
   const [batches, setBatches] = useState([]);
+  const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   
   // Admin Form States
@@ -17,6 +18,8 @@ export default function Homework({ currentUser, verifyAction }) {
   const [formError, setFormError] = useState('');
   const [image, setImage] = useState('');
   const [selectedImage, setSelectedImage] = useState(null);
+  const [trackingHomework, setTrackingHomework] = useState(null);
+  const [tempSubmissions, setTempSubmissions] = useState({});
 
   const handleImageChange = (e) => {
     setFormError('');
@@ -44,6 +47,7 @@ export default function Homework({ currentUser, verifyAction }) {
   useEffect(() => {
     const handleCloseModals = () => {
       setSelectedImage(null);
+      setTrackingHomework(null);
     };
     document.addEventListener('close-modals', handleCloseModals);
     return () => document.removeEventListener('close-modals', handleCloseModals);
@@ -58,8 +62,10 @@ export default function Homework({ currentUser, verifyAction }) {
       setLoading(true);
       const hw = await dbService.getHomework();
       const bList = await dbService.getBatches();
+      const sList = await dbService.getStudents();
       setHomeworkList(hw);
       setBatches(bList);
+      setStudents(sList);
       if (bList.length > 0) {
         setBatchId(bList[0].id);
       }
@@ -67,6 +73,53 @@ export default function Homework({ currentUser, verifyAction }) {
       console.error('Failed to load homework data', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleOpenTracking = (hw) => {
+    setTrackingHomework(hw);
+    
+    // Initialize temporary submissions state
+    const initialSubs = {};
+    const batchStudents = students.filter(s => s.batch_id === hw.batch_id);
+    
+    batchStudents.forEach(student => {
+      if (hw.submissions && hw.submissions[student.id]) {
+        initialSubs[student.id] = { ...hw.submissions[student.id] };
+      } else {
+        initialSubs[student.id] = {
+          status: 'Not Submitted',
+          submitted_at: new Date().toISOString().split('T')[0]
+        };
+      }
+    });
+    
+    setTempSubmissions(initialSubs);
+  };
+
+  const handleSaveSubmissions = async () => {
+    if (!trackingHomework) return;
+    
+    const action = async () => {
+      try {
+        await dbService.updateHomeworkSubmissions(trackingHomework.id, tempSubmissions);
+        // Update local homework list state
+        setHomeworkList(prev => prev.map(h => {
+          if (h.id === trackingHomework.id) {
+            return { ...h, submissions: tempSubmissions };
+          }
+          return h;
+        }));
+        setTrackingHomework(null);
+      } catch (err) {
+        alert("Failed to save submissions: " + err.message);
+      }
+    };
+
+    if (verifyAction) {
+      verifyAction(action);
+    } else {
+      await action();
     }
   };
 
@@ -292,6 +345,16 @@ export default function Homework({ currentUser, verifyAction }) {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '1.25rem' }}>
           {filteredHomework.map(h => {
             const isOverdue = new Date(h.due_date) < new Date() && !isAdmin;
+            const batchStudents = students.filter(s => s.batch_id === h.batch_id);
+            const totalStudents = batchStudents.length;
+            const submittedCount = h.submissions 
+              ? Object.values(h.submissions).filter(sub => sub.status === 'Submitted' || sub.status === 'Late').length
+              : 0;
+
+            const studentSubmission = (!isAdmin && currentUser?.studentId && h.submissions)
+              ? h.submissions[currentUser.studentId]
+              : null;
+
             return (
               <div key={h.id} className="card" style={{ 
                 padding: '1.25rem', 
@@ -376,21 +439,71 @@ export default function Homework({ currentUser, verifyAction }) {
                       </div>
                     </div>
                   )}
+
+                  {/* Submission Status for Student/Parent */}
+                  {!isAdmin && (
+                    <div style={{ marginTop: '0.75rem', padding: '0.5rem 0.75rem', borderRadius: '8px', backgroundColor: 'rgba(248, 250, 252, 0.05)', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: '0.78rem', fontWeight: '700', color: 'var(--text-secondary)' }}>Status:</span>
+                      {studentSubmission ? (
+                        <span style={{
+                          fontSize: '0.75rem',
+                          fontWeight: '800',
+                          backgroundColor: studentSubmission.status === 'Submitted' ? '#d1fae5' : studentSubmission.status === 'Late' ? '#fef3c7' : '#fee2e2',
+                          color: studentSubmission.status === 'Submitted' ? '#065f46' : studentSubmission.status === 'Late' ? '#b45309' : '#991b1b',
+                          padding: '0.2rem 0.6rem',
+                          borderRadius: '50px'
+                        }}>
+                          {studentSubmission.status === 'Submitted' ? `Submitted (${formatDateDisplay(studentSubmission.submitted_at)})` : studentSubmission.status === 'Late' ? `Late (${formatDateDisplay(studentSubmission.submitted_at)})` : 'Not Submitted'}
+                        </span>
+                      ) : (
+                        <span style={{
+                          fontSize: '0.75rem',
+                          fontWeight: '800',
+                          backgroundColor: isOverdue ? '#fee2e2' : 'rgba(241, 245, 249, 0.1)',
+                          color: isOverdue ? '#991b1b' : 'var(--text-secondary)',
+                          padding: '0.2rem 0.6rem',
+                          borderRadius: '50px'
+                        }}>
+                          {isOverdue ? 'Not Submitted (Overdue)' : 'Pending'}
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Submission Stats and Tracking for Admin */}
+                  {isAdmin && (
+                    <div style={{ marginTop: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '600' }}>
+                        Submissions: <strong style={{ color: 'var(--text-primary)' }}>{submittedCount}/{totalStudents}</strong>
+                      </span>
+                      <button 
+                        className="btn btn-secondary" 
+                        onClick={() => handleOpenTracking(h)} 
+                        style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem', height: 'auto', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', width: 'auto' }}
+                      >
+                        Track Submissions
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <div style={{ 
                   display: 'flex', 
                   alignItems: 'center', 
                   justifyContent: 'space-between',
-                  borderTop: '1px solid #f1f5f9',
+                  borderTop: '1px solid var(--border-color)',
                   paddingTop: '0.75rem',
                   marginTop: '1.25rem',
                   fontSize: '0.78rem',
-                  color: '#64748b'
+                  color: 'var(--text-secondary)'
                 }}>
-                  {isAdmin && (
-                    <span style={{ fontWeight: '700', color: '#475569' }}>
+                  {isAdmin ? (
+                    <span style={{ fontWeight: '700', color: 'var(--text-secondary)' }}>
                       Batch: {getBatchName(h.batch_id)}
+                    </span>
+                  ) : (
+                    <span style={{ fontWeight: '700', color: 'var(--text-secondary)' }}>
+                      Given: {formatDateDisplay(h.created_at ? h.created_at.split('T')[0] : '')}
                     </span>
                   )}
                   <span style={{ 
@@ -463,6 +576,140 @@ export default function Homework({ currentUser, verifyAction }) {
             >
               <X size={16} /> Close Preview
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Submissions Tracking Modal */}
+      {trackingHomework && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            backgroundColor: 'rgba(15, 23, 42, 0.7)',
+            zIndex: 999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backdropFilter: 'blur(4px)',
+            animation: 'fadeIn 0.2s ease'
+          }}
+        >
+          <div 
+            style={{
+              backgroundColor: 'var(--card-bg)',
+              border: '1px solid var(--border-color)',
+              borderRadius: '16px',
+              width: '90%',
+              maxWidth: '550px',
+              maxHeight: '85vh',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3)',
+              overflow: 'hidden'
+            }}
+          >
+            {/* Modal Header */}
+            <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: '800', color: '#1e3a8a' }}>Track Submissions</h3>
+                <p style={{ margin: '0.15rem 0 0', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                  {trackingHomework.title} — Batch: {getBatchName(trackingHomework.batch_id)}
+                </p>
+              </div>
+              <button 
+                onClick={() => setTrackingHomework(null)}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div style={{ padding: '1.5rem', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {students.filter(s => s.batch_id === trackingHomework.batch_id).length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                  No students registered in this batch.
+                </div>
+              ) : (
+                students.filter(s => s.batch_id === trackingHomework.batch_id).map(student => {
+                  const sub = tempSubmissions[student.id] || { status: 'Not Submitted', submitted_at: new Date().toISOString().split('T')[0] };
+                  return (
+                    <div 
+                      key={student.id} 
+                      style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'space-between', 
+                        gap: '1rem',
+                        paddingBottom: '0.85rem',
+                        borderBottom: '1px solid var(--border-color)',
+                        flexWrap: 'wrap'
+                      }}
+                    >
+                      <div style={{ flex: 1, minWidth: '150px' }}>
+                        <div style={{ fontSize: '0.88rem', fontWeight: '800', color: 'var(--text-primary)' }}>{student.name}</div>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Roll: {student.mobile.slice(-4)}</div>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        <select 
+                          className="form-control" 
+                          value={sub.status}
+                          onChange={(e) => {
+                            setTempSubmissions(prev => ({
+                              ...prev,
+                              [student.id]: {
+                                ...prev[student.id],
+                                status: e.target.value
+                              }
+                            }));
+                          }}
+                          style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem', height: 'auto', width: '130px', margin: 0 }}
+                        >
+                          <option value="Not Submitted">Not Submitted</option>
+                          <option value="Submitted">Submitted</option>
+                          <option value="Late">Late</option>
+                        </select>
+
+                        {(sub.status === 'Submitted' || sub.status === 'Late') && (
+                          <input 
+                            type="date" 
+                            className="form-control" 
+                            value={sub.submitted_at || new Date().toISOString().split('T')[0]}
+                            onChange={(e) => {
+                              setTempSubmissions(prev => ({
+                                ...prev,
+                                [student.id]: {
+                                  ...prev[student.id],
+                                  submitted_at: e.target.value
+                                }
+                              }));
+                            }}
+                            style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem', height: 'auto', width: '130px', margin: 0 }}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', backgroundColor: 'rgba(248, 250, 252, 0.02)' }}>
+              <button className="btn btn-secondary" onClick={() => setTrackingHomework(null)}>Cancel</button>
+              <button 
+                className="btn btn-primary" 
+                onClick={handleSaveSubmissions}
+                disabled={students.filter(s => s.batch_id === trackingHomework.batch_id).length === 0}
+              >
+                Save Changes
+              </button>
+            </div>
           </div>
         </div>
       )}

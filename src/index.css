@@ -1155,10 +1155,10 @@ select.form-control {
   body * {
     visibility: hidden;
   }
-  .receipt-print, .receipt-print * {
+  .receipt-print, .receipt-print *, .report-card-print, .report-card-print * {
     visibility: visible;
   }
-  .receipt-print {
+  .receipt-print, .report-card-print {
     position: absolute;
     left: 0;
     top: 0;
@@ -1166,7 +1166,7 @@ select.form-control {
     color: #0f172a !important;
     background: #ffffff !important;
   }
-  .receipt-print svg {
+  .receipt-print svg, .report-card-print svg {
     stroke: #0f172a !important;
   }
 }

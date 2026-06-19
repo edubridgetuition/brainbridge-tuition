@@ -14,6 +14,7 @@ import InquiryForm from './pages/InquiryForm';
 import Inquiries from './pages/Inquiries';
 import StaffManagement from './pages/StaffManagement';
 import ForcedPasswordChange from './components/ForcedPasswordChange';
+import StudentPerformance from './pages/StudentPerformance';
 import { GraduationCap } from 'lucide-react';
 import { dbService } from './database/dbService';
 import { Capacitor } from '@capacitor/core';
@@ -515,7 +516,7 @@ function App() {
       case 'staff':
         return <StaffManagement key={tenantKey} currentUser={currentUser} verifyAction={verifyAction} activeTenant={activeTenant} />;
       case 'timetable':
-        return <Timetable key={tenantKey} currentUser={currentUser} verifyAction={verifyAction} />;
+        return <Timetable key={tenantKey} currentUser={currentUser} verifyAction={verifyAction} activeTenant={activeTenant} />;
       case 'attendance':
         return <Attendance key={tenantKey} currentUser={currentUser} verifyAction={verifyAction} />;
       case 'fees':
@@ -526,6 +527,8 @@ function App() {
         return <Homework key={tenantKey} currentUser={currentUser} verifyAction={verifyAction} />;
       case 'materials':
         return <StudyMaterial key={tenantKey} currentUser={currentUser} verifyAction={verifyAction} />;
+      case 'student_performance':
+        return <StudentPerformance key={tenantKey} currentUser={currentUser} verifyAction={verifyAction} activeTenant={activeTenant} />;
       case 'manage_centers':
         return (
           <SuperAdmin 

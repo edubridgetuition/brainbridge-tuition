@@ -1160,6 +1160,27 @@ export const dbService = {
     );
   },
 
+  async updateHomeworkSubmissions(id, submissions) {
+    await dbService.logActivity(`Updated submissions for homework "${id}"`);
+    return runQuery(
+      async () => {
+        const docRef = doc(db, "homework", id);
+        await updateDoc(docRef, { submissions });
+        return true;
+      },
+      () => {
+        const homework = getLocalData('bb_homework', []);
+        const idx = homework.findIndex(h => h.id === id);
+        if (idx !== -1) {
+          homework[idx] = { ...homework[idx], submissions };
+          saveLocalData('bb_homework', homework);
+          return true;
+        }
+        return false;
+      }
+    );
+  },
+
   // --- STUDY MATERIAL ---
   async getStudyMaterials() {
     return runQuery(

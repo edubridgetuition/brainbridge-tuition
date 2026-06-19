@@ -16,7 +16,8 @@ import {
   FileText,
   UserCheck,
   Shield,
-  Key
+  Key,
+  TrendingUp
 } from 'lucide-react';
 import { dbService } from '../database/dbService';
 
@@ -218,7 +219,8 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
         { id: 'timetable', label: 'Timetable', icon: Calendar },
         { id: 'attendance', label: 'Attendance', icon: CheckSquare },
         { id: 'homework', label: 'Homework', icon: ClipboardList },
-        { id: 'materials', label: 'Study Material', icon: Download }
+        { id: 'materials', label: 'Study Material', icon: Download },
+        { id: 'student_performance', label: 'Performance', icon: TrendingUp }
       ].filter(item => isFeatureEnabled(item.id))
     },
     {
@@ -257,13 +259,15 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
         { id: 'staff', label: 'Staff Management', icon: UserCheck, role: 'admin' },
         { id: 'tests', label: 'Test Marks', icon: FileSpreadsheet },
         { id: 'homework', label: 'Homework', icon: ClipboardList },
-        { id: 'materials', label: 'Study Material', icon: Download }
+        { id: 'materials', label: 'Study Material', icon: Download },
+        { id: 'student_performance', label: 'Performance', icon: TrendingUp }
       ]
     : [
         { id: 'attendance', label: 'Attendance', icon: CheckSquare },
         { id: 'timetable', label: 'Timetable', icon: Calendar },
         { id: 'tests', label: 'Test Marks', icon: FileSpreadsheet },
-        { id: 'materials', label: 'Study Material', icon: Download }
+        { id: 'materials', label: 'Study Material', icon: Download },
+        { id: 'student_performance', label: 'Performance', icon: TrendingUp }
       ]
   ).filter(item => isFeatureEnabled(item.id) && shouldShowItem(item));
 
