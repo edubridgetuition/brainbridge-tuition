@@ -43,7 +43,7 @@ export default function SuperAdmin({ onLogout, onInspectTenant }) {
   const [customTeacherSubtitle, setCustomTeacherSubtitle] = useState('');
   const [useBlackLogoFallback, setUseBlackLogoFallback] = useState(true);
   const [superAdminNotes, setSuperAdminNotes] = useState('');
-  const [customDomain, setCustomDomain] = useState(() => localStorage.getItem('bb_custom_domain') || 'https://edubridge.in');
+  const [customDomain, setCustomDomain] = useState(() => localStorage.getItem('bb_custom_domain') || window.location.origin);
   const [copiedLink, setCopiedLink] = useState(false);
 
   // Form Fields
