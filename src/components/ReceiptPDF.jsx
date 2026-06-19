@@ -4,7 +4,7 @@ import { Printer, X, GraduationCap, CheckCircle } from 'lucide-react';
 export default function ReceiptPDF({ receiptData, onClose }) {
   if (!receiptData) return null;
 
-  const { studentName, standard, amount, paymentMode, paymentDate, id, fromDate, toDate } = receiptData;
+  const { studentName, standard, amount, paymentMode, paymentDate, id, fromDate, toDate, description } = receiptData;
   const invoiceNumber = `BB-${id.substring(0, 8).toUpperCase()}`;
 
   const handlePrint = () => {
