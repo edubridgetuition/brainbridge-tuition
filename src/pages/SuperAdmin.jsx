@@ -17,7 +17,10 @@ import {
   Activity,
   RefreshCw,
   Check,
-  X
+  X,
+  QrCode,
+  Copy,
+  Download
 } from 'lucide-react';
 
 export default function SuperAdmin({ onLogout, onInspectTenant }) {
@@ -40,6 +43,8 @@ export default function SuperAdmin({ onLogout, onInspectTenant }) {
   const [customTeacherSubtitle, setCustomTeacherSubtitle] = useState('');
   const [useBlackLogoFallback, setUseBlackLogoFallback] = useState(true);
   const [superAdminNotes, setSuperAdminNotes] = useState('');
+  const [customDomain, setCustomDomain] = useState(() => localStorage.getItem('bb_custom_domain') || 'https://edubridge.in');
+  const [copiedLink, setCopiedLink] = useState(false);
 
   // Form Fields
   const [code, setCode] = useState('');
@@ -310,6 +315,25 @@ export default function SuperAdmin({ onLogout, onInspectTenant }) {
           }}
         >
           <Database size={18} /> Tuition Centers ({tenants.length})
+        </button>
+        <button 
+          onClick={() => setActiveConsoleTab('onboarding')} 
+          style={{
+            padding: '0.75rem 1.25rem',
+            background: 'none',
+            border: 'none',
+            borderBottom: activeConsoleTab === 'onboarding' ? '3px solid var(--primary)' : '3px solid transparent',
+            color: activeConsoleTab === 'onboarding' ? 'var(--primary)' : 'var(--text-secondary)',
+            fontWeight: '800',
+            fontSize: '0.95rem',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            transition: 'var(--transition-smooth)'
+          }}
+        >
+          <QrCode size={18} /> Onboarding Link & QR
         </button>
       </div>
 
@@ -880,6 +904,126 @@ export default function SuperAdmin({ onLogout, onInspectTenant }) {
                 </table>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* RENDER TAB 3: ONBOARDING LINK & QR */}
+      {activeConsoleTab === 'onboarding' && (
+        <div className="card fade-in" style={{ padding: '2rem', border: '1px solid var(--border-color)', maxWidth: '700px', margin: '0 auto' }}>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: '800', color: 'var(--text-primary)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <QrCode size={22} style={{ color: 'var(--primary)' }} />
+            Tuition Owner Registration Link & QR Code
+          </h2>
+          <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.5rem', lineHeight: '1.4' }}>
+            Distribute this invite link or QR Code to new Tuition Owners so they can self-register their centers.
+            Once they register, their center status will show as <strong>Pending</strong> in the center list until you approve it.
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            {/* Custom Domain Input */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+              <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>
+                Portal / Domain URL (vercel word nahi dikhane ke liye custom domain set karein)
+              </label>
+              <input
+                type="text"
+                className="form-control"
+                placeholder="e.g. https://edubridge.in"
+                value={customDomain}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setCustomDomain(val);
+                  localStorage.setItem('bb_custom_domain', val);
+                }}
+                style={{ maxWidth: '400px' }}
+              />
+              <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                Default browser URL ki jagah apna custom domain enter karein taaki QR Code aur link usi domain ke sath banein.
+              </span>
+            </div>
+
+            {/* Generated Invite Link */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+              <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Generated Invite Link</label>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'stretch', maxWidth: '500px' }}>
+                <input
+                  type="text"
+                  className="form-control"
+                  readOnly
+                  value={`${customDomain.replace(/\/$/, '')}/?new-center=true`}
+                  style={{ backgroundColor: '#f8fafc', color: '#334155', flex: 1, fontFamily: 'monospace', fontSize: '0.85rem' }}
+                />
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => {
+                    const inviteUrl = `${customDomain.replace(/\/$/, '')}/?new-center=true`;
+                    navigator.clipboard.writeText(inviteUrl);
+                    setCopiedLink(true);
+                    setTimeout(() => setCopiedLink(false), 2000);
+                  }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0 1rem', fontSize: '0.85rem', fontWeight: '700' }}
+                >
+                  {copiedLink ? <Check size={16} /> : <Copy size={16} />}
+                  <span>{copiedLink ? 'Copied!' : 'Copy Link'}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* QR Code Section */}
+            <div style={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              alignItems: 'center', 
+              gap: '1rem', 
+              padding: '1.5rem', 
+              backgroundColor: '#f8fafc', 
+              borderRadius: '12px', 
+              border: '1px dashed #cbd5e1',
+              maxWidth: '320px',
+              margin: '0 auto',
+              marginTop: '1rem'
+            }}>
+              <div style={{
+                padding: '1rem',
+                backgroundColor: '#ffffff',
+                borderRadius: '8px',
+                boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+              }}>
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`${customDomain.replace(/\/$/, '')}/?new-center=true`)}`}
+                  alt="Onboarding QR Code"
+                  style={{ width: '200px', height: '200px', display: 'block' }}
+                />
+              </div>
+              
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={async () => {
+                  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(`${customDomain.replace(/\/$/, '')}/?new-center=true`)}`;
+                  try {
+                    const res = await fetch(qrUrl);
+                    const blob = await res.blob();
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'EduBridge_Onboarding_QR.png';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                  } catch (err) {
+                    window.open(qrUrl, '_blank');
+                  }
+                }}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', fontWeight: '700', padding: '0.5rem 1rem' }}
+              >
+                <Download size={16} />
+                Download QR Code
+              </button>
+            </div>
           </div>
         </div>
       )}
