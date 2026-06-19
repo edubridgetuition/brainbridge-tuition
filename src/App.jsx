@@ -359,32 +359,43 @@ function App() {
           width: '84px',
           height: '84px',
           borderRadius: '20px',
-          backgroundColor: '#3b82f6',
+          backgroundColor: 'transparent',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          boxShadow: '0 10px 30px rgba(59, 130, 246, 0.25)',
           marginBottom: '1.25rem',
           animation: 'pulseScale 2s infinite ease-in-out',
           overflow: 'hidden'
         }}>
-          <img src="/logo.png" alt="EduBridge Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          <img src="/logo.png" alt="EduBridge Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
         </div>
         <h1 style={{
-          fontSize: '2.2rem',
+          fontSize: '2.5rem',
           fontWeight: '800',
           letterSpacing: '-0.02em',
           background: 'linear-gradient(135deg, #ffffff 40%, #93c5fd 100%)',
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
-          margin: 0
+          margin: 0,
+          lineHeight: '1.1',
+          textAlign: 'center'
         }}>
-          EduBridge – Tuition ERP
+          EduBridge
         </h1>
+        <h2 style={{
+          fontSize: '1.4rem',
+          fontWeight: '700',
+          color: '#93c5fd',
+          marginTop: '0.25rem',
+          marginBottom: 0,
+          textAlign: 'center'
+        }}>
+          Tuition ERP
+        </h2>
         <p style={{
           fontSize: '0.85rem',
           color: '#94a3b8',
-          marginTop: '0.4rem',
+          marginTop: '0.6rem',
           fontWeight: '500',
           letterSpacing: '0.08em',
           textTransform: 'uppercase'
