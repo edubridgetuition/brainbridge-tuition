@@ -15,7 +15,8 @@ import {
   Trash2,
   FileText,
   UserCheck,
-  Shield
+  Shield,
+  Key
 } from 'lucide-react';
 import { dbService } from '../database/dbService';
 
@@ -402,12 +403,12 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
         </div>
 
         {/* Profile Card & Storage widgets at bottom */}
-        <div className="sidebar-footer" style={{ borderTop: '1px solid #bfdbfe', paddingTop: '1rem', marginTop: 'auto' }}>
-          <div className="admin-profile-widget" style={{ marginBottom: '0.75rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+        <div className="sidebar-footer" style={{ borderTop: '1px solid #bfdbfe', paddingTop: '0.75rem', marginTop: 'auto' }}>
+          <div className="admin-profile-widget" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.25rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', overflow: 'hidden' }}>
               <div style={{
-                width: '36px',
-                height: '36px',
+                width: '32px',
+                height: '32px',
                 borderRadius: '50%',
                 backgroundColor: '#ffffff',
                 border: '1px solid #93c5fd',
@@ -416,90 +417,94 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
                 justifyContent: 'center',
                 color: 'var(--primary)',
                 fontWeight: '700',
-                fontSize: '1rem',
-                boxShadow: '0 2px 8px rgba(37, 99, 235, 0.08)'
+                fontSize: '0.85rem',
+                flexShrink: 0,
+                boxShadow: '0 1px 4px rgba(37, 99, 235, 0.08)'
               }}>
                 {currentUser?.username ? currentUser.username.charAt(0).toUpperCase() : 'U'}
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span style={{ fontSize: '0.72rem', fontWeight: '800', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                <span style={{ fontSize: '0.62rem', fontWeight: '800', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>
                   {currentUser?.role === 'admin' 
-                    ? (currentUser.staffId ? `${currentUser.designation || 'Staff'} Mode` : 'Owner Admin') 
-                    : `Student ID: ${currentUser?.numericId}`}
+                    ? (currentUser.staffId ? `${currentUser.designation || 'Staff'}` : 'Owner') 
+                    : `Student`}
                 </span>
-                <span style={{ fontSize: '0.92rem', fontWeight: '800', color: '#1e3a8a', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={currentUser?.username}>
+                <span style={{ fontSize: '0.8rem', fontWeight: '800', color: '#1e3a8a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '85px' }} title={currentUser?.username}>
                   {currentUser?.username}
                 </span>
               </div>
             </div>
-            {currentUser?.role === 'admin' && (
+            
+            <div style={{ display: 'flex', gap: '0.35rem', flexShrink: 0 }}>
+              {currentUser?.role === 'admin' && (
+                <button
+                  type="button"
+                  onClick={() => { setShowPasswordModal(true); setModalError(''); setModalSuccess(''); }}
+                  style={{
+                    padding: '0.35rem',
+                    borderRadius: 'var(--radius-sm)',
+                    backgroundColor: '#eff6ff',
+                    border: '1px solid #bfdbfe',
+                    color: 'var(--primary)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'all 0.2s',
+                    width: '28px',
+                    height: '28px'
+                  }}
+                  title="Change Password"
+                >
+                  <Key size={14} />
+                </button>
+              )}
               <button
-                type="button"
-                onClick={() => { setShowPasswordModal(true); setModalError(''); setModalSuccess(''); }}
-                className="btn btn-secondary"
+                onClick={onLogout}
                 style={{
-                  width: '100%',
-                  padding: '0.45rem 1rem',
-                  fontSize: '0.78rem',
-                  fontWeight: '700',
-                  color: 'var(--primary)',
-                  backgroundColor: '#eff6ff',
-                  borderColor: '#bfdbfe',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.4rem',
-                  marginBottom: '0.5rem',
-                  boxShadow: 'none'
-                }}
-              >
-                Change Password
-              </button>
-            )}
-            <button
-              onClick={onLogout}
-              className="btn btn-secondary"
-              style={{
-                width: '100%',
-                padding: '0.5rem 1rem',
-                fontSize: '0.85rem',
-                fontWeight: '700',
-                color: 'var(--danger)',
-                backgroundColor: 'var(--danger-bg)',
-                borderColor: 'var(--danger-border)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.4rem',
-                boxShadow: 'none'
-              }}
-            >
-              Logout Portal
-            </button>
-            {currentUser?.role !== 'admin' && (
-              <button
-                onClick={handleDeleteAccount}
-                style={{
-                  width: '100%',
-                  marginTop: '0.65rem',
                   padding: '0.35rem',
-                  fontSize: '0.75rem',
-                  fontWeight: '700',
-                  color: '#ef4444',
-                  backgroundColor: 'transparent',
-                  border: 'none',
+                  borderRadius: 'var(--radius-sm)',
+                  backgroundColor: 'var(--danger-bg)',
+                  border: '1px solid var(--danger-border)',
+                  color: 'var(--danger)',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '0.25rem',
-                  textDecoration: 'underline'
+                  transition: 'all 0.2s',
+                  width: '28px',
+                  height: '28px'
                 }}
+                title="Logout Portal"
               >
-                Delete Account Data
+                <LogOut size={14} />
               </button>
-            )}
+            </div>
           </div>
+
+          {currentUser?.role !== 'admin' && (
+            <button
+              onClick={handleDeleteAccount}
+              style={{
+                width: '100%',
+                marginTop: '0.5rem',
+                padding: '0.25rem',
+                fontSize: '0.7rem',
+                fontWeight: '700',
+                color: '#ef4444',
+                backgroundColor: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.2rem',
+                textDecoration: 'underline'
+              }}
+            >
+              Delete Account Data
+            </button>
+          )}
 
           {currentUser?.role === 'admin' && !isSubAdmin && currentUser?.isInspecting && (
             <div className="db-selector-widget" style={{ borderTop: '1px solid #bfdbfe', paddingTop: '0.75rem' }}>
