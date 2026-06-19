@@ -189,7 +189,10 @@ export default function Fees({ currentUser, verifyAction, activeTenant }) {
       description: feeRecord.description || 'Monthly Tuition Fees',
       tenantName: activeTenant?.name || 'EduBridge',
       tenantLogo: activeTenant?.logo_url || '',
-      tenantWhatsapp: activeTenant?.owner_whatsapp || ''
+      tenantWhatsapp: activeTenant?.owner_whatsapp || '',
+      receiptSubHeader: activeTenant?.receipt_sub_header || '',
+      receiptFooterNote1: activeTenant?.receipt_footer_note_1 || '',
+      receiptFooterNote2: activeTenant?.receipt_footer_note_2 || ''
     });
   };
 
