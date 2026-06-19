@@ -95,10 +95,10 @@ const INITIAL_BATCHES = [
 ];
 
 const INITIAL_STUDENTS = [
-  { id: 's1', student_id: 1001, name: 'Amit Sharma', mobile: '9876500001', parent_mobile: '9876500011', address: '12, Shanti Nagar, Indore', school: 'DPS', standard: '10th', admission_date: '2026-04-10', batch_id: 'b1' },
-  { id: 's2', student_id: 1002, name: 'Priyanshu Patel', mobile: '9876500002', parent_mobile: '9876500012', address: '45, Scheme 54, Indore', school: 'St. Pauls', standard: '11th', admission_date: '2026-04-12', batch_id: 'b2' },
-  { id: 's3', student_id: 1003, name: 'Riya Mehta', mobile: '9876500003', parent_mobile: '9876500013', address: '102, Silver Arcade, Indore', school: 'Choithram', standard: '12th', admission_date: '2026-04-15', batch_id: 'b3' },
-  { id: 's4', student_id: 1004, name: 'Rahul Verma', mobile: '9876500004', parent_mobile: '9876500014', address: '88, Vijay Nagar, Indore', school: 'DPS', standard: '10th', admission_date: '2026-04-20', batch_id: 'b1' }
+  { id: 's1', student_id: 1001, name: 'Amit Sharma', mobile: '9876500001', parent_mobile: '9876500011', address: '12, Shanti Nagar, Indore', school: 'DPS', standard: '10th', admission_date: '2026-04-10', batch_id: 'b1', email: 'amit@example.com' },
+  { id: 's2', student_id: 1002, name: 'Priyanshu Patel', mobile: '9876500002', parent_mobile: '9876500012', address: '45, Scheme 54, Indore', school: 'St. Pauls', standard: '11th', admission_date: '2026-04-12', batch_id: 'b2', email: 'priyanshu@example.com' },
+  { id: 's3', student_id: 1003, name: 'Riya Mehta', mobile: '9876500003', parent_mobile: '9876500013', address: '102, Silver Arcade, Indore', school: 'Choithram', standard: '12th', admission_date: '2026-04-15', batch_id: 'b3', email: 'riya@example.com' },
+  { id: 's4', student_id: 1004, name: 'Rahul Verma', mobile: '9876500004', parent_mobile: '9876500014', address: '88, Vijay Nagar, Indore', school: 'DPS', standard: '10th', admission_date: '2026-04-20', batch_id: 'b1', email: 'rahul@example.com' }
 ];
 
 const INITIAL_FEES = [
@@ -855,7 +855,7 @@ export const dbService = {
 
         // Students
         await Promise.all(INITIAL_STUDENTS.map(s => 
-          setDoc(doc(db, "students", s.id), { student_id: s.student_id, name: s.name, mobile: s.mobile, parent_mobile: s.parent_mobile, address: s.address, school: s.school, standard: s.standard, admission_date: s.admission_date, batch_id: s.batch_id })
+          setDoc(doc(db, "students", s.id), { student_id: s.student_id, name: s.name, mobile: s.mobile, parent_mobile: s.parent_mobile, address: s.address, school: s.school, standard: s.standard, admission_date: s.admission_date, batch_id: s.batch_id, email: s.email || '' })
         ));
 
         // Fees
@@ -1751,6 +1751,25 @@ export const dbService = {
     );
   },
 
+  async getStaffAccount(staffId) {
+    const cleanId = String(staffId || '').trim();
+    if (!cleanId) return null;
+    return runQuery(
+      async () => {
+        const docRef = doc(db, "staff_accounts", cleanId);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          return { id: docSnap.id, ...docSnap.data() };
+        }
+        return null;
+      },
+      () => {
+        const list = getLocalData('bb_staff_accounts', []);
+        return list.find(s => s.id === cleanId) || null;
+      }
+    );
+  },
+
   async updateStaffPassword(staffId, newPassword) {
     const cleanPassword = String(newPassword || '').trim();
     return runQuery(
@@ -1774,5 +1793,121 @@ export const dbService = {
         return false;
       }
     );
+  },
+
+  async updateParentPassword(studentId, newPassword) {
+    const cleanPassword = String(newPassword || '').trim();
+    return runQuery(
+      async () => {
+        const docRef = doc(db, "parent_accounts", studentId);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          await updateDoc(docRef, { password: cleanPassword });
+        } else {
+          const studentRef = doc(db, "students", studentId);
+          const studentSnap = await getDoc(studentRef);
+          const studentData = studentSnap.exists() ? studentSnap.data() : {};
+          const numId = parseInt(studentData.student_id || studentData.student_numeric_id) || 0;
+          await setDoc(docRef, {
+            student_id: studentId,
+            student_numeric_id: numId,
+            password: cleanPassword
+          });
+        }
+        return true;
+      },
+      () => {
+        const list = getLocalData('bb_parent_accounts', []);
+        const idx = list.findIndex(p => p.student_id === studentId);
+        if (idx !== -1) {
+          list[idx].password = cleanPassword;
+        } else {
+          const students = getLocalData('bb_students', INITIAL_STUDENTS);
+          const student = students.find(s => s.id === studentId) || {};
+          const numId = parseInt(student.student_id) || 0;
+          list.push({
+            student_id: studentId,
+            student_numeric_id: numId,
+            password: cleanPassword
+          });
+        }
+        saveLocalData('bb_parent_accounts', list);
+        return true;
+      }
+    );
+  },
+
+  async verifyResetEmail(role, centreName, email) {
+    const cleanCode = String(centreName || '').trim().toLowerCase();
+    const cleanEmail = String(email || '').trim().toLowerCase();
+    
+    // First verify center exists
+    const tenant = await dbService.verifyTenantCode(cleanCode);
+    if (!tenant) {
+      throw new Error("Invalid Centre Name.");
+    }
+    
+    // Set tenant code temporarily so that sub-collection queries work under correct tenant
+    const origTenantCode = dbService.getTenantCode();
+    dbService.setTenantCode(cleanCode);
+    
+    try {
+      if (role === 'owner') {
+        const ownerEmail = String(tenant.owner_email || '').trim().toLowerCase();
+        if (ownerEmail !== cleanEmail) {
+          throw new Error("Registered email does not match for this Tuition Owner.");
+        }
+        return { id: tenant.id, name: tenant.owner_name || 'Owner', email: ownerEmail };
+      } 
+      
+      if (role === 'staff') {
+        const staffAccounts = await dbService.getStaffAccounts();
+        const matched = staffAccounts.find(s => String(s.email || '').trim().toLowerCase() === cleanEmail);
+        if (!matched) {
+          throw new Error("No staff account found with this registered email.");
+        }
+        return { id: matched.id, name: matched.name, email: matched.email };
+      } 
+      
+      if (role === 'student') {
+        const students = await dbService.getStudents();
+        const matched = students.find(s => String(s.email || '').trim().toLowerCase() === cleanEmail);
+        if (!matched) {
+          throw new Error("No student account found with this registered email.");
+        }
+        return { id: matched.id, name: matched.name, email: matched.email };
+      }
+      
+      throw new Error("Invalid reset role.");
+    } finally {
+      // Restore original tenant code
+      dbService.setTenantCode(origTenantCode);
+    }
+  },
+
+  async resetPassword(role, centreName, accountId, newPassword) {
+    const cleanCode = String(centreName || '').trim().toLowerCase();
+    const cleanPassword = String(newPassword || '').trim();
+    
+    const origTenantCode = dbService.getTenantCode();
+    dbService.setTenantCode(cleanCode);
+    
+    try {
+      if (role === 'owner') {
+        await dbService.updateTenant(cleanCode, { admin_password: cleanPassword });
+        return true;
+      }
+      if (role === 'staff') {
+        await dbService.updateStaffPassword(accountId, cleanPassword);
+        return true;
+      }
+      if (role === 'student') {
+        await dbService.updateParentPassword(accountId, cleanPassword);
+        return true;
+      }
+      return false;
+    } finally {
+      dbService.setTenantCode(origTenantCode);
+    }
   }
 };

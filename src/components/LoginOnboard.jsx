@@ -122,6 +122,118 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  // Forgot Password States
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotRole, setForgotRole] = useState('student'); // 'owner', 'staff', 'student'
+  const [forgotCentreCode, setForgotCentreCode] = useState('');
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotStep, setForgotStep] = useState('request'); // 'request', 'otp', 'reset', 'success'
+  const [forgotOtp, setForgotOtp] = useState('');
+  const [forgotOtpInput, setForgotOtpInput] = useState('');
+  const [forgotNewPassword, setForgotNewPassword] = useState('');
+  const [forgotConfirmPassword, setForgotConfirmPassword] = useState('');
+  const [forgotError, setForgotError] = useState('');
+  const [forgotSuccess, setForgotSuccess] = useState('');
+  const [loadingForgot, setLoadingForgot] = useState(false);
+  const [verifiedAccountId, setVerifiedAccountId] = useState('');
+  const [verifiedUserName, setVerifiedUserName] = useState('');
+
+  // Floating Mock Notification Toast State
+  const [showMockToast, setShowMockToast] = useState(false);
+  const [mockToastMessage, setMockToastMessage] = useState('');
+
+  const handleOpenForgotPassword = (initialRole) => {
+    setForgotRole(initialRole || 'student');
+    setForgotCentreCode(centreName);
+    setForgotEmail('');
+    setForgotStep('request');
+    setForgotOtp('');
+    setForgotOtpInput('');
+    setForgotNewPassword('');
+    setForgotConfirmPassword('');
+    setForgotError('');
+    setForgotSuccess('');
+    setVerifiedAccountId('');
+    setVerifiedUserName('');
+    setShowForgotPassword(true);
+  };
+
+  const handleForgotPasswordRequest = async (e) => {
+    e.preventDefault();
+    setForgotError('');
+    setForgotSuccess('');
+    setLoadingForgot(true);
+
+    try {
+      const account = await dbService.verifyResetEmail(forgotRole, forgotCentreCode, forgotEmail);
+      setVerifiedAccountId(account.id);
+      setVerifiedUserName(account.name);
+
+      // Generate 6-digit random OTP
+      const generatedOtp = String(Math.floor(100000 + Math.random() * 900000));
+      setForgotOtp(generatedOtp);
+
+      // Trigger simulated toast notification
+      setMockToastMessage(`📧 [OTP Simulation] Email sent to ${forgotEmail} with OTP: ${generatedOtp}`);
+      setShowMockToast(true);
+
+      setForgotSuccess('Verification OTP sent successfully!');
+      setTimeout(() => {
+        setForgotStep('otp');
+        setForgotSuccess('');
+      }, 1000);
+    } catch (err) {
+      setForgotError(err.message || 'Verification failed. Account not found.');
+    } finally {
+      setLoadingForgot(false);
+    }
+  };
+
+  const handleVerifyOtp = (e) => {
+    e.preventDefault();
+    setForgotError('');
+    setForgotSuccess('');
+
+    if (forgotOtpInput.trim() !== forgotOtp) {
+      setForgotError('Invalid OTP code. Please check the simulated notification.');
+      return;
+    }
+
+    setForgotSuccess('OTP verified successfully!');
+    setTimeout(() => {
+      setForgotStep('reset');
+      setForgotSuccess('');
+    }, 1000);
+  };
+
+  const handleResetPasswordSubmit = async (e) => {
+    e.preventDefault();
+    setForgotError('');
+    setForgotSuccess('');
+
+    if (forgotNewPassword !== forgotConfirmPassword) {
+      setForgotError('Passwords do not match.');
+      return;
+    }
+
+    const passwordRegex = /^(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$&*-]).{8,}$/;
+    if (!passwordRegex.test(forgotNewPassword)) {
+      setForgotError('Password must contain at least 8 characters, an uppercase letter, a number, and a special character (!@#$&*-).');
+      return;
+    }
+
+    try {
+      setLoadingForgot(true);
+      await dbService.resetPassword(forgotRole, forgotCentreCode, verifiedAccountId, forgotNewPassword.trim());
+      setForgotStep('success');
+      setShowMockToast(false); // Hide mock OTP toast on success
+    } catch (err) {
+      setForgotError(err.message || 'Failed to reset password.');
+    } finally {
+      setLoadingForgot(false);
+    }
+  };
+
   // Keep centreName synced with activeTenant when it changes externally
   useEffect(() => {
     if (activeTenant) {
@@ -820,6 +932,15 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
                 <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.35rem', display: 'block', textAlign: 'center', lineHeight: '1.4' }}>
                   Password must contain at least 8 characters, an uppercase letter, a number, and a special character (!@#$&*-).
                 </span>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.35rem' }}>
+                  <button 
+                    type="button" 
+                    onClick={() => handleOpenForgotPassword('staff')}
+                    style={{ background: 'none', border: 'none', color: 'var(--primary)', fontSize: '0.78rem', fontWeight: '700', cursor: 'pointer', padding: 0, textDecoration: 'underline' }}
+                  >
+                    Forgot Password?
+                  </button>
+                </div>
               </div>
 
               <button type="submit" className="btn btn-primary" style={{ padding: '0.85rem', fontSize: '0.92rem', marginTop: '0.5rem', boxShadow: '0 4px 12px rgba(37, 99, 235, 0.2)' }}>
@@ -904,6 +1025,15 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
                 <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.35rem', display: 'block', textAlign: 'center', lineHeight: '1.4' }}>
                   Password must contain at least 8 characters, an uppercase letter, a number, and a special character (!@#$&*-) (or enter registered Mobile Number).
                 </span>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.35rem' }}>
+                  <button 
+                    type="button" 
+                    onClick={() => handleOpenForgotPassword('student')}
+                    style={{ background: 'none', border: 'none', color: 'var(--primary)', fontSize: '0.78rem', fontWeight: '700', cursor: 'pointer', padding: 0, textDecoration: 'underline' }}
+                  >
+                    Forgot Password?
+                  </button>
+                </div>
               </div>
 
               <button type="submit" className="btn btn-primary" style={{ padding: '0.85rem', fontSize: '0.92rem', marginTop: '0.5rem', boxShadow: '0 4px 12px rgba(37, 99, 235, 0.2)' }}>
@@ -1604,6 +1734,276 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* 4. FORGOT PASSWORD MODAL */}
+      {showForgotPassword && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.65)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 100000,
+          padding: '1rem'
+        }}>
+          <div className="card" style={{
+            width: '100%',
+            maxWidth: '420px',
+            padding: '2rem 1.5rem',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+            border: '1px solid #bfdbfe',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1.25rem',
+            backgroundColor: '#ffffff',
+            borderRadius: '16px'
+          }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              borderBottom: '1px solid #e2e8f0',
+              paddingBottom: '0.75rem'
+            }}>
+              <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: 'var(--primary)', margin: 0 }}>
+                Reset Password
+              </h3>
+              <button 
+                onClick={() => { setShowForgotPassword(false); setShowMockToast(false); }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {forgotError && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem', backgroundColor: 'var(--danger-bg)', border: '1px solid var(--danger-border)', borderRadius: '8px', color: 'var(--danger)', fontSize: '0.78rem', fontWeight: '600' }}>
+                <ShieldAlert size={16} style={{ flexShrink: 0 }} />
+                <span>{forgotError}</span>
+              </div>
+            )}
+
+            {forgotSuccess && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem', backgroundColor: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '8px', color: '#047857', fontSize: '0.78rem', fontWeight: '600' }}>
+                <CheckCircle2 size={16} style={{ flexShrink: 0 }} />
+                <span>{forgotSuccess}</span>
+              </div>
+            )}
+
+            {/* STEP 1: REQUEST VERIFICATION */}
+            {forgotStep === 'request' && (
+              <form onSubmit={handleForgotPasswordRequest} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Select Your Role *</label>
+                  <select
+                    className="form-control"
+                    value={forgotRole}
+                    onChange={(e) => setForgotRole(e.target.value)}
+                    required
+                  >
+                    <option value="student">Student / Parent</option>
+                    <option value="staff">Teacher / Staff</option>
+                    <option value="owner">Tuition Owner (Admin)</option>
+                  </select>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Centre Name *</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Enter center name code"
+                    value={forgotCentreCode}
+                    onChange={(e) => setForgotCentreCode(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Registered Email Address *</label>
+                  <input
+                    type="email"
+                    className="form-control"
+                    placeholder="Enter registered email address"
+                    value={forgotEmail}
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <button type="submit" className="btn btn-primary" style={{ padding: '0.65rem', fontWeight: '800', marginTop: '0.5rem' }} disabled={loadingForgot}>
+                  {loadingForgot ? 'Verifying...' : 'Send Verification OTP'}
+                </button>
+              </form>
+            )}
+
+            {/* STEP 2: ENTER OTP */}
+            {forgotStep === 'otp' && (
+              <form onSubmit={handleVerifyOtp} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div style={{ padding: '0.5rem 0.75rem', backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', color: '#1e3a8a', fontSize: '0.8rem', lineHeight: '1.4' }}>
+                  An OTP has been simulated for <strong>{forgotEmail}</strong>. Look at the simulated notification on the top right.
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Enter 6-Digit OTP *</label>
+                  <input
+                    type="text"
+                    maxLength={6}
+                    className="form-control"
+                    placeholder="Enter OTP"
+                    value={forgotOtpInput}
+                    onChange={(e) => setForgotOtpInput(e.target.value.replace(/\D/g, ''))}
+                    required
+                    style={{ textAlign: 'center', letterSpacing: '0.5em', fontSize: '1.1rem', fontWeight: '700' }}
+                  />
+                </div>
+
+                <button type="submit" className="btn btn-primary" style={{ padding: '0.65rem', fontWeight: '800', marginTop: '0.5rem' }}>
+                  Verify OTP
+                </button>
+
+                <button type="button" onClick={() => setForgotStep('request')} style={{ background: 'none', border: 'none', color: '#64748b', fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'underline' }}>
+                  Back
+                </button>
+              </form>
+            )}
+
+            {/* STEP 3: RESET PASSWORD */}
+            {forgotStep === 'reset' && (
+              <form onSubmit={handleResetPasswordSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div style={{ padding: '0.5rem 0.75rem', backgroundColor: '#e2e8f0', borderRadius: '8px', color: '#334155', fontSize: '0.8rem', lineHeight: '1.4' }}>
+                  Creating new password for <strong>{verifiedUserName}</strong>.
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>New Password *</label>
+                  <input
+                    type="password"
+                    className="form-control"
+                    placeholder="Enter new password"
+                    value={forgotNewPassword}
+                    onChange={(e) => setForgotNewPassword(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Confirm New Password *</label>
+                  <input
+                    type="password"
+                    className="form-control"
+                    placeholder="Confirm new password"
+                    value={forgotConfirmPassword}
+                    onChange={(e) => setForgotConfirmPassword(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <span style={{ fontSize: '0.68rem', color: '#64748b', lineHeight: '1.4' }}>
+                  Password must contain at least 8 characters, an uppercase letter, a number, and a special character (!@#$&*-).
+                </span>
+
+                <button type="submit" className="btn btn-primary" style={{ padding: '0.65rem', fontWeight: '800', marginTop: '0.5rem' }} disabled={loadingForgot}>
+                  {loadingForgot ? 'Resetting...' : 'Reset Password'}
+                </button>
+              </form>
+            )}
+
+            {/* STEP 4: SUCCESS */}
+            {forgotStep === 'success' && (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', padding: '1rem 0', textAlign: 'center' }}>
+                <div style={{ width: '56px', height: '56px', borderRadius: '50%', backgroundColor: 'rgba(16, 185, 129, 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#10b981' }}>
+                  <CheckCircle2 size={36} />
+                </div>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#111827', margin: 0 }}>Password Reset Success</h3>
+                <p style={{ fontSize: '0.82rem', color: '#475569', lineHeight: '1.5', margin: 0 }}>
+                  Your password has been successfully updated. You can now close this modal and log in with your new credentials.
+                </p>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => { setShowForgotPassword(false); }}
+                  style={{ width: '100%', padding: '0.75rem', fontSize: '0.88rem', fontWeight: '800', marginTop: '1rem' }}
+                >
+                  Return to Login
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* FLOATING EMAIL INBOX SIMULATOR TOAST */}
+      {showMockToast && (
+        <div style={{
+          position: 'fixed',
+          top: '20px',
+          right: '20px',
+          width: '340px',
+          backgroundColor: '#0f172a',
+          borderRadius: '12px',
+          border: '1px solid #334155',
+          color: '#f8fafc',
+          boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3)',
+          padding: '1.25rem 1rem',
+          zIndex: 100005,
+          fontFamily: 'system-ui, -apple-system, sans-serif',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.75rem',
+          animation: 'slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #1e293b', paddingBottom: '0.5rem' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: '800', color: '#38bdf8', letterSpacing: '0.05em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              📧 Email Simulator Inbox
+            </span>
+            <button 
+              onClick={() => setShowMockToast(false)}
+              style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+            >
+              <X size={14} />
+            </button>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+            <span style={{ fontSize: '0.65rem', color: '#94a3b8' }}>To: {forgotEmail}</span>
+            <span style={{ fontSize: '0.78rem', fontWeight: '800', color: '#ffffff' }}>Subject: EduBridge OTP Code</span>
+          </div>
+          <div style={{
+            backgroundColor: '#1e293b',
+            borderRadius: '6px',
+            padding: '0.75rem',
+            border: '1px solid #334155',
+            fontSize: '0.78rem',
+            lineHeight: '1.4',
+            color: '#cbd5e1'
+          }}>
+            Hello <strong>{verifiedUserName}</strong>, your verification code is:
+            <div style={{
+              marginTop: '0.5rem',
+              textAlign: 'center',
+              fontSize: '1.4rem',
+              fontWeight: '900',
+              letterSpacing: '0.2em',
+              color: '#38bdf8',
+              backgroundColor: '#0f172a',
+              padding: '0.4rem',
+              borderRadius: '4px',
+              border: '1px dashed #38bdf8',
+              userSelect: 'all'
+            }}>
+              {forgotOtp}
+            </div>
+            <span style={{ display: 'block', fontSize: '0.62rem', color: '#94a3b8', textAlign: 'center', marginTop: '0.5rem' }}>
+              (Double click the code to select and copy it)
+            </span>
           </div>
         </div>
       )}
