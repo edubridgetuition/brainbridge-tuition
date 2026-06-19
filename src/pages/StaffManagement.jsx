@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { dbService } from '../database/dbService';
-import { Phone, MapPin, Check, X, Mail, BookOpen, UserCheck, Eye, EyeOff } from 'lucide-react';
+import { Phone, MapPin, Check, X, Mail, BookOpen, UserCheck, Eye, EyeOff, Key } from 'lucide-react';
 
 export default function StaffManagement({ currentUser, verifyAction, activeTenant }) {
   const [staffList, setStaffList] = useState([]);
@@ -9,6 +9,10 @@ export default function StaffManagement({ currentUser, verifyAction, activeTenan
   const [selectedStaffForApproval, setSelectedStaffForApproval] = useState(null);
   const [selectedStaffForView, setSelectedStaffForView] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [resetPasswordStaff, setResetPasswordStaff] = useState(null);
+  const [newResetPassword, setNewResetPassword] = useState('');
+  const [resetPasswordLoading, setResetPasswordLoading] = useState(false);
+  const [resetError, setResetError] = useState('');
 
   const getFeature = (key, defaultVal) => {
     if (!activeTenant || !activeTenant.features) return defaultVal;
@@ -133,6 +137,44 @@ export default function StaffManagement({ currentUser, verifyAction, activeTenan
       } else {
         await action();
       }
+    }
+  };
+
+  const handleResetPasswordConfirm = async (e) => {
+    e.preventDefault();
+    if (!resetPasswordStaff || !newResetPassword.trim()) return;
+
+    const action = async () => {
+      try {
+        setResetPasswordLoading(true);
+        setResetError('');
+        const { id, name, mobile } = resetPasswordStaff;
+        const passwordVal = newResetPassword.trim();
+
+        // 1. Update password in database
+        await dbService.updateStaffPassword(id, passwordVal);
+
+        // 2. Compose and trigger WhatsApp message to staff with login details
+        const tenantCode = dbService.getTenantCode() || '';
+        const whatsappMsg = `Hello ${name},\n\nYour staff account password has been reset at ${activeTenant?.name || 'EduBridge – Tuition ERP'}.\n\nHere are your new login credentials:\n\n🏢 Centre Code: ${tenantCode}\n📱 Mobile: ${mobile}\n🔑 New Password: ${passwordVal}\n\nNote: You will be prompted to change your password immediately upon your next login.\n\nLink: ${window.location.origin}`;
+
+        dbService.sendWhatsAppMessage(mobile, whatsappMsg);
+
+        alert(`Password for ${name} reset successfully! New credentials have been sent via WhatsApp.`);
+        setResetPasswordStaff(null);
+        setNewResetPassword('');
+      } catch (err) {
+        console.error("Error resetting staff password:", err);
+        setResetError("Failed to reset password: " + err.message);
+      } finally {
+        setResetPasswordLoading(false);
+      }
+    };
+
+    if (verifyAction) {
+      verifyAction(action);
+    } else {
+      await action();
     }
   };
 
@@ -345,9 +387,34 @@ export default function StaffManagement({ currentUser, verifyAction, activeTenan
                           </>
                         )}
                         {staff.status === 'Approved' && (
-                          <span style={{ fontSize: '0.75rem', color: '#64748b', fontStyle: 'italic' }}>
-                            Approved
-                          </span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: '700' }}>
+                              Approved
+                            </span>
+                            <button
+                              onClick={() => {
+                                setResetPasswordStaff(staff);
+                                setNewResetPassword('');
+                                setResetError('');
+                              }}
+                              className="btn btn-secondary"
+                              style={{
+                                padding: '0.25rem 0.5rem',
+                                fontSize: '0.72rem',
+                                fontWeight: '700',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.2rem',
+                                backgroundColor: '#f1f5f9',
+                                borderColor: '#cbd5e1',
+                                color: '#475569'
+                              }}
+                              title="Reset Password"
+                            >
+                              <Key size={12} />
+                              <span>Reset Pass</span>
+                            </button>
+                          </div>
                         )}
                         {staff.status === 'Rejected' && (
                           <button
@@ -695,6 +762,112 @@ export default function StaffManagement({ currentUser, verifyAction, activeTenan
                 </button>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* RESET PASSWORD MODAL */}
+      {resetPasswordStaff && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.65)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 99999,
+          padding: '1rem'
+        }}>
+          <div className="card" style={{
+            width: '100%',
+            maxWidth: '420px',
+            padding: '2rem 1.5rem',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+            border: '1px solid #bfdbfe',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1.25rem',
+            backgroundColor: '#ffffff',
+            borderRadius: '16px'
+          }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              borderBottom: '1px solid #cbd5e1',
+              paddingBottom: '0.75rem'
+            }}>
+              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '800', color: 'var(--primary)' }}>
+                Reset Password: {resetPasswordStaff.name}
+              </h3>
+              <button 
+                type="button"
+                onClick={() => setResetPasswordStaff(null)}
+                style={{ 
+                  background: 'none', 
+                  border: 'none', 
+                  cursor: 'pointer', 
+                  color: '#94a3b8',
+                  padding: '4px',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center'
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {resetError && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%', padding: '0.75rem 1rem', backgroundColor: 'var(--danger-bg)', border: '1px solid var(--danger-border)', borderRadius: '8px', color: 'var(--danger)', fontSize: '0.78rem', fontWeight: '600' }}>
+                <Check size={16} style={{ flexShrink: 0 }} />
+                <span>{resetError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleResetPasswordConfirm} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Enter New Password *</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Enter new password (e.g. Pass123!)"
+                  value={newResetPassword}
+                  onChange={(e) => setNewResetPassword(e.target.value)}
+                  required
+                  style={{ fontSize: '0.9rem' }}
+                />
+              </div>
+
+              <div style={{
+                display: 'flex',
+                gap: '0.75rem',
+                borderTop: '1px solid #cbd5e1',
+                paddingTop: '1.25rem',
+                marginTop: '0.5rem'
+              }}>
+                <button
+                  type="button"
+                  onClick={() => setResetPasswordStaff(null)}
+                  className="btn btn-secondary"
+                  style={{ flex: 1, padding: '0.6rem', fontWeight: '800', fontSize: '0.85rem' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{ flex: 1, padding: '0.6rem', fontWeight: '800', fontSize: '0.85rem' }}
+                  disabled={resetPasswordLoading}
+                >
+                  {resetPasswordLoading ? 'Resetting...' : 'Reset Password'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
