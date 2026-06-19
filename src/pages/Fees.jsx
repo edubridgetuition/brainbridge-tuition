@@ -40,6 +40,7 @@ export default function Fees({ currentUser, verifyAction, activeTenant }) {
   const [paymentDateInput, setPaymentDateInput] = useState(new Date().toISOString().split('T')[0]);
   const [periodFrom, setPeriodFrom] = useState('');
   const [periodTo, setPeriodTo] = useState('');
+  const [descriptionInput, setDescriptionInput] = useState('Monthly Tuition Fees');
 
   // Editing state
   const [editingFeeRecord, setEditingFeeRecord] = useState(null);
@@ -50,6 +51,7 @@ export default function Fees({ currentUser, verifyAction, activeTenant }) {
   const [editPaymentMode, setEditPaymentMode] = useState('UPI');
   const [editPeriodFrom, setEditPeriodFrom] = useState('');
   const [editPeriodTo, setEditPeriodTo] = useState('');
+  const [editDescription, setEditDescription] = useState('Monthly Tuition Fees');
 
   const isOwner = currentUser?.role === 'admin' && !currentUser.staffId;
 
@@ -94,7 +96,8 @@ export default function Fees({ currentUser, verifyAction, activeTenant }) {
           payment_date: paymentDateInput,
           payment_mode: paymentMode,
           from_date: periodFrom || null,
-          to_date: periodTo || null
+          to_date: periodTo || null,
+          description: descriptionInput || 'Monthly Tuition Fees'
         };
         
         const updatedRecord = await dbService.updateFeeStatus(selectedFeeRecord.id, updateData);
@@ -130,7 +133,8 @@ export default function Fees({ currentUser, verifyAction, activeTenant }) {
           payment_date: editStatus === 'Paid' ? editPaymentDate : null,
           payment_mode: editStatus === 'Paid' ? editPaymentMode : '',
           from_date: editPeriodFrom || null,
-          to_date: editPeriodTo || null
+          to_date: editPeriodTo || null,
+          description: editDescription || 'Monthly Tuition Fees'
         };
 
         const updatedRecord = await dbService.updateFeeStatus(editingFeeRecord.id, updateData);
@@ -157,6 +161,7 @@ export default function Fees({ currentUser, verifyAction, activeTenant }) {
     setPaymentDateInput(new Date().toISOString().split('T')[0]);
     setPeriodFrom('');
     setPeriodTo('');
+    setDescriptionInput(record.description || 'Monthly Tuition Fees');
   };
 
   const handleOpenEditModal = (record) => {
@@ -168,6 +173,7 @@ export default function Fees({ currentUser, verifyAction, activeTenant }) {
     setEditPaymentMode(record.payment_mode || 'UPI');
     setEditPeriodFrom(record.from_date || '');
     setEditPeriodTo(record.to_date || '');
+    setEditDescription(record.description || 'Monthly Tuition Fees');
   };
   const handleOpenReceipt = (feeRecord) => {
     const student = getStudentDetails(feeRecord.student_id);
@@ -179,7 +185,8 @@ export default function Fees({ currentUser, verifyAction, activeTenant }) {
       paymentMode: feeRecord.payment_mode,
       paymentDate: formatDateDisplay(feeRecord.payment_date),
       fromDate: feeRecord.from_date ? formatDateDisplay(feeRecord.from_date) : '',
-      toDate: feeRecord.to_date ? formatDateDisplay(feeRecord.to_date) : ''
+      toDate: feeRecord.to_date ? formatDateDisplay(feeRecord.to_date) : '',
+      description: feeRecord.description || 'Monthly Tuition Fees'
     });
   };
 
@@ -525,6 +532,18 @@ export default function Fees({ currentUser, verifyAction, activeTenant }) {
                     />
                   </div>
                 </div>
+
+                <div className="form-group" style={{ marginBottom: '1rem' }}>
+                  <label className="form-label">Description *</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="e.g. Monthly Tuition Fees"
+                    value={descriptionInput}
+                    onChange={(e) => setDescriptionInput(e.target.value)}
+                    required
+                  />
+                </div>
               </div>
               <div className="modal-footer">
                 <button type="button" className="btn btn-secondary" onClick={() => setSelectedFeeRecord(null)}>
@@ -645,6 +664,18 @@ export default function Fees({ currentUser, verifyAction, activeTenant }) {
                       onChange={(e) => setEditPeriodTo(e.target.value)}
                     />
                   </div>
+                </div>
+
+                <div className="form-group" style={{ marginBottom: '1rem' }}>
+                  <label className="form-label">Description *</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="e.g. Monthly Tuition Fees"
+                    value={editDescription}
+                    onChange={(e) => setEditDescription(e.target.value)}
+                    required
+                  />
                 </div>
               </div>
               <div className="modal-footer">

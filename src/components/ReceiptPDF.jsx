@@ -82,14 +82,14 @@ export default function ReceiptPDF({ receiptData, onClose }) {
           <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '2rem' }}>
             <thead>
               <tr style={{ background: '#f8fafc' }}>
-                <th style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #e2e8f0', color: '#334155', fontSize: '0.85rem', textAlign: 'left' }}>Item Description</th>
+                <th style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #e2e8f0', color: '#334155', fontSize: '0.85rem', textAlign: 'left' }}>Description</th>
                 <th style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #e2e8f0', color: '#334155', fontSize: '0.85rem', textAlign: 'right', width: '150px' }}>Amount</th>
               </tr>
             </thead>
             <tbody>
               <tr>
                 <td style={{ padding: '1rem', borderBottom: '1px solid #f1f5f9', fontSize: '0.9rem', color: '#334155' }}>
-                  <strong>Monthly Tuition Fees</strong><br />
+                  <strong>{description || 'Monthly Tuition Fees'}</strong><br />
                   {fromDate && toDate ? (
                     <span style={{ fontSize: '0.8rem', color: '#64748b' }}>Fees for period: {fromDate} to {toDate}</span>
                   ) : (
