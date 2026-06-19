@@ -2,8 +2,28 @@ import React, { useState, useEffect } from 'react';
 import { dbService, formatDateDisplay, sendWhatsAppMessage } from '../database/dbService';
 import { Plus, Search, Filter, Edit, Phone, MapPin, MessageCircle, Check, X, Trash2, Eye, FileText, CheckCircle } from 'lucide-react';
 
-export default function Students({ currentUser, verifyAction, activeTenant }) {
+export default function Students({ currentUser, verifyAction, activeTenant, autoOpenRegister, onCloseRegister }) {
   const [students, setStudents] = useState([]);
+
+  useEffect(() => {
+    if (autoOpenRegister) {
+      setIsEditing(false);
+      setFormData({
+        name: '',
+        mobile: '',
+        parent_mobile: '',
+        address: '',
+        school: '',
+        standard: '10th',
+        batch_id: '',
+        admission_date: new Date().toISOString().split('T')[0]
+      });
+      setShowModal(true);
+      if (onCloseRegister) {
+        onCloseRegister();
+      }
+    }
+  }, [autoOpenRegister, onCloseRegister]);
   const [batches, setBatches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeSubTab, setActiveSubTab] = useState('students'); // 'students' or 'summary'

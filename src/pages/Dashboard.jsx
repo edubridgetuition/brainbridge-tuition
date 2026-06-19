@@ -773,7 +773,7 @@ export default function Dashboard({ setActiveTab, currentUser, verifyAction, act
                 </button>
               )}
               {isFeatureEnabled('students') && (
-                <button className="btn btn-secondary quick-action-btn" onClick={() => setActiveTab('students')} style={{ border: '1px solid var(--border-color)' }}>
+                <button className="btn btn-secondary quick-action-btn" onClick={() => setActiveTab('students_register')} style={{ border: '1px solid var(--border-color)' }}>
                   <Users size={24} />
                   <span>Register New Student</span>
                 </button>

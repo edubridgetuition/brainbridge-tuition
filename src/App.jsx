@@ -20,6 +20,17 @@ import { Capacitor } from '@capacitor/core';
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [studentsAutoOpen, setStudentsAutoOpen] = useState(false);
+
+  const handleSetActiveTab = (tab) => {
+    if (tab === 'students_register') {
+      setActiveTab('students');
+      setStudentsAutoOpen(true);
+    } else {
+      setActiveTab(tab);
+      setStudentsAutoOpen(false);
+    }
+  };
   const [currentUser, setCurrentUser] = useState(() => {
     const stored = sessionStorage.getItem('bb_current_user');
     return stored ? JSON.parse(stored) : null;
@@ -485,9 +496,9 @@ function App() {
 
     switch (tabToRender) {
       case 'dashboard':
-        return <Dashboard key={tenantKey} setActiveTab={setActiveTab} currentUser={currentUser} activeTenant={activeTenant} />;
+        return <Dashboard key={tenantKey} setActiveTab={handleSetActiveTab} currentUser={currentUser} activeTenant={activeTenant} />;
       case 'students':
-        return <Students key={tenantKey} currentUser={currentUser} verifyAction={verifyAction} activeTenant={activeTenant} />;
+        return <Students key={tenantKey} currentUser={currentUser} verifyAction={verifyAction} activeTenant={activeTenant} autoOpenRegister={studentsAutoOpen} onCloseRegister={() => setStudentsAutoOpen(false)} />;
       case 'inquiries':
         return <Inquiries key={tenantKey} currentUser={currentUser} verifyAction={verifyAction} activeTenant={activeTenant} />;
       case 'staff':
@@ -517,7 +528,7 @@ function App() {
           />
         );
       default:
-        return <Dashboard key={tenantKey} setActiveTab={setActiveTab} currentUser={currentUser} activeTenant={activeTenant} />;
+        return <Dashboard key={tenantKey} setActiveTab={handleSetActiveTab} currentUser={currentUser} activeTenant={activeTenant} />;
     }
   };
 
@@ -733,7 +744,7 @@ function App() {
         {/* Sidebar Nav */}
         <Sidebar 
           activeTab={activeTab} 
-          setActiveTab={setActiveTab} 
+          setActiveTab={handleSetActiveTab} 
           currentUser={currentUser} 
           onLogout={handleLogout} 
           activeTenant={activeTenant}
