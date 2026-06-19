@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { dbService, formatDateDisplay, sendWhatsAppMessage } from '../database/dbService';
-import { Users, BookOpen, CheckCircle, IndianRupee, Bell, Play, FileSpreadsheet, Star, Quote, Plus, Calendar, ClipboardList, Download } from 'lucide-react';
+import { Users, BookOpen, CheckCircle, IndianRupee, Bell, Play, FileSpreadsheet, Star, Quote, Plus, Calendar, ClipboardList, Download, ChevronDown } from 'lucide-react';
 
 export default function Dashboard({ setActiveTab, currentUser, verifyAction, activeTenant }) {
   const isSubAdmin = import.meta.env.VITE_ROLE === 'admin2' || sessionStorage.getItem('bb_current_admin') === 'admin2';
@@ -826,6 +826,15 @@ export default function Dashboard({ setActiveTab, currentUser, verifyAction, act
                           </div>
                         </div>
                       </div>
+                      <ChevronDown
+                        size={16}
+                        style={{
+                          color: 'var(--text-muted)',
+                          transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                          transition: 'transform 0.2s ease',
+                          flexShrink: 0
+                        }}
+                      />
                     </div>
                   );
                 })
