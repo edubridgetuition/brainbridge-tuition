@@ -508,7 +508,7 @@ function App() {
       case 'attendance':
         return <Attendance key={tenantKey} currentUser={currentUser} verifyAction={verifyAction} />;
       case 'fees':
-        return <Fees key={tenantKey} currentUser={currentUser} verifyAction={verifyAction} />;
+        return <Fees key={tenantKey} currentUser={currentUser} verifyAction={verifyAction} activeTenant={activeTenant} />;
       case 'tests':
         return <TestMarks key={tenantKey} currentUser={currentUser} verifyAction={verifyAction} />;
       case 'homework':

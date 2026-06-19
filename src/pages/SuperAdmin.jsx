@@ -1426,6 +1426,94 @@ export default function SuperAdmin({ onLogout, onInspectTenant }) {
                 </div>
               </div>
 
+              {/* Fees Page Permissions */}
+              <div>
+                <h4 style={{ fontSize: '0.85rem', fontWeight: '800', color: '#475569', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Fees Page Permissions
+                </h4>
+                <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '-0.3rem', marginBottom: '0.75rem' }}>
+                  Set Date Filter and Search rights separately for Owner Admin and Teacher/Staff.
+                </p>
+                <div style={{
+                  background: '#f8fafc',
+                  padding: '1rem',
+                  borderRadius: '12px',
+                  border: '1px solid #e2e8f0',
+                  overflowX: 'auto'
+                }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1.5px solid #cbd5e1', color: '#475569', fontWeight: '800', textAlign: 'left' }}>
+                        <th style={{ padding: '0.5rem' }}>Permission / Feature Name</th>
+                        <th style={{ padding: '0.5rem', textAlign: 'center', width: '100px' }}>Owner Admin</th>
+                        <th style={{ padding: '0.5rem', textAlign: 'center', width: '110px' }}>Teacher / Staff</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        { 
+                          label: 'Filter by Date (Date Select Input)', 
+                          ownerKey: 'owner_fee_date_filter', 
+                          staffKey: 'staff_fee_date_filter'
+                        },
+                        { 
+                          label: 'Search by Father\'s Name', 
+                          ownerKey: 'owner_fee_father_search', 
+                          staffKey: 'staff_fee_father_search'
+                        },
+                        { 
+                          label: 'Search by Date Text', 
+                          ownerKey: 'owner_fee_date_search', 
+                          staffKey: 'staff_fee_date_search'
+                        }
+                      ].map(item => {
+                        const ownerVal = tempFeatures[item.ownerKey] !== undefined 
+                          ? tempFeatures[item.ownerKey] 
+                          : true;
+                          
+                        const staffVal = tempFeatures[item.staffKey] !== undefined 
+                          ? tempFeatures[item.staffKey] 
+                          : true;
+
+                        return (
+                          <tr key={item.label} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '0.65rem 0.5rem', fontWeight: '700', color: '#334155' }}>
+                              {item.label}
+                            </td>
+                            <td style={{ padding: '0.65rem 0.5rem', textAlign: 'center' }}>
+                              <input
+                                type="checkbox"
+                                checked={!!ownerVal}
+                                onChange={(e) => handleFeatureToggle(item.ownerKey, e.target.checked)}
+                                style={{
+                                  width: '18px',
+                                  height: '18px',
+                                  cursor: 'pointer',
+                                  accentColor: '#1655e0'
+                                }}
+                              />
+                            </td>
+                            <td style={{ padding: '0.65rem 0.5rem', textAlign: 'center' }}>
+                              <input
+                                type="checkbox"
+                                checked={!!staffVal}
+                                onChange={(e) => handleFeatureToggle(item.staffKey, e.target.checked)}
+                                style={{
+                                  width: '18px',
+                                  height: '18px',
+                                  cursor: 'pointer',
+                                  accentColor: '#1655e0'
+                                }}
+                              />
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
               {/* Dashboard Widgets Section */}
               <div>
                 <h4 style={{ fontSize: '0.85rem', fontWeight: '800', color: '#475569', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>

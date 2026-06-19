@@ -12,6 +12,7 @@ export default function Students({ currentUser, verifyAction, activeTenant, auto
         name: '',
         mobile: '',
         parent_mobile: '',
+        parent_name: '',
         email: '',
         address: '',
         school: '',
@@ -51,6 +52,7 @@ export default function Students({ currentUser, verifyAction, activeTenant, auto
     name: '',
     mobile: '',
     parent_mobile: '',
+    parent_name: '',
     email: '',
     address: '',
     school: '',
@@ -171,6 +173,7 @@ export default function Students({ currentUser, verifyAction, activeTenant, auto
       name: student.name || '',
       mobile: student.mobile || '',
       parent_mobile: student.parent_mobile || '',
+      parent_name: student.parent_name || '',
       email: student.email || '',
       address: student.address || '',
       school: student.school || '',
@@ -192,6 +195,7 @@ export default function Students({ currentUser, verifyAction, activeTenant, auto
       name: '',
       mobile: '',
       parent_mobile: '',
+      parent_name: '',
       email: '',
       address: '',
       school: '',
@@ -568,6 +572,18 @@ export default function Students({ currentUser, verifyAction, activeTenant, auto
                   />
                 </div>
 
+                <div className="form-group">
+                  <label className="form-label">Father's / Parent's Name</label>
+                  <input
+                    type="text"
+                    name="parent_name"
+                    className="form-control"
+                    placeholder="Enter father's/parent's name"
+                    value={formData.parent_name || ''}
+                    onChange={handleInputChange}
+                  />
+                </div>
+
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                   <div className="form-group">
                     <label className="form-label">Student Mobile *</label>
@@ -832,6 +848,13 @@ export default function Students({ currentUser, verifyAction, activeTenant, auto
                     >
                       <MessageCircle size={14} /> WhatsApp
                     </button>
+                  </div>
+                </div>
+
+                <div>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.04em' }}>Father's / Parent's Name</span>
+                  <div style={{ fontWeight: '600', fontSize: '0.92rem', color: 'var(--text-primary)', marginTop: '0.15rem' }}>
+                    {selectedStudentForDetail.parent_name || 'N/A'}
                   </div>
                 </div>
 

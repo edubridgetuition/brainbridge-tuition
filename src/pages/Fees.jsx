@@ -3,7 +3,7 @@ import { dbService, formatDateDisplay, sendWhatsAppMessage } from '../database/d
 import ReceiptPDF from '../components/ReceiptPDF';
 import { IndianRupee, FileText, Check, Plus, Search, HelpCircle, DollarSign, Calendar, MessageCircle } from 'lucide-react';
 
-export default function Fees({ currentUser, verifyAction }) {
+export default function Fees({ currentUser, verifyAction, activeTenant }) {
   const [fees, setFees] = useState([]);
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -11,6 +11,27 @@ export default function Fees({ currentUser, verifyAction }) {
   // Filters
   const [statusFilter, setStatusFilter] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedDateFilter, setSelectedDateFilter] = useState('');
+
+  const getFeature = (key, defaultVal) => {
+    if (!activeTenant || !activeTenant.features) return defaultVal;
+    if (activeTenant.features[key] !== undefined) return activeTenant.features[key];
+    return defaultVal;
+  };
+
+  const isStaff = currentUser?.role === 'admin' && !!currentUser.staffId;
+
+  const showDateFilter = isStaff
+    ? getFeature('staff_fee_date_filter', true)
+    : getFeature('owner_fee_date_filter', true);
+
+  const showFatherSearch = isStaff
+    ? getFeature('staff_fee_father_search', true)
+    : getFeature('owner_fee_father_search', true);
+
+  const showDateSearch = isStaff
+    ? getFeature('staff_fee_date_search', true)
+    : getFeature('owner_fee_date_search', true);
 
   // Modals & Receipts
   const [activeReceipt, setActiveReceipt] = useState(null);
@@ -38,7 +59,9 @@ export default function Fees({ currentUser, verifyAction }) {
 
   const getStudentDetails = (studentId) => {
     const student = students.find(s => s.id === studentId);
-    return student ? { name: student.name, standard: student.standard } : { name: 'Unknown Student', standard: '-' };
+    return student 
+      ? { name: student.name, standard: student.standard, parent_name: student.parent_name || '' } 
+      : { name: 'Unknown Student', standard: '-', parent_name: '' };
   };
 
   const handleRecordPaymentSubmit = async (e) => {
@@ -102,9 +125,42 @@ export default function Fees({ currentUser, verifyAction }) {
   // Filtered List
   const filteredFees = visibleFees.filter(f => {
     const student = getStudentDetails(f.student_id);
-    const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const searchLower = searchTerm.trim().toLowerCase();
+    
+    // Check student name
+    let matchesSearch = student.name.toLowerCase().includes(searchLower);
+    
+    // Check parent name (if enabled)
+    if (!matchesSearch && showFatherSearch && student.parent_name) {
+      matchesSearch = student.parent_name.toLowerCase().includes(searchLower);
+    }
+    
+    // Check dates (if enabled)
+    if (!matchesSearch && showDateSearch) {
+      const rawDueDate = (f.due_date || '').toLowerCase();
+      const formattedDueDate = formatDateDisplay(f.due_date).toLowerCase();
+      const rawPaymentDate = (f.payment_date || '').toLowerCase();
+      const formattedPaymentDate = f.payment_date ? formatDateDisplay(f.payment_date).toLowerCase() : '';
+      
+      // Handle slashes/dots substitution for dates e.g. 15/06/2026 -> 15-06-2026
+      const searchNormalized = searchLower.replace(/\//g, '-').replace(/\./g, '-');
+      
+      matchesSearch = rawDueDate.includes(searchNormalized) || 
+                      formattedDueDate.includes(searchNormalized) ||
+                      rawPaymentDate.includes(searchNormalized) ||
+                      (formattedPaymentDate && formattedPaymentDate.includes(searchNormalized));
+    }
+    
     const matchesStatus = statusFilter === 'All' || f.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    
+    // Date filter selection (if enabled)
+    let matchesDateFilter = true;
+    if (showDateFilter && selectedDateFilter) {
+      // both due_date and payment_date comparison
+      matchesDateFilter = (f.due_date === selectedDateFilter) || (f.payment_date === selectedDateFilter);
+    }
+    
+    return matchesSearch && matchesStatus && matchesDateFilter;
   });
 
   return (
@@ -147,10 +203,41 @@ export default function Fees({ currentUser, verifyAction }) {
             <input
               type="text"
               className="form-control"
-              placeholder="Search by student name..."
+              placeholder={
+                showFatherSearch && showDateSearch
+                  ? "Search student, father name or date..."
+                  : showFatherSearch
+                  ? "Search student or father name..."
+                  : showDateSearch
+                  ? "Search student or date..."
+                  : "Search by student name..."
+              }
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
+          </div>
+        )}
+
+        {showDateFilter && !isParent && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <input
+              type="date"
+              className="form-control"
+              style={{ maxWidth: '180px', padding: '0.5rem 0.75rem', fontSize: '0.9rem', minHeight: '43px' }}
+              value={selectedDateFilter}
+              onChange={(e) => setSelectedDateFilter(e.target.value)}
+              title="Filter by Due/Payment Date"
+            />
+            {selectedDateFilter && (
+              <button 
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setSelectedDateFilter('')}
+                style={{ padding: '0.5rem 0.75rem', fontSize: '0.85rem', minHeight: '43px' }}
+              >
+                Clear
+              </button>
+            )}
           </div>
         )}
 
@@ -209,7 +296,14 @@ export default function Fees({ currentUser, verifyAction }) {
 
                   return (
                     <tr key={record.id}>
-                      <td data-label="Student Name" style={{ fontWeight: '600' }}>{student.name}</td>
+                      <td data-label="Student Name" style={{ fontWeight: '600' }}>
+                        <div>{student.name}</div>
+                        {student.parent_name && (
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: '400', marginTop: '0.1rem' }}>
+                            Father: {student.parent_name}
+                          </div>
+                        )}
+                      </td>
                       <td data-label="Standard">{student.standard}</td>
                       <td data-label="Fee Amount" style={{ fontWeight: '700' }}>₹{record.amount}</td>
                       <td data-label="Due Date" style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{formatDateDisplay(record.due_date)}</td>

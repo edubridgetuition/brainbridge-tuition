@@ -95,10 +95,10 @@ const INITIAL_BATCHES = [
 ];
 
 const INITIAL_STUDENTS = [
-  { id: 's1', student_id: 1001, name: 'Amit Sharma', mobile: '9876500001', parent_mobile: '9876500011', address: '12, Shanti Nagar, Indore', school: 'DPS', standard: '10th', admission_date: '2026-04-10', batch_id: 'b1', email: 'amit@example.com' },
-  { id: 's2', student_id: 1002, name: 'Priyanshu Patel', mobile: '9876500002', parent_mobile: '9876500012', address: '45, Scheme 54, Indore', school: 'St. Pauls', standard: '11th', admission_date: '2026-04-12', batch_id: 'b2', email: 'priyanshu@example.com' },
-  { id: 's3', student_id: 1003, name: 'Riya Mehta', mobile: '9876500003', parent_mobile: '9876500013', address: '102, Silver Arcade, Indore', school: 'Choithram', standard: '12th', admission_date: '2026-04-15', batch_id: 'b3', email: 'riya@example.com' },
-  { id: 's4', student_id: 1004, name: 'Rahul Verma', mobile: '9876500004', parent_mobile: '9876500014', address: '88, Vijay Nagar, Indore', school: 'DPS', standard: '10th', admission_date: '2026-04-20', batch_id: 'b1', email: 'rahul@example.com' }
+  { id: 's1', student_id: 1001, name: 'Amit Sharma', mobile: '9876500001', parent_mobile: '9876500011', parent_name: 'Sunita Sharma', address: '12, Shanti Nagar, Indore', school: 'DPS', standard: '10th', admission_date: '2026-04-10', batch_id: 'b1', email: 'amit@example.com' },
+  { id: 's2', student_id: 1002, name: 'Priyanshu Patel', mobile: '9876500002', parent_mobile: '9876500012', parent_name: 'Dr. Rajesh Patel', address: '45, Scheme 54, Indore', school: 'St. Pauls', standard: '11th', admission_date: '2026-04-12', batch_id: 'b2', email: 'priyanshu@example.com' },
+  { id: 's3', student_id: 1003, name: 'Riya Mehta', mobile: '9876500003', parent_mobile: '9876500013', parent_name: 'Meera Mehta', address: '102, Silver Arcade, Indore', school: 'Choithram', standard: '12th', admission_date: '2026-04-15', batch_id: 'b3', email: 'riya@example.com' },
+  { id: 's4', student_id: 1004, name: 'Rahul Verma', mobile: '9876500004', parent_mobile: '9876500014', parent_name: 'Suresh Verma', address: '88, Vijay Nagar, Indore', school: 'DPS', standard: '10th', admission_date: '2026-04-20', batch_id: 'b1', email: 'rahul@example.com' }
 ];
 
 const INITIAL_FEES = [
@@ -209,6 +209,12 @@ const DEFAULT_FEATURES = {
   staff_db_testimonials: true,
   owner_fee_reminder: true,
   staff_fee_reminder: false,
+  owner_fee_date_filter: true,
+  staff_fee_date_filter: true,
+  owner_fee_father_search: true,
+  staff_fee_father_search: true,
+  owner_fee_date_search: true,
+  staff_fee_date_search: true,
   db_analytics: true,
   owner_db_analytics: true,
   staff_db_analytics: false
@@ -855,7 +861,7 @@ export const dbService = {
 
         // Students
         await Promise.all(INITIAL_STUDENTS.map(s => 
-          setDoc(doc(db, "students", s.id), { student_id: s.student_id, name: s.name, mobile: s.mobile, parent_mobile: s.parent_mobile, address: s.address, school: s.school, standard: s.standard, admission_date: s.admission_date, batch_id: s.batch_id, email: s.email || '' })
+          setDoc(doc(db, "students", s.id), { student_id: s.student_id, name: s.name, mobile: s.mobile, parent_mobile: s.parent_mobile, parent_name: s.parent_name || '', address: s.address, school: s.school, standard: s.standard, admission_date: s.admission_date, batch_id: s.batch_id, email: s.email || '' })
         ));
 
         // Fees
