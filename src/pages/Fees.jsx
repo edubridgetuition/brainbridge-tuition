@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { dbService, formatDateDisplay, sendWhatsAppMessage } from '../database/dbService';
 import ReceiptPDF from '../components/ReceiptPDF';
-import { IndianRupee, FileText, Check, Plus, Search, HelpCircle, DollarSign, Calendar, MessageCircle } from 'lucide-react';
+import { IndianRupee, FileText, Check, Plus, Search, HelpCircle, DollarSign, Calendar, MessageCircle, Edit } from 'lucide-react';
 
 export default function Fees({ currentUser, verifyAction, activeTenant }) {
   const [fees, setFees] = useState([]);
@@ -38,6 +38,24 @@ export default function Fees({ currentUser, verifyAction, activeTenant }) {
   const [selectedFeeRecord, setSelectedFeeRecord] = useState(null); // for payment collection
   const [paymentMode, setPaymentMode] = useState('UPI');
   const [paymentDateInput, setPaymentDateInput] = useState(new Date().toISOString().split('T')[0]);
+  const [periodFrom, setPeriodFrom] = useState('');
+  const [periodTo, setPeriodTo] = useState('');
+
+  // Editing state
+  const [editingFeeRecord, setEditingFeeRecord] = useState(null);
+  const [editAmount, setEditAmount] = useState('');
+  const [editDueDate, setEditDueDate] = useState('');
+  const [editStatus, setEditStatus] = useState('Pending');
+  const [editPaymentDate, setEditPaymentDate] = useState('');
+  const [editPaymentMode, setEditPaymentMode] = useState('UPI');
+  const [editPeriodFrom, setEditPeriodFrom] = useState('');
+  const [editPeriodTo, setEditPeriodTo] = useState('');
+
+  const isOwner = currentUser?.role === 'admin' && !currentUser.staffId;
+
+  const showReceiptEdit = isOwner
+    ? getFeature('owner_fee_receipt_edit', true)
+    : false;
 
   useEffect(() => {
     async function loadFeeData() {
@@ -74,7 +92,9 @@ export default function Fees({ currentUser, verifyAction, activeTenant }) {
         const updateData = {
           status: 'Paid',
           payment_date: paymentDateInput,
-          payment_mode: paymentMode
+          payment_mode: paymentMode,
+          from_date: periodFrom || null,
+          to_date: periodTo || null
         };
         
         const updatedRecord = await dbService.updateFeeStatus(selectedFeeRecord.id, updateData);
@@ -95,9 +115,59 @@ export default function Fees({ currentUser, verifyAction, activeTenant }) {
       await action();
     }
   };
+
+  const handleEditFeeSubmit = async (e) => {
+    e.preventDefault();
+    if (!editingFeeRecord) return;
+
+    const action = async () => {
+      try {
+        setLoading(true);
+        const updateData = {
+          amount: Number(editAmount),
+          due_date: editDueDate,
+          status: editStatus,
+          payment_date: editStatus === 'Paid' ? editPaymentDate : null,
+          payment_mode: editStatus === 'Paid' ? editPaymentMode : '',
+          from_date: editPeriodFrom || null,
+          to_date: editPeriodTo || null
+        };
+
+        const updatedRecord = await dbService.updateFeeStatus(editingFeeRecord.id, updateData);
+
+        // Update local fees state
+        setFees(prev => prev.map(f => f.id === updatedRecord.id ? updatedRecord : f));
+        setEditingFeeRecord(null);
+      } catch (err) {
+        console.error("Failed to update fee record:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (verifyAction) {
+      verifyAction(action);
+    } else {
+      await action();
+    }
+  };
+
   const handleOpenCollectModal = (record) => {
     setSelectedFeeRecord(record);
     setPaymentDateInput(new Date().toISOString().split('T')[0]);
+    setPeriodFrom('');
+    setPeriodTo('');
+  };
+
+  const handleOpenEditModal = (record) => {
+    setEditingFeeRecord(record);
+    setEditAmount(record.amount);
+    setEditDueDate(record.due_date);
+    setEditStatus(record.status);
+    setEditPaymentDate(record.payment_date || new Date().toISOString().split('T')[0]);
+    setEditPaymentMode(record.payment_mode || 'UPI');
+    setEditPeriodFrom(record.from_date || '');
+    setEditPeriodTo(record.to_date || '');
   };
   const handleOpenReceipt = (feeRecord) => {
     const student = getStudentDetails(feeRecord.student_id);
@@ -107,7 +177,9 @@ export default function Fees({ currentUser, verifyAction, activeTenant }) {
       standard: student.standard,
       amount: feeRecord.amount,
       paymentMode: feeRecord.payment_mode,
-      paymentDate: formatDateDisplay(feeRecord.payment_date)
+      paymentDate: formatDateDisplay(feeRecord.payment_date),
+      fromDate: feeRecord.from_date ? formatDateDisplay(feeRecord.from_date) : '',
+      toDate: feeRecord.to_date ? formatDateDisplay(feeRecord.to_date) : ''
     });
   };
 
@@ -314,13 +386,25 @@ export default function Fees({ currentUser, verifyAction, activeTenant }) {
                       </td>
                       <td data-label="Actions" style={{ textAlign: 'right' }}>
                         {isPaid ? (
-                          <button 
-                            className="btn btn-secondary" 
-                            onClick={() => handleOpenReceipt(record)}
-                            style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', gap: '0.35rem' }}
-                          >
-                            <FileText size={14} /> Receipt
-                          </button>
+                          <div style={{ display: 'inline-flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                            <button 
+                              className="btn btn-secondary" 
+                              onClick={() => handleOpenReceipt(record)}
+                              style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', gap: '0.35rem' }}
+                            >
+                              <FileText size={14} /> Receipt
+                            </button>
+                            {showReceiptEdit && (
+                              <button 
+                                className="btn btn-secondary" 
+                                onClick={() => handleOpenEditModal(record)}
+                                style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', gap: '0.35rem' }}
+                                title="Edit Payment Details"
+                              >
+                                <Edit size={14} /> Edit
+                              </button>
+                            )}
+                          </div>
                         ) : isParent ? (
                           <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
                             Payment Pending
@@ -347,6 +431,16 @@ export default function Fees({ currentUser, verifyAction, activeTenant }) {
                             >
                               <Check size={14} /> Collect
                             </button>
+                            {showReceiptEdit && (
+                              <button 
+                                className="btn btn-secondary" 
+                                onClick={() => handleOpenEditModal(record)}
+                                style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', gap: '0.35rem' }}
+                                title="Edit Fee Record"
+                              >
+                                <Edit size={14} /> Edit
+                              </button>
+                            )}
                           </div>
                         )}
                       </td>
@@ -386,29 +480,50 @@ export default function Fees({ currentUser, verifyAction, activeTenant }) {
                   </div>
                 </div>
 
-                <div className="form-group">
-                  <label className="form-label">Payment Received Date *</label>
-                  <input
-                    type="date"
-                    className="form-control"
-                    value={paymentDateInput}
-                    onChange={(e) => setPaymentDateInput(e.target.value)}
-                    required
-                    style={{ marginBottom: '1rem' }}
-                  />
+                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                  <div className="form-group">
+                    <label className="form-label">Payment Received Date *</label>
+                    <input
+                      type="date"
+                      className="form-control"
+                      value={paymentDateInput}
+                      onChange={(e) => setPaymentDateInput(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Payment Mode</label>
+                    <select
+                      className="form-control"
+                      value={paymentMode}
+                      onChange={(e) => setPaymentMode(e.target.value)}
+                    >
+                      <option value="UPI">UPI</option>
+                      <option value="Cash">Cash Payment</option>
+                      <option value="NetBanking">Net Banking / Card</option>
+                    </select>
+                  </div>
                 </div>
 
-                <div className="form-group">
-                  <label className="form-label">Payment Mode</label>
-                  <select
-                    className="form-control"
-                    value={paymentMode}
-                    onChange={(e) => setPaymentMode(e.target.value)}
-                  >
-                    <option value="UPI">UPI (GooglePay / PhonePe / Paytm)</option>
-                    <option value="Cash">Cash Payment</option>
-                    <option value="NetBanking">Net Banking / Card</option>
-                  </select>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                  <div className="form-group">
+                    <label className="form-label">Period From (Optional)</label>
+                    <input
+                      type="date"
+                      className="form-control"
+                      value={periodFrom}
+                      onChange={(e) => setPeriodFrom(e.target.value)}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Period To (Optional)</label>
+                    <input
+                      type="date"
+                      className="form-control"
+                      value={periodTo}
+                      onChange={(e) => setPeriodTo(e.target.value)}
+                    />
+                  </div>
                 </div>
               </div>
               <div className="modal-footer">
@@ -430,6 +545,119 @@ export default function Fees({ currentUser, verifyAction, activeTenant }) {
           receiptData={activeReceipt} 
           onClose={() => setActiveReceipt(null)} 
         />
+      )}
+
+      {/* Edit Fee Modal */}
+      {editingFeeRecord && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '500px' }}>
+            <div className="modal-header">
+              <h3 className="modal-title">Edit Fee Record</h3>
+              <button className="modal-close" onClick={() => setEditingFeeRecord(null)}>Close</button>
+            </div>
+            <form onSubmit={handleEditFeeSubmit}>
+              <div className="modal-body">
+                <div style={{ backgroundColor: 'rgba(255, 255, 255, 0.02)', padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', marginBottom: '1.25rem' }}>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Student Name</div>
+                  <div style={{ fontWeight: '700', fontSize: '1.1rem', marginTop: '0.15rem' }}>
+                    {getStudentDetails(editingFeeRecord.student_id).name}
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                  <div className="form-group">
+                    <label className="form-label">Fee Amount (₹) *</label>
+                    <input
+                      type="number"
+                      className="form-control"
+                      value={editAmount}
+                      onChange={(e) => setEditAmount(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Due Date *</label>
+                    <input
+                      type="date"
+                      className="form-control"
+                      value={editDueDate}
+                      onChange={(e) => setEditDueDate(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="form-group" style={{ marginBottom: '1rem' }}>
+                  <label className="form-label">Status</label>
+                  <select
+                    className="form-control"
+                    value={editStatus}
+                    onChange={(e) => setEditStatus(e.target.value)}
+                  >
+                    <option value="Pending">Pending</option>
+                    <option value="Paid">Paid</option>
+                  </select>
+                </div>
+
+                {editStatus === 'Paid' && (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                    <div className="form-group">
+                      <label className="form-label">Payment Date *</label>
+                      <input
+                        type="date"
+                        className="form-control"
+                        value={editPaymentDate}
+                        onChange={(e) => setEditPaymentDate(e.target.value)}
+                        required={editStatus === 'Paid'}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Payment Mode</label>
+                      <select
+                        className="form-control"
+                        value={editPaymentMode}
+                        onChange={(e) => setEditPaymentMode(e.target.value)}
+                      >
+                        <option value="UPI">UPI</option>
+                        <option value="Cash">Cash Payment</option>
+                        <option value="NetBanking">Net Banking / Card</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                  <div className="form-group">
+                    <label className="form-label">Period From (Optional)</label>
+                    <input
+                      type="date"
+                      className="form-control"
+                      value={editPeriodFrom}
+                      onChange={(e) => setEditPeriodFrom(e.target.value)}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Period To (Optional)</label>
+                    <input
+                      type="date"
+                      className="form-control"
+                      value={editPeriodTo}
+                      onChange={(e) => setEditPeriodTo(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={() => setEditingFeeRecord(null)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-success">
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

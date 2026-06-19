@@ -1465,13 +1465,18 @@ export default function SuperAdmin({ onLogout, onInspectTenant }) {
                           label: 'Search by Date Text', 
                           ownerKey: 'owner_fee_date_search', 
                           staffKey: 'staff_fee_date_search'
+                        },
+                        { 
+                          label: 'Edit Fee Receipt / Details', 
+                          ownerKey: 'owner_fee_receipt_edit', 
+                          staffKey: null
                         }
                       ].map(item => {
                         const ownerVal = tempFeatures[item.ownerKey] !== undefined 
                           ? tempFeatures[item.ownerKey] 
                           : true;
                           
-                        const staffVal = tempFeatures[item.staffKey] !== undefined 
+                        const staffVal = item.staffKey && tempFeatures[item.staffKey] !== undefined 
                           ? tempFeatures[item.staffKey] 
                           : true;
 
@@ -1494,17 +1499,21 @@ export default function SuperAdmin({ onLogout, onInspectTenant }) {
                               />
                             </td>
                             <td style={{ padding: '0.65rem 0.5rem', textAlign: 'center' }}>
-                              <input
-                                type="checkbox"
-                                checked={!!staffVal}
-                                onChange={(e) => handleFeatureToggle(item.staffKey, e.target.checked)}
-                                style={{
-                                  width: '18px',
-                                  height: '18px',
-                                  cursor: 'pointer',
-                                  accentColor: '#1655e0'
-                                }}
-                              />
+                              {item.staffKey ? (
+                                <input
+                                  type="checkbox"
+                                  checked={!!staffVal}
+                                  onChange={(e) => handleFeatureToggle(item.staffKey, e.target.checked)}
+                                  style={{
+                                    width: '18px',
+                                    height: '18px',
+                                    cursor: 'pointer',
+                                    accentColor: '#1655e0'
+                                  }}
+                                />
+                              ) : (
+                                <span style={{ color: '#94a3b8', fontSize: '0.8rem', fontStyle: 'italic' }}>N/A</span>
+                              )}
                             </td>
                           </tr>
                         );

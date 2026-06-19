@@ -215,6 +215,7 @@ const DEFAULT_FEATURES = {
   staff_fee_father_search: true,
   owner_fee_date_search: true,
   staff_fee_date_search: true,
+  owner_fee_receipt_edit: true,
   db_analytics: true,
   owner_db_analytics: true,
   staff_db_analytics: false

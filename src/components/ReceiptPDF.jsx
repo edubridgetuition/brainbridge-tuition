@@ -4,7 +4,7 @@ import { Printer, X, GraduationCap, CheckCircle } from 'lucide-react';
 export default function ReceiptPDF({ receiptData, onClose }) {
   if (!receiptData) return null;
 
-  const { studentName, standard, amount, paymentMode, paymentDate, id } = receiptData;
+  const { studentName, standard, amount, paymentMode, paymentDate, id, fromDate, toDate } = receiptData;
   const invoiceNumber = `BB-${id.substring(0, 8).toUpperCase()}`;
 
   const handlePrint = () => {
@@ -71,6 +71,9 @@ export default function ReceiptPDF({ receiptData, onClose }) {
                 <div><strong>Method:</strong> {paymentMode}</div>
                 <div><strong>Status:</strong> <span style={{ color: '#10b981', fontWeight: '700' }}>PAID</span></div>
                 <div><strong>Received Date:</strong> {paymentDate}</div>
+                {fromDate && toDate && (
+                  <div><strong>Period:</strong> {fromDate} to {toDate}</div>
+                )}
               </div>
             </div>
           </div>
@@ -87,7 +90,11 @@ export default function ReceiptPDF({ receiptData, onClose }) {
               <tr>
                 <td style={{ padding: '1rem', borderBottom: '1px solid #f1f5f9', fontSize: '0.9rem', color: '#334155' }}>
                   <strong>Monthly Tuition Fees</strong><br />
-                  <span style={{ fontSize: '0.8rem', color: '#64748b' }}>Fees for the current billing cycle</span>
+                  {fromDate && toDate ? (
+                    <span style={{ fontSize: '0.8rem', color: '#64748b' }}>Fees for period: {fromDate} to {toDate}</span>
+                  ) : (
+                    <span style={{ fontSize: '0.8rem', color: '#64748b' }}>Fees for the current billing cycle</span>
+                  )}
                 </td>
                 <td style={{ padding: '1rem', borderBottom: '1px solid #f1f5f9', fontSize: '0.9rem', color: '#0f172a', textAlign: 'right', fontWeight: '600' }}>
                   ₹{amount}.00
