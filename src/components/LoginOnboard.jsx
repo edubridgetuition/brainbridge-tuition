@@ -173,7 +173,7 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
     setOwnerRegError('');
     setOwnerRegSuccess('');
 
-    if (!ownerTuitionName.trim() || !ownerTuitionCode.trim() || !ownerName.trim() || !ownerDob.trim() || !ownerWhatsapp.trim() || !ownerPassword.trim() || !ownerConfirmPassword.trim()) {
+    if (!ownerTuitionName.trim() || !ownerTuitionCode.trim() || !ownerName.trim() || !ownerDob.trim() || !ownerWhatsapp.trim() || !ownerEmail.trim() || !ownerPassword.trim() || !ownerConfirmPassword.trim()) {
       setOwnerRegError('Please fill in all required fields.');
       return;
     }
@@ -1476,7 +1476,7 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                  <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Email Address</label>
+                  <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Email Address *</label>
                   <input
                     type="email"
                     className="form-control"
