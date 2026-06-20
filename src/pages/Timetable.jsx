@@ -120,7 +120,7 @@ export default function Timetable({ currentUser, verifyAction, activeTenant }) {
     const draftedSlots = [];
     
     logs.push("🤖 Antigravity AI Parser initialized...");
-    logs.push(`📅 Week Starting Monday: ${baseMondayDate}`);
+    logs.push(`📅 Week Starting Monday: ${baseMondayDate || 'N/A'}`);
     
     if (!command || !command.trim()) {
       logs.push("⚠️ Error: Empty command input. Please type an instruction.");
@@ -153,7 +153,10 @@ export default function Timetable({ currentUser, verifyAction, activeTenant }) {
     };
     
     const getSlotDate = (dayName, mondayDateStr) => {
-      const monday = new Date(mondayDateStr);
+      const monday = new Date(mondayDateStr || new Date());
+      if (isNaN(monday.getTime())) {
+        return new Date().toISOString().split('T')[0];
+      }
       const offset = dayOffsets[dayName] || 0;
       const targetDate = new Date(monday);
       targetDate.setDate(monday.getDate() + offset);
@@ -239,25 +242,25 @@ export default function Timetable({ currentUser, verifyAction, activeTenant }) {
       
       batches.forEach(b => {
         let score = 0;
-        const bName = b.name.toLowerCase();
-        const bSubject = b.subject.toLowerCase();
+        const bName = (b.name || '').toLowerCase();
+        const bSubject = (b.subject || '').toLowerCase();
         
-        if (lowerSentence.includes(bName)) {
+        if (bName && lowerSentence.includes(bName)) {
           score += 10;
         }
         
-        if (lowerSentence.includes(bSubject) || (bSubject === 'mathematics' && (lowerSentence.includes('math') || lowerSentence.includes('maths')))) {
+        if (bSubject && (lowerSentence.includes(bSubject) || (bSubject === 'mathematics' && (lowerSentence.includes('math') || lowerSentence.includes('maths'))))) {
           score += 5;
         }
         
         const standards = ['10th', '11th', '12th', '9th', '8th'];
         standards.forEach(std => {
-          if (bName.includes(std.toLowerCase()) && (lowerSentence.includes(std) || lowerSentence.includes(std.replace('th', '')))) {
+          if (bName && bName.includes(std.toLowerCase()) && (lowerSentence.includes(std) || lowerSentence.includes(std.replace('th', '')))) {
             score += 3;
           }
         });
         
-        if (b.teacher_name && lowerSentence.includes(b.teacher_name.split(' ')[0].toLowerCase())) {
+        if (b.teacher_name && typeof b.teacher_name === 'string' && lowerSentence.includes(b.teacher_name.split(' ')[0].toLowerCase())) {
           score += 2;
         }
         
@@ -268,18 +271,19 @@ export default function Timetable({ currentUser, verifyAction, activeTenant }) {
       });
       
       if (bestBatch && highestScore > 0) {
-        logs.push(`👉 Batch matched: "${bestBatch.name}" (Subject: ${bestBatch.subject}, Score: ${highestScore})`);
+        logs.push(`👉 Batch matched: "${bestBatch.name || 'N/A'}" (Subject: ${bestBatch.subject || 'N/A'}, Score: ${highestScore})`);
       } else {
-        bestBatch = batches[0];
-        logs.push(`⚠️ Batch missing or unmatched. Defaulting to first batch: "${bestBatch.name}"`);
+        bestBatch = batches[0] || { id: 'temp', name: 'General Batch', subject: 'General' };
+        logs.push(`⚠️ Batch missing or unmatched. Defaulting to: "${bestBatch.name || 'N/A'}"`);
       }
       
       let teacher = bestBatch.teacher_name || 'Tutor';
       batches.forEach(b => {
-        if (b.teacher_name) {
-          const firstName = b.teacher_name.split(' ')[0].toLowerCase();
-          const lastName = b.teacher_name.split(' ').slice(-1)[0].toLowerCase();
-          if (lowerSentence.includes(firstName) || lowerSentence.includes(lastName)) {
+        if (b.teacher_name && typeof b.teacher_name === 'string') {
+          const parts = b.teacher_name.split(' ').filter(Boolean);
+          const firstName = parts[0] ? parts[0].toLowerCase() : '';
+          const lastName = parts[parts.length - 1] ? parts[parts.length - 1].toLowerCase() : '';
+          if ((firstName && lowerSentence.includes(firstName)) || (lastName && lowerSentence.includes(lastName))) {
             teacher = b.teacher_name;
           }
         }
@@ -315,7 +319,7 @@ export default function Timetable({ currentUser, verifyAction, activeTenant }) {
         }
       }
       
-      let topic = `Practice Session: ${bestBatch.subject}`;
+      let topic = `Practice Session: ${bestBatch.subject || 'General'}`;
       const topicRegex = /(?:topic|lesson|chapter)\s*(?:is|:|-)?\s*["']?([^"'\n.,]+)["']?/i;
       const topicMatch = sentence.match(topicRegex);
       if (topicMatch) {
