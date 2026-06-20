@@ -364,8 +364,37 @@ export default function StaffManagement({ currentUser, verifyAction, activeTenan
                     <td data-label="Registration Date" style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
                       {formatDate(staff.created_at)}
                     </td>
-                    <td data-label="Name" style={{ fontWeight: '600', color: 'var(--text-main)' }}>
-                      {staff.name}
+                    <td data-label="Name" style={{ fontWeight: '700' }}>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedStaffForView(staff)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          padding: 0,
+                          margin: 0,
+                          fontFamily: 'inherit',
+                          fontSize: 'inherit',
+                          fontWeight: '700',
+                          color: '#2563eb',
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                          display: 'inline-block',
+                          textDecoration: 'none',
+                          transition: 'all 0.15s ease',
+                          outline: 'none'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.target.style.textDecoration = 'underline';
+                          e.target.style.color = '#1d4ed8';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.textDecoration = 'none';
+                          e.target.style.color = '#2563eb';
+                        }}
+                      >
+                        {staff.name}
+                      </button>
                     </td>
                     <td data-label="Designation / Role">
                       <span style={{
@@ -414,25 +443,6 @@ export default function StaffManagement({ currentUser, verifyAction, activeTenan
                     </td>
                     <td data-label="Actions" style={{ textAlign: 'right' }}>
                       <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
-                        <button
-                          onClick={() => setSelectedStaffForView(staff)}
-                          className="btn btn-secondary"
-                          style={{
-                            padding: '0.35rem 0.65rem',
-                            fontSize: '0.74rem',
-                            fontWeight: '800',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.25rem',
-                            backgroundColor: '#f1f5f9',
-                            color: '#1e293b',
-                            border: '1px solid #cbd5e1'
-                          }}
-                          title="View Full Profile"
-                        >
-                          <Eye size={12} />
-                          <span>View Profile</span>
-                        </button>
                         {staff.status === 'Pending' && (
                           <>
                             <button
@@ -473,34 +483,29 @@ export default function StaffManagement({ currentUser, verifyAction, activeTenan
                           </>
                         )}
                         {staff.status === 'Approved' && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <span style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: '700' }}>
-                              Approved
-                            </span>
-                            <button
-                              onClick={() => {
-                                setResetPasswordStaff(staff);
-                                setNewResetPassword('');
-                                setResetError('');
-                              }}
-                              className="btn btn-secondary"
-                              style={{
-                                padding: '0.25rem 0.5rem',
-                                fontSize: '0.72rem',
-                                fontWeight: '700',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.2rem',
-                                backgroundColor: '#f1f5f9',
-                                borderColor: '#cbd5e1',
-                                color: '#475569'
-                              }}
-                              title="Reset Password"
-                            >
-                              <Key size={12} />
-                              <span>Reset Pass</span>
-                            </button>
-                          </div>
+                          <button
+                            onClick={() => {
+                              setResetPasswordStaff(staff);
+                              setNewResetPassword('');
+                              setResetError('');
+                            }}
+                            className="btn btn-secondary"
+                            style={{
+                              padding: '0.3rem 0.6rem',
+                              fontSize: '0.74rem',
+                              fontWeight: '800',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.25rem',
+                              backgroundColor: '#f1f5f9',
+                              borderColor: '#cbd5e1',
+                              color: '#475569'
+                            }}
+                            title="Reset Password"
+                          >
+                            <Key size={12} />
+                            <span>Reset Pass</span>
+                          </button>
                         )}
                         {staff.status === 'Rejected' && (
                           <button
