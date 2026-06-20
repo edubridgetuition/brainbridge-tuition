@@ -231,14 +231,9 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
         { id: 'inquiries', label: 'Inquiries', icon: FileText, role: 'admin' },
         { id: 'staff', label: 'Staff Management', icon: UserCheck, role: 'admin' },
         { id: 'fees', label: 'Fees', icon: CreditCard },
+        { id: 'settings', label: 'Settings', icon: Settings, role: 'owner' },
         { id: 'tests', label: 'Test Marks', icon: FileSpreadsheet }
       ].filter(item => isFeatureEnabled(item.id))
-    },
-    {
-      title: 'System',
-      items: [
-        { id: 'settings', label: 'Settings', icon: Settings, role: 'owner' }
-      ]
     }
   ];
 

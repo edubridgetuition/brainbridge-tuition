@@ -4,6 +4,10 @@ import { Plus, Search, Filter, Edit, Phone, MapPin, MessageCircle, Check, X, Tra
 
 export default function Students({ currentUser, verifyAction, activeTenant, autoOpenRegister, onCloseRegister }) {
   const [students, setStudents] = useState([]);
+  
+  const standardOptions = (activeTenant?.standards && activeTenant.standards.length > 0)
+    ? activeTenant.standards.map(s => s.std)
+    : ['10th', '11th', '12th'];
 
   useEffect(() => {
     if (autoOpenRegister) {
@@ -16,7 +20,7 @@ export default function Students({ currentUser, verifyAction, activeTenant, auto
         email: '',
         address: '',
         school: '',
-        standard: '10th',
+        standard: standardOptions[0] || '10th',
         batch_id: '',
         admission_date: new Date().toISOString().split('T')[0]
       });
@@ -56,7 +60,7 @@ export default function Students({ currentUser, verifyAction, activeTenant, auto
     email: '',
     address: '',
     school: '',
-    standard: '10th',
+    standard: standardOptions[0] || '10th',
     batch_id: '',
     admission_date: new Date().toISOString().split('T')[0]
   });
@@ -159,7 +163,7 @@ export default function Students({ currentUser, verifyAction, activeTenant, auto
           parent_mobile: '',
           address: '',
           school: '',
-          standard: '10th',
+          standard: standardOptions[0] || '10th',
           batch_id: batches[0]?.id || '',
           admission_date: new Date().toISOString().split('T')[0]
         });
@@ -209,7 +213,7 @@ export default function Students({ currentUser, verifyAction, activeTenant, auto
       email: '',
       address: '',
       school: '',
-      standard: '10th',
+      standard: standardOptions[0] || '10th',
       batch_id: batches[0]?.id || '',
       admission_date: new Date().toISOString().split('T')[0]
     });
@@ -309,11 +313,13 @@ export default function Students({ currentUser, verifyAction, activeTenant, auto
   const thisMonthCount = getThisMonthAdmissions();
 
   const getStandardDistribution = () => {
-    const dist = { '10th': 0, '11th': 0, '12th': 0 };
+    const dist = {};
+    standardOptions.forEach(std => {
+      dist[std] = 0;
+    });
     students.forEach(s => {
       if (!s.standard) return;
-      const std = s.standard.includes('th') ? s.standard : `${s.standard}th`;
-      dist[std] = (dist[std] || 0) + 1;
+      dist[s.standard] = (dist[s.standard] || 0) + 1;
     });
     return dist;
   };
@@ -431,9 +437,9 @@ export default function Students({ currentUser, verifyAction, activeTenant, auto
                 style={{ width: '140px' }}
               >
                 <option value="All">All Standards</option>
-                <option value="10th">10th</option>
-                <option value="11th">11th</option>
-                <option value="12th">12th</option>
+                {standardOptions.map(std => (
+                  <option key={std} value={std}>{std}</option>
+                ))}
               </select>
             </div>
           </div>
@@ -641,9 +647,9 @@ export default function Students({ currentUser, verifyAction, activeTenant, auto
                       value={formData.standard}
                       onChange={handleInputChange}
                     >
-                      <option value="10th">10th Standard</option>
-                      <option value="11th">11th Standard</option>
-                      <option value="12th">12th Standard</option>
+                      {standardOptions.map(std => (
+                        <option key={std} value={std}>{std} Standard</option>
+                      ))}
                     </select>
                   </div>
                   <div className="form-group">

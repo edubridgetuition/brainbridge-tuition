@@ -34,9 +34,9 @@ export default function Settings({ currentUser, activeTenant, onTenantUpdate, ve
   
   // Tab 2: Academics & Classrooms states
   const [standards, setStandards] = useState(activeTenant?.standards || [
-    { std: '10th', fee: 1500 },
-    { std: '11th', fee: 2000 },
-    { std: '12th', fee: 2500 }
+    { std: '10th', fee: 1500, board: 'CBSE', yearly_fee: 18000 },
+    { std: '11th', fee: 2000, board: 'CBSE', yearly_fee: 24000 },
+    { std: '12th', fee: 2500, board: 'CBSE', yearly_fee: 30000 }
   ]);
   const [rooms, setRooms] = useState(activeTenant?.rooms || [
     { name: 'Room A', capacity: 30 },
@@ -53,7 +53,9 @@ export default function Settings({ currentUser, activeTenant, onTenantUpdate, ve
 
   // Add Row form states
   const [newStdName, setNewStdName] = useState('');
+  const [newStdBoard, setNewStdBoard] = useState('CBSE');
   const [newStdFee, setNewStdFee] = useState('');
+  const [newStdYearlyFee, setNewStdYearlyFee] = useState('');
   const [newRoomName, setNewRoomName] = useState('');
   const [newRoomCapacity, setNewRoomCapacity] = useState('');
 
@@ -119,9 +121,16 @@ export default function Settings({ currentUser, activeTenant, onTenantUpdate, ve
       return;
     }
 
-    setStandards(prev => [...prev, { std: stdClean, fee: Number(newStdFee) }]);
+    setStandards(prev => [...prev, { 
+      std: stdClean, 
+      board: newStdBoard.trim() || 'CBSE', 
+      fee: Number(newStdFee),
+      yearly_fee: newStdYearlyFee ? Number(newStdYearlyFee) : 0
+    }]);
     setNewStdName('');
+    setNewStdBoard('CBSE');
     setNewStdFee('');
+    setNewStdYearlyFee('');
     setSaveError('');
   };
 
@@ -218,7 +227,10 @@ export default function Settings({ currentUser, activeTenant, onTenantUpdate, ve
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
         <div>
           <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <SettingsIcon size={28} style={{ color: 'var(--primary)' }} /> Center Configuration
+            <SettingsIcon size={28} style={{ color: 'var(--primary)' }} /> Settings: {
+              activeSubTab === 'branding' ? 'Profile & Branding' :
+              activeSubTab === 'classrooms' ? 'Classes' : 'Fees Structure'
+            }
           </h1>
           <p className="page-subtitle">Configure your tuition identity, branding themes, standards pricing lists, and classrooms.</p>
         </div>
@@ -270,58 +282,86 @@ export default function Settings({ currentUser, activeTenant, onTenantUpdate, ve
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr', gap: '2rem' }}>
-        {/* Left Sub-Tabs Navigation */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          <button
-            onClick={() => setActiveSubTab('branding')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.75rem',
-              width: '100%',
-              padding: '0.85rem 1rem',
-              borderRadius: 'var(--radius-md)',
-              border: '1px solid ' + (activeSubTab === 'branding' ? 'var(--primary)' : 'var(--border-color)'),
-              backgroundColor: activeSubTab === 'branding' ? 'var(--primary-glow)' : 'var(--bg-card)',
-              color: activeSubTab === 'branding' ? 'var(--primary)' : 'var(--text-primary)',
-              fontWeight: '700',
-              fontSize: '0.9rem',
-              cursor: 'pointer',
-              textAlign: 'left',
-              transition: 'all 0.25s'
-            }}
-          >
-            <Palette size={18} />
-            <span>Profile & Branding</span>
-          </button>
+      {/* Horizontal Sub-Tabs Navigation */}
+      <div style={{ 
+        display: 'flex', 
+        gap: '2.5rem', 
+        borderBottom: '1px solid var(--border-color)', 
+        marginBottom: '2rem', 
+        paddingBottom: '0px'
+      }}>
+        <button
+          onClick={() => setActiveSubTab('branding')}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: activeSubTab === 'branding' ? 'var(--primary)' : 'var(--text-muted)',
+            borderBottom: '2px solid ' + (activeSubTab === 'branding' ? 'var(--primary)' : 'transparent'),
+            fontWeight: '800',
+            fontSize: '0.98rem',
+            paddingBottom: '0.85rem',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            fontFamily: 'inherit',
+            marginBottom: '-1px'
+          }}
+        >
+          <Palette size={16} />
+          <span>Profile & Branding</span>
+        </button>
 
-          <button
-            onClick={() => setActiveSubTab('academics')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.75rem',
-              width: '100%',
-              padding: '0.85rem 1rem',
-              borderRadius: 'var(--radius-md)',
-              border: '1px solid ' + (activeSubTab === 'academics' ? 'var(--primary)' : 'var(--border-color)'),
-              backgroundColor: activeSubTab === 'academics' ? 'var(--primary-glow)' : 'var(--bg-card)',
-              color: activeSubTab === 'academics' ? 'var(--primary)' : 'var(--text-primary)',
-              fontWeight: '700',
-              fontSize: '0.9rem',
-              cursor: 'pointer',
-              textAlign: 'left',
-              transition: 'all 0.25s'
-            }}
-          >
-            <BookOpen size={18} />
-            <span>Classes & Classrooms</span>
-          </button>
-        </div>
+        <button
+          onClick={() => setActiveSubTab('classrooms')}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: activeSubTab === 'classrooms' ? 'var(--primary)' : 'var(--text-muted)',
+            borderBottom: '2px solid ' + (activeSubTab === 'classrooms' ? 'var(--primary)' : 'transparent'),
+            fontWeight: '800',
+            fontSize: '0.98rem',
+            paddingBottom: '0.85rem',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            fontFamily: 'inherit',
+            marginBottom: '-1px'
+          }}
+        >
+          <Home size={16} />
+          <span>Classes</span>
+        </button>
 
-        {/* Right Active Tab Content */}
-        <div className="card" style={{ padding: '2rem' }}>
+        <button
+          onClick={() => setActiveSubTab('fees_structure')}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: activeSubTab === 'fees_structure' ? 'var(--primary)' : 'var(--text-muted)',
+            borderBottom: '2px solid ' + (activeSubTab === 'fees_structure' ? 'var(--primary)' : 'transparent'),
+            fontWeight: '800',
+            fontSize: '0.98rem',
+            paddingBottom: '0.85rem',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            fontFamily: 'inherit',
+            marginBottom: '-1px'
+          }}
+        >
+          <CreditCard size={16} />
+          <span>Fees Structure</span>
+        </button>
+      </div>
+
+      {/* Right Active Tab Content */}
+      <div className="card" style={{ padding: '2rem' }}>
           
           {/* TAB 1: PROFILE & BRANDING */}
           {activeSubTab === 'branding' && (
@@ -537,106 +577,9 @@ export default function Settings({ currentUser, activeTenant, onTenantUpdate, ve
             </div>
           )}
 
-          {/* TAB 2: ACADEMICS & CLASSROOMS */}
-          {activeSubTab === 'academics' && (
+          {/* TAB 2: CLASSROOMS */}
+          {activeSubTab === 'classrooms' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
-              
-              {/* Standards Listing */}
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                  <div>
-                    <h3 style={{ fontSize: '1.25rem', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#1e3a8a' }}>
-                      <BookOpen size={20} /> Class Standards & Fee Rates
-                    </h3>
-                    <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '0.2rem' }}>Configure default standard classifications and their corresponding monthly fee rates.</p>
-                  </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '2rem', alignItems: 'start', marginTop: '1rem' }}>
-                  {/* Table List */}
-                  <div style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
-                    <table className="table" style={{ margin: 0 }}>
-                      <thead>
-                        <tr>
-                          <th>Class Standard</th>
-                          <th>Monthly Tuition Fee</th>
-                          <th style={{ textAlign: 'right' }}>Action</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {standards.map((s, i) => (
-                          <tr key={s.std}>
-                            <td style={{ fontWeight: '800', color: 'var(--text-primary)' }}>{s.std} Standard</td>
-                            <td style={{ fontWeight: '800', color: 'var(--primary)' }}>
-                              ₹{s.fee}
-                            </td>
-                            <td style={{ textAlign: 'right' }}>
-                              <button
-                                onClick={() => handleDeleteStandard(s.std)}
-                                style={{
-                                  background: 'none',
-                                  border: 'none',
-                                  color: 'var(--danger)',
-                                  cursor: 'pointer',
-                                  padding: '0.25rem'
-                                }}
-                                title="Delete Standard"
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                        {standards.length === 0 && (
-                          <tr>
-                            <td colSpan={3} style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                              No standards configured. Add a class standard on the right.
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {/* Add Standard Inline Form */}
-                  <form onSubmit={handleAddStandard} style={{ padding: '1.25rem', backgroundColor: 'var(--bg-main)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    <h4 style={{ fontSize: '0.95rem', fontWeight: '800', color: 'var(--text-primary)', margin: 0 }}>Add Class Standard</h4>
-                    <div className="form-group">
-                      <label className="form-label" style={{ fontSize: '0.72rem' }}>Standard Name *</label>
-                      <input 
-                        type="text" 
-                        className="form-control"
-                        placeholder="E.g. 9th, NEET, IIT-JEE"
-                        value={newStdName}
-                        onChange={(e) => setNewStdName(e.target.value)}
-                        required
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label" style={{ fontSize: '0.72rem' }}>Monthly Fee (₹) *</label>
-                      <input 
-                        type="number" 
-                        className="form-control"
-                        placeholder="E.g. 1500"
-                        value={newStdFee}
-                        onChange={(e) => setNewStdFee(e.target.value)}
-                        required
-                      />
-                    </div>
-                    <button 
-                      type="submit" 
-                      className="btn btn-primary"
-                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', padding: '0.55rem', fontSize: '0.85rem' }}
-                    >
-                      <Plus size={14} /> Add Standard
-                    </button>
-                  </form>
-                </div>
-              </div>
-
-              <hr style={{ border: 'none', borderTop: '1px solid var(--border-color)' }} />
-
-              {/* Classrooms Listing */}
               <div>
                 <div>
                   <h3 style={{ fontSize: '1.25rem', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#1e3a8a' }}>
@@ -726,6 +669,131 @@ export default function Settings({ currentUser, activeTenant, onTenantUpdate, ve
                   </form>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* TAB 3: FEES STRUCTURE */}
+          {activeSubTab === 'fees_structure' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                  <div>
+                    <h3 style={{ fontSize: '1.25rem', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#1e3a8a' }}>
+                      <CreditCard size={20} /> Fees Structure
+                    </h3>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '0.2rem' }}>Configure tuition class standards, boards, monthly fees, and yearly fee rates.</p>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '2rem', alignItems: 'start', marginTop: '1rem' }}>
+                  {/* Table List */}
+                  <div style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
+                    <table className="table" style={{ margin: 0 }}>
+                      <thead>
+                        <tr>
+                          <th>Standard</th>
+                          <th>Monthly Fee</th>
+                          <th>Yearly Fee</th>
+                          <th style={{ textAlign: 'right' }}>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {standards.map((s, i) => (
+                          <tr key={s.std}>
+                            <td style={{ padding: '1rem 0.75rem' }}>
+                              <div style={{ fontWeight: '800', color: 'var(--text-primary)', fontSize: '0.95rem' }}>{s.std} Standard</div>
+                              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: '600', marginTop: '0.15rem' }}>Board: {s.board || 'CBSE'}</div>
+                            </td>
+                            <td style={{ fontWeight: '800', color: 'var(--primary)', padding: '1rem 0.75rem' }}>
+                              ₹{s.fee}
+                            </td>
+                            <td style={{ fontWeight: '800', color: 'var(--success)', padding: '1rem 0.75rem' }}>
+                              ₹{s.yearly_fee || 0}
+                            </td>
+                            <td style={{ textAlign: 'right', padding: '1rem 0.75rem' }}>
+                              <button
+                                onClick={() => handleDeleteStandard(s.std)}
+                                style={{
+                                  background: 'none',
+                                  border: 'none',
+                                  color: 'var(--danger)',
+                                  cursor: 'pointer',
+                                  padding: '0.25rem'
+                                }}
+                                title="Delete Standard"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                        {standards.length === 0 && (
+                          <tr>
+                            <td colSpan={4} style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                              No standards configured. Add a class standard on the right.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Add Standard Inline Form */}
+                  <form onSubmit={handleAddStandard} style={{ padding: '1.25rem', backgroundColor: 'var(--bg-main)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <h4 style={{ fontSize: '0.95rem', fontWeight: '800', color: 'var(--text-primary)', margin: 0 }}>Fees Structure</h4>
+                    <div className="form-group">
+                      <label className="form-label" style={{ fontSize: '0.72rem' }}>Standard Name *</label>
+                      <input 
+                        type="text" 
+                        className="form-control"
+                        placeholder="E.g. 9th, NEET, IIT-JEE"
+                        value={newStdName}
+                        onChange={(e) => setNewStdName(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label" style={{ fontSize: '0.72rem' }}>Board *</label>
+                      <input 
+                        type="text" 
+                        className="form-control"
+                        placeholder="E.g. CBSE, ICSE, State Board"
+                        value={newStdBoard}
+                        onChange={(e) => setNewStdBoard(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label" style={{ fontSize: '0.72rem' }}>Monthly Fee (₹) *</label>
+                      <input 
+                        type="number" 
+                        className="form-control"
+                        placeholder="E.g. 1500"
+                        value={newStdFee}
+                        onChange={(e) => setNewStdFee(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label" style={{ fontSize: '0.72rem' }}>Yearly Fee (₹)</label>
+                      <input 
+                        type="number" 
+                        className="form-control"
+                        placeholder="E.g. 18000"
+                        value={newStdYearlyFee}
+                        onChange={(e) => setNewStdYearlyFee(e.target.value)}
+                      />
+                    </div>
+                    <button 
+                      type="submit" 
+                      className="btn btn-primary"
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', padding: '0.55rem', fontSize: '0.85rem' }}
+                    >
+                      <Plus size={14} /> Add Standard
+                    </button>
+                  </form>
+                </div>
+              </div>
 
               <hr style={{ border: 'none', borderTop: '1px solid var(--border-color)' }} />
 
@@ -778,7 +846,6 @@ export default function Settings({ currentUser, activeTenant, onTenantUpdate, ve
           )}
 
         </div>
-      </div>
     </div>
   );
 }

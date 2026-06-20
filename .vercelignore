@@ -1,0 +1,15 @@
+# Exclude large binary files
+*.apk
+*.aab
+EduBridge.apk
+EduBridge.aab
+
+# Exclude native mobile directories
+android/
+capacitor.config.json
+
+# Exclude local node/build outputs
+node_modules/
+dist/
+.git/
+.vercel/
