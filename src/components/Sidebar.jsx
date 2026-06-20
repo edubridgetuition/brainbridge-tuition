@@ -17,7 +17,8 @@ import {
   UserCheck,
   Shield,
   Key,
-  TrendingUp
+  TrendingUp,
+  Settings
 } from 'lucide-react';
 import { dbService } from '../database/dbService';
 
@@ -232,6 +233,12 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
         { id: 'fees', label: 'Fees', icon: CreditCard },
         { id: 'tests', label: 'Test Marks', icon: FileSpreadsheet }
       ].filter(item => isFeatureEnabled(item.id))
+    },
+    {
+      title: 'System',
+      items: [
+        { id: 'settings', label: 'Settings', icon: Settings, role: 'owner' }
+      ]
     }
   ];
 
@@ -260,7 +267,8 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
         { id: 'tests', label: 'Test Marks', icon: FileSpreadsheet },
         { id: 'homework', label: 'Homework', icon: ClipboardList },
         { id: 'materials', label: 'Study Material', icon: Download },
-        { id: 'student_performance', label: 'Performance', icon: TrendingUp }
+        { id: 'student_performance', label: 'Performance', icon: TrendingUp },
+        { id: 'settings', label: 'Settings', icon: Settings, role: 'owner' }
       ]
     : [
         { id: 'attendance', label: 'Attendance', icon: CheckSquare },

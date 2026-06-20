@@ -15,6 +15,7 @@ import Inquiries from './pages/Inquiries';
 import StaffManagement from './pages/StaffManagement';
 import ForcedPasswordChange from './components/ForcedPasswordChange';
 import StudentPerformance from './pages/StudentPerformance';
+import Settings from './pages/Settings';
 import { GraduationCap } from 'lucide-react';
 import { dbService } from './database/dbService';
 import { Capacitor } from '@capacitor/core';
@@ -539,6 +540,19 @@ function App() {
               setActiveTenant(tenant);
               setActiveTab('dashboard');
             }}
+          />
+        );
+      case 'settings':
+        return (
+          <Settings 
+            key={tenantKey} 
+            currentUser={currentUser} 
+            activeTenant={activeTenant} 
+            onTenantUpdate={(updatedTenant) => {
+              setActiveTenant(updatedTenant);
+              setAllTenants(prev => prev.map(t => t.id === updatedTenant.id ? updatedTenant : t));
+            }}
+            verifyAction={verifyAction} 
           />
         );
       default:
