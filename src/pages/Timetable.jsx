@@ -102,17 +102,28 @@ export default function Timetable({ currentUser, verifyAction, activeTenant }) {
 
   useEffect(() => {
     if (terminalEndRef.current) {
-      terminalEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      try {
+        terminalEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      } catch (err) {
+        try {
+          terminalEndRef.current.scrollIntoView();
+        } catch (e) {
+          console.error("Scroll error:", e);
+        }
+      }
     }
   }, [aiLogs]);
 
   const formatTime12h = (time24) => {
     if (!time24) return '';
-    const [hours, minutes] = time24.split(':');
+    const str = String(time24);
+    if (!str.includes(':')) return str;
+    const [hours, minutes] = str.split(':');
     const h = parseInt(hours, 10);
+    if (isNaN(h)) return str;
     const ampm = h >= 12 ? 'PM' : 'AM';
     const displayHour = h % 12 || 12;
-    return `${String(displayHour).padStart(2, '0')}:${minutes} ${ampm}`;
+    return `${String(displayHour).padStart(2, '0')}:${minutes || '00'} ${ampm}`;
   };
 
   const parseCommandToSlots = (command, baseMondayDate) => {
@@ -385,7 +396,7 @@ export default function Timetable({ currentUser, verifyAction, activeTenant }) {
   };
 
   const processAiCommand = () => {
-    if (batches.length === 0) {
+    if (!batches || batches.length === 0) {
       alert("No batches defined. Cannot generate timetable.");
       return;
     }
@@ -401,12 +412,13 @@ export default function Timetable({ currentUser, verifyAction, activeTenant }) {
     const { slots, logs } = parseCommandToSlots(aiCommand, aiSelectedMonday);
     
     let idx = 0;
-    const timer = setInterval(() => {
+    let timer = null;
+    timer = setInterval(() => {
       if (idx < logs.length) {
         setAiLogs(prev => [...prev, logs[idx]]);
         idx++;
       } else {
-        clearInterval(timer);
+        if (timer) clearInterval(timer);
         setAiDraftSlots(slots);
         setAiIsGenerating(false);
       }
@@ -861,7 +873,7 @@ export default function Timetable({ currentUser, verifyAction, activeTenant }) {
 
       {activeSubTab === 'ai' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-          <style>{`
+          <style dangerouslySetInnerHTML={{ __html: `
             @keyframes blink {
               50% { opacity: 0; }
             }
@@ -906,7 +918,7 @@ export default function Timetable({ currentUser, verifyAction, activeTenant }) {
             .log-warning { color: #ef4444; text-shadow: 0 0 1px #ef4444; }
             .log-info { color: #38bdf8; text-shadow: 0 0 1px #38bdf8; }
             .log-normal { color: #a7f3d0; }
-          `}</style>
+          ` }} />
 
           <div className="card" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
