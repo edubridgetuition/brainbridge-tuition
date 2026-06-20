@@ -200,6 +200,7 @@ export default function Fees({ currentUser, verifyAction, activeTenant }) {
       tenantName: activeTenant?.name || 'EduBridge',
       tenantLogo: activeTenant?.logo_url || '',
       tenantWhatsapp: activeTenant?.owner_whatsapp || '',
+      tenantAddress: activeTenant?.address || '',
       receiptSubHeader: activeTenant?.receipt_sub_header || '',
       receiptFooterNote1: activeTenant?.receipt_footer_note_1 || '',
       receiptFooterNote2: activeTenant?.receipt_footer_note_2 || ''

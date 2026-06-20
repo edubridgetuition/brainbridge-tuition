@@ -23,10 +23,14 @@ export default function Settings({ currentUser, activeTenant, onTenantUpdate, ve
   // Tab 1: Profile & Branding states
   const [name, setName] = useState(activeTenant?.name || '');
   const [whatsapp, setWhatsapp] = useState(activeTenant?.owner_whatsapp || '');
+  const [address, setAddress] = useState(activeTenant?.address || '');
   const [logoUrl, setLogoUrl] = useState(activeTenant?.logo_url || '');
   const [themeColor, setThemeColor] = useState(activeTenant?.theme_color || '#2563eb');
-  const [receiptHeader, setReceiptHeader] = useState(activeTenant?.receipt_header || 'Thank you for studying with us!');
-  const [receiptFootnote, setReceiptFootnote] = useState(activeTenant?.receipt_footnote || 'Fees once paid are non-refundable.');
+  
+  // Aligning receipt variables with database schema
+  const [receiptSubHeader, setReceiptSubHeader] = useState(activeTenant?.receipt_sub_header || '');
+  const [receiptFooterNote1, setReceiptFooterNote1] = useState(activeTenant?.receipt_footer_note_1 || '');
+  const [receiptFooterNote2, setReceiptFooterNote2] = useState(activeTenant?.receipt_footer_note_2 || '');
   
   // Tab 2: Academics & Classrooms states
   const [standards, setStandards] = useState(activeTenant?.standards || [
@@ -166,10 +170,12 @@ export default function Settings({ currentUser, activeTenant, onTenantUpdate, ve
     const payload = {
       name: name.trim(),
       owner_whatsapp: whatsapp.trim(),
+      address: address.trim(),
       logo_url: logoUrl,
       theme_color: themeColor,
-      receipt_header: receiptHeader.trim(),
-      receipt_footnote: receiptFootnote.trim(),
+      receipt_sub_header: receiptSubHeader.trim(),
+      receipt_footer_note_1: receiptFooterNote1.trim(),
+      receipt_footer_note_2: receiptFooterNote2.trim(),
       standards: standards,
       rooms: rooms,
       accepted_payment_modes: paymentModes
@@ -350,6 +356,17 @@ export default function Settings({ currentUser, activeTenant, onTenantUpdate, ve
                     />
                     <small style={{ color: 'var(--text-muted)', fontSize: '0.72rem', marginTop: '0.2rem', display: 'block' }}>Used for sending automation alerts.</small>
                   </div>
+                  <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                    <label className="form-label">Tuition Address *</label>
+                    <input 
+                      type="text" 
+                      className="form-control"
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      placeholder="E.g. 102, Silver Arcade, Vijay Nagar, Indore"
+                      required
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -483,26 +500,37 @@ export default function Settings({ currentUser, activeTenant, onTenantUpdate, ve
                 </h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                   <div className="form-group">
-                    <label className="form-label">Receipt Header Greeting Notes</label>
+                    <label className="form-label">Receipt Sub-Header / Contact Info</label>
                     <textarea 
                       className="form-control"
                       rows={2}
-                      value={receiptHeader}
-                      onChange={(e) => setReceiptHeader(e.target.value)}
-                      placeholder="E.g. Thank you for studying with us!"
+                      value={receiptSubHeader}
+                      onChange={(e) => setReceiptSubHeader(e.target.value)}
+                      placeholder="E.g. Official tuition fees receipt. Tel: +91 9876543210"
                       style={{ resize: 'vertical', fontFamily: 'inherit' }}
                     />
                   </div>
-                  <div className="form-group">
-                    <label className="form-label">Receipt Bottom Footnote terms</label>
-                    <textarea 
-                      className="form-control"
-                      rows={2}
-                      value={receiptFootnote}
-                      onChange={(e) => setReceiptFootnote(e.target.value)}
-                      placeholder="E.g. Note: Fees once paid are non-refundable."
-                      style={{ resize: 'vertical', fontFamily: 'inherit' }}
-                    />
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div className="form-group">
+                      <label className="form-label">Receipt Footer Note 1</label>
+                      <input 
+                        type="text"
+                        className="form-control"
+                        value={receiptFooterNote1}
+                        onChange={(e) => setReceiptFooterNote1(e.target.value)}
+                        placeholder="E.g. * This is a computer-generated invoice."
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Receipt Footer Note 2</label>
+                      <input 
+                        type="text"
+                        className="form-control"
+                        value={receiptFooterNote2}
+                        onChange={(e) => setReceiptFooterNote2(e.target.value)}
+                        placeholder="E.g. * Thank you for studying with us!"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>

@@ -17,6 +17,7 @@ export default function ReceiptPDF({ receiptData, onClose }) {
     tenantName,
     tenantLogo,
     tenantWhatsapp,
+    tenantAddress,
     receiptSubHeader,
     receiptFooterNote1,
     receiptFooterNote2
@@ -62,6 +63,11 @@ export default function ReceiptPDF({ receiptData, onClose }) {
                   {tenantName || 'EduBridge'}
                 </span>
               </div>
+              {tenantAddress && (
+                <div style={{ fontSize: '0.8rem', fontWeight: '600', color: '#475569', marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                  <span>📍</span> <span>{tenantAddress}</span>
+                </div>
+              )}
               <p style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '0.5rem', lineHeight: '1.4', whiteSpace: 'pre-line' }}>
                 {receiptSubHeader ? receiptSubHeader : (
                   <>
