@@ -1349,6 +1349,16 @@ export const dbService = {
     );
   },
 
+  async getNotifications() {
+    return runQuery(
+      async () => {
+        const querySnapshot = await getDocs(collection(db, "notifications"));
+        return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      },
+      () => getLocalData('bb_notifications', [])
+    );
+  },
+
   listenToNotifications(studentId, callback) {
     if (isFirebaseConfigured && localStorage.getItem('bb_db_mode') !== 'local' && !forceLocalMode) {
       const q = query(

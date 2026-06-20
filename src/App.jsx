@@ -16,6 +16,7 @@ import StaffManagement from './pages/StaffManagement';
 import ForcedPasswordChange from './components/ForcedPasswordChange';
 import StudentPerformance from './pages/StudentPerformance';
 import Settings from './pages/Settings';
+import Communication from './pages/Communication';
 import { GraduationCap } from 'lucide-react';
 import { dbService } from './database/dbService';
 import { Capacitor } from '@capacitor/core';
@@ -530,6 +531,8 @@ function App() {
         return <StudyMaterial key={tenantKey} currentUser={currentUser} verifyAction={verifyAction} />;
       case 'student_performance':
         return <StudentPerformance key={tenantKey} currentUser={currentUser} verifyAction={verifyAction} activeTenant={activeTenant} />;
+      case 'communication':
+        return <Communication key={tenantKey} currentUser={currentUser} verifyAction={verifyAction} />;
       case 'manage_centers':
         return (
           <SuperAdmin 

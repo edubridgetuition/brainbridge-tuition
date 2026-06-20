@@ -18,7 +18,8 @@ import {
   Shield,
   Key,
   TrendingUp,
-  Settings
+  Settings,
+  Megaphone
 } from 'lucide-react';
 import { dbService } from '../database/dbService';
 
@@ -231,6 +232,7 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
         { id: 'inquiries', label: 'Inquiries', icon: FileText, role: 'admin' },
         { id: 'staff', label: 'Staff Management', icon: UserCheck, role: 'admin' },
         { id: 'fees', label: 'Fees', icon: CreditCard },
+        { id: 'communication', label: 'Broadcast', icon: Megaphone, role: 'admin' },
         { id: 'settings', label: 'Settings', icon: Settings, role: 'owner' },
         { id: 'tests', label: 'Test Marks', icon: FileSpreadsheet }
       ].filter(item => isFeatureEnabled(item.id))
@@ -259,6 +261,7 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
         { id: 'timetable', label: 'Timetable', icon: Calendar },
         { id: 'inquiries', label: 'Inquiries', icon: FileText },
         { id: 'staff', label: 'Staff Management', icon: UserCheck, role: 'admin' },
+        { id: 'communication', label: 'Broadcast', icon: Megaphone, role: 'admin' },
         { id: 'tests', label: 'Test Marks', icon: FileSpreadsheet },
         { id: 'homework', label: 'Homework', icon: ClipboardList },
         { id: 'materials', label: 'Study Material', icon: Download },
