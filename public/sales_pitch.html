@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EduBridge ERP - Sales Presentation Deck</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg: #070a13;
+      --card-bg: rgba(15, 23, 42, 0.6);
+      --primary: #2563eb;
+      --primary-glow: rgba(37, 99, 235, 0.25);
+      --accent: #8b5cf6;
+      --accent-glow: rgba(139, 92, 246, 0.25);
+      --success: #10b981;
+      --border: rgba(255, 255, 255, 0.08);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: var(--bg);
+      color: var(--text-main);
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    /* Top branding header */
+    .deck-header {
+      padding: 1.5rem 3rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      background-color: rgba(7, 10, 19, 0.8);
+      backdrop-filter: blur(10px);
+      z-index: 10;
+    }
+
+    .brand-logo {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 800;
+      font-size: 1.1rem;
+      background: linear-gradient(135deg, #fff, var(--text-muted));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .brand-badge {
+      background-color: var(--primary-glow);
+      color: #60a5fa;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      padding: 0.2rem 0.6rem;
+      font-size: 0.72rem;
+      font-weight: 700;
+      border-radius: 50px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Presentation Slider Window */
+    .slides-container {
+      flex: 1;
+      position: relative;
+      width: 100%;
+      max-width: 1300px;
+      margin: 0 auto;
+      padding: 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .slide {
+      position: absolute;
+      width: 95%;
+      height: 90%;
+      opacity: 0;
+      transform: scale(0.97) translateY(10px);
+      transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+      pointer-events: none;
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 3rem;
+      align-items: center;
+      background-color: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 3.5rem;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(8px);
+    }
+
+    .slide.active {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+      pointer-events: auto;
+    }
+
+    /* Slide details */
+    .slide-content {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .slide-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      color: var(--accent);
+      font-size: 0.95rem;
+      margin-bottom: 0.5rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    .slide-title {
+      font-size: 2.3rem;
+      font-weight: 800;
+      line-height: 1.2;
+      margin-bottom: 1.25rem;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #ffffff, #94a3b8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .slide-desc {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+      margin-bottom: 2rem;
+      line-height: 1.6;
+    }
+
+    .feature-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .feature-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      font-size: 0.95rem;
+    }
+
+    .feature-icon {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background-color: rgba(16, 185, 129, 0.15);
+      color: var(--success);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 0.1rem;
+      font-weight: 800;
+      font-size: 0.75rem;
+    }
+
+    .feature-text strong {
+      color: #ffffff;
+      display: block;
+      margin-bottom: 0.15rem;
+    }
+
+    /* Graphics / media side */
+    .slide-media {
+      width: 100%;
+      height: 100%;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background-color: rgba(0, 0, 0, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .slide-media img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.8s ease;
+    }
+
+    .slide-media:hover img {
+      transform: scale(1.03);
+    }
+
+    .no-image-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 2rem;
+      text-align: center;
+    }
+
+    .no-image-icon {
+      font-size: 2.5rem;
+      color: var(--primary);
+    }
+
+    /* Bottom navigation controls */
+    .deck-footer {
+      padding: 1.5rem 3rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid var(--border);
+      background-color: rgba(7, 10, 19, 0.8);
+      z-index: 10;
+    }
+
+    .controls-group {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+    }
+
+    .nav-btn {
+      background-color: var(--card-bg);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      padding: 0.6rem 1.2rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.2s ease;
+    }
+
+    .nav-btn:hover:not(:disabled) {
+      background-color: var(--primary);
+      border-color: var(--primary);
+      box-shadow: 0 4px 12px var(--primary-glow);
+    }
+
+    .nav-btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    .slide-indicators {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .indicator-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: var(--border);
+      cursor: pointer;
+      transition: all 0.25s ease;
+    }
+
+    .indicator-dot.active {
+      width: 24px;
+      border-radius: 10px;
+      background-color: var(--primary);
+      box-shadow: 0 0 8px var(--primary);
+    }
+
+    .keyboard-hint {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Responsive overrides */
+    @media (max-width: 1024px) {
+      .slide {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+        padding: 2rem;
+        overflow-y: auto;
+      }
+      .slide-media {
+        height: 250px;
+      }
+      .slide-title {
+        font-size: 1.8rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top bar -->
+  <header class="deck-header">
+    <div class="brand-logo">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="color: var(--primary);"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+      <span>EduBridge ERP</span>
+    </div>
+    <span class="brand-badge">Coaching Sales Presentation</span>
+  </header>
+
+  <!-- Main Slides Window -->
+  <main class="slides-container">
+    
+    <!-- Slide 1: Cover -->
+    <div class="slide active">
+      <div class="slide-content">
+        <span class="slide-num">Slide 01 / 07</span>
+        <h2 class="slide-title">Run Your Tuition Center Like a Smart Business</h2>
+        <p class="slide-desc">EduBridge is a premium, mobile-first SaaS management system built to automate timetables, boost collections, keep parents updated, and optimize daily operations.</p>
+        <div class="feature-list">
+          <div class="feature-item">
+            <span class="feature-icon">✓</span>
+            <div class="feature-text">
+              <strong>Save 15+ Hours/Week</strong>
+              Timetable scheduler, homework trackers, and auto reminders.
+            </div>
+          </div>
+          <div class="feature-item">
+            <span class="feature-icon">✓</span>
+            <div class="feature-text">
+              <strong>Delight Parents & Students</strong>
+              Self-service parent login portal with performance progress cards.
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="slide-media">
+        <!-- Relative image reference for deployed Vercel site assets -->
+        <img src="/presentation_cover.png" alt="Smart Dashboard Cover Graphic">
+      </div>
+    </div>
+
+    <!-- Slide 2: The Problem -->
+    <div class="slide">
+      <div class="slide-content">
+        <span class="slide-num">Slide 02 / 07</span>
+        <h2 class="slide-title">The Administrative Headache</h2>
+        <p class="slide-desc">Coaching centers lose time and parents due to unstructured management methods. Here's why manual administration is slowing your business growth:</p>
+        <div class="feature-list">
+          <div class="feature-item">
+            <span class="feature-icon" style="background-color: rgba(239, 68, 68, 0.15); color: var(--danger);">✗</span>
+            <div class="feature-text">
+              <strong>Timetabling Conflicts</strong>
+              Overlapping teacher slots and double-booked classrooms waste student energy.
+            </div>
+          </div>
+          <div class="feature-item">
+            <span class="feature-icon" style="background-color: rgba(239, 68, 68, 0.15); color: var(--danger);">✗</span>
+            <div class="feature-text">
+              <strong>Unpaid/Pending Fee Leakages</strong>
+              Manually checking Excel logs and calling parents for fee collections is awkward and slow.
+            </div>
+          </div>
+          <div class="feature-item">
+            <span class="feature-icon" style="background-color: rgba(239, 68, 68, 0.15); color: var(--danger);">✗</span>
+            <div class="feature-text">
+              <strong>Zero Transparency for Parents</strong>
+              Parents have no visibility on daily marks, homework status, or test trends.
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="slide-media">
+        <div class="no-image-placeholder">
+          <div class="no-image-icon" style="color: var(--danger);">⚠️</div>
+          <strong style="font-size: 1.2rem; color: #ffffff;">Admin Overload</strong>
+          <p style="font-size: 0.88rem; color: var(--text-muted); max-width: 300px;">Managing batches, students, rooms, and attendance on WhatsApp and notebooks leads to confusion.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 3: Automation features -->
+    <div class="slide">
+      <div class="slide-content">
+        <span class="slide-num">Slide 03 / 07</span>
+        <h2 class="slide-title">How It Works: Streamlined in 3 Steps</h2>
+        <p class="slide-desc">EduBridge onboarding is super simple, allowing centers to transition to full automation in less than 10 minutes:</p>
+        <div class="feature-list">
+          <div class="feature-item">
+            <span class="feature-icon">1</span>
+            <div class="feature-text">
+              <strong>Register & Brand Your Center</strong>
+              Claim your unique tuition code, upload your logo, and configure dynamic custom receipt text footnotes.
+            </div>
+          </div>
+          <div class="feature-item">
+            <span class="feature-icon">2</span>
+            <div class="feature-text">
+              <strong>Add Batches & Teachers</strong>
+              Register staff accounts. Teachers can self-register and get approved instantly by the admin.
+            </div>
+          </div>
+          <div class="feature-item">
+            <span class="feature-icon">3</span>
+            <div class="feature-text">
+              <strong>Upload Students & Go Live</strong>
+              Allocate students into batches. The system automatically creates a parent login vault and sets up a pending fee schedule.
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="slide-media">
+        <div class="no-image-placeholder">
+          <div class="no-image-icon">⚙️</div>
+          <strong style="font-size: 1.2rem; color: #ffffff;">Automatic Scoping</strong>
+          <p style="font-size: 0.88rem; color: var(--text-muted); max-width: 320px;">The ERP automatically isolates each center's data under their custom namespace. Other owners cannot view your reports or configurations.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 4: AI & Powerful Modules -->
+    <div class="slide">
+      <div class="slide-content">
+        <span class="slide-num">Slide 04 / 07</span>
+        <h2 class="slide-title">Next-Gen Modules for Smart Academies</h2>
+        <p class="slide-desc">We offer advanced, feature-rich tools designed to give your coaching center a modern, premium competitive edge:</p>
+        <div class="feature-list">
+          <div class="feature-item">
+            <span class="feature-icon">✓</span>
+            <div class="feature-text">
+              <strong>AI conflict-free Timetable</strong>
+              Saves hours by checking teacher timetables and room capacities to prevent double-bookings.
+            </div>
+          </div>
+          <div class="feature-item">
+            <span class="feature-icon">✓</span>
+            <div class="feature-text">
+              <strong>Visual Report Card & PDF</strong>
+              Provides line graphs showing test trends and compares student performance against batch averages.
+            </div>
+          </div>
+          <div class="feature-item">
+            <span class="feature-icon">✓</span>
+            <div class="feature-text">
+              <strong>Homework Image Uploader</strong>
+              Teachers can attach homework reference files up to a strict 50KB size cap (optimized for fast page loads).
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="slide-media">
+        <div class="no-image-placeholder">
+          <div class="no-image-icon" style="color: var(--accent);">📊</div>
+          <strong style="font-size: 1.2rem; color: #ffffff;">AI Study Diagnostics</strong>
+          <p style="font-size: 0.88rem; color: var(--text-muted); max-width: 320px;">Utilizes Google Gemini AI diagnostics to generate chapter-specific student study tips based on their actual test grades.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 5: WhatsApp Reminders -->
+    <div class="slide">
+      <div class="slide-content">
+        <span class="slide-num">Slide 05 / 07</span>
+        <h2 class="slide-title">Boost Fee Collections by 40%</h2>
+        <p class="slide-desc">Stop chasing outstanding bills. EduBridge speeds up fee recovery while maintaining polite and professional communication with parents:</p>
+        <div class="feature-list">
+          <div class="feature-item">
+            <span class="feature-icon">✓</span>
+            <div class="feature-text">
+              <strong>Automated Reminder Dispatch</strong>
+              Generates pre-filled reminders with billing details and fee amounts.
+            </div>
+          </div>
+          <div class="feature-item">
+            <span class="feature-icon">✓</span>
+            <div class="feature-text">
+              <strong>One-Tap WhatsApp Redirect</strong>
+              Send reminders directly to parents' WhatsApp with one tap—complete with payment collection links.
+            </div>
+          </div>
+          <div class="feature-item">
+            <span class="feature-icon">✓</span>
+            <div class="feature-text">
+              <strong>Dynamic Invoice Receipts</strong>
+              Logs payment mode (UPI, Cash, Bank Transfer) and prints receipt sheets matching your custom settings.
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="slide-media">
+        <img src="/whatsapp_reminder_graphic.png" alt="WhatsApp Payment reminders graphic">
+      </div>
+    </div>
+
+    <!-- Slide 6: Security and Multi-tenancy -->
+    <div class="slide">
+      <div class="slide-content">
+        <span class="slide-num">Slide 06 / 07</span>
+        <h2 class="slide-title">Bank-Grade Data Security</h2>
+        <p class="slide-desc">Your student lists, teacher contact details, and fee summaries are fully private. We maintain a secure environment for all centers:</p>
+        <div class="feature-list">
+          <div class="feature-item">
+            <span class="feature-icon">✓</span>
+            <div class="feature-text">
+              <strong>Multi-Tenancy Segregation</strong>
+              Every tuition center operates on a separate data track. Your data is completely isolated.
+            </div>
+          </div>
+          <div class="feature-item">
+            <span class="feature-icon">✓</span>
+            <div class="feature-text">
+              <strong>Private Credentials Vaults</strong>
+              Parents and teachers can set private login passwords. SuperAdmins can reset passwords but cannot see active passwords.
+            </div>
+          </div>
+          <div class="feature-item">
+            <span class="feature-icon">✓</span>
+            <div class="feature-text">
+              <strong>OTP-Verified Critical Actions</strong>
+              Sensitive events (such as deleting a student profile or erasing timetable scheduler history) require security checks.
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="slide-media">
+        <div class="no-image-placeholder">
+          <div class="no-image-icon" style="color: var(--success);">🛡️</div>
+          <strong style="font-size: 1.2rem; color: #ffffff;">Encrypted Backups</strong>
+          <p style="font-size: 0.88rem; color: var(--text-muted); max-width: 320px;">Continuous cloud synchronization and offline LocalStorage fallback modes ensure no data loss even during internet outages.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 7: Business ROI -->
+    <div class="slide">
+      <div class="slide-content">
+        <span class="slide-num">Slide 07 / 07</span>
+        <h2 class="slide-title">Make Your Tuition Center Premium</h2>
+        <p class="slide-desc">EduBridge isn't just admin software—it's a marketing tool that makes your center look modern and premium, helping you retain parents:</p>
+        <div class="feature-list">
+          <div class="feature-item">
+            <span class="feature-icon">✓</span>
+            <div class="feature-text">
+              <strong>Modern QR Code Leads</strong>
+              Print your center's custom intake QR code on brochures to gather admission inquiries instantly online.
+            </div>
+          </div>
+          <div class="feature-item">
+            <span class="feature-icon">✓</span>
+            <div class="feature-text">
+              <strong>Showcase Testimonials</strong>
+              Collect parent feedback easily and display reviews on your portal to attract new admissions.
+            </div>
+          </div>
+          <div class="feature-item">
+            <span class="feature-icon">✓</span>
+            <div class="feature-text">
+              <strong>100% Mobile Ready</strong>
+              Compatible with Android (comes with APK package support) so teachers can record attendance on the go.
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="slide-media">
+        <div class="no-image-placeholder">
+          <div class="no-image-icon">🚀</div>
+          <strong style="font-size: 1.2rem; color: #ffffff;">Grow Your Business</strong>
+          <p style="font-size: 0.88rem; color: var(--text-muted); max-width: 300px;">Save time, recover unpaid dues, delight parents, and focus on delivering excellent education.</p>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Bottom navigation controls -->
+  <footer class="deck-footer">
+    <div class="keyboard-hint">Use Keyboard Arrow keys or Spacebar to navigate</div>
+    
+    <div class="controls-group">
+      <button class="nav-btn" id="prev-btn" onclick="changeSlide(-1)" disabled>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+        <span>Previous</span>
+      </button>
+      
+      <div class="slide-indicators" id="indicators">
+        <!-- Dots injected dynamically -->
+      </div>
+      
+      <button class="nav-btn" id="next-btn" onclick="changeSlide(1)">
+        <span>Next</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+    </div>
+  </footer>
+
+  <script>
+    let currentSlideIndex = 0;
+    const slides = document.querySelectorAll('.slide');
+    const totalSlides = slides.length;
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+    const indicatorsContainer = document.getElementById('indicators');
+
+    // Build indicator dots
+    for (let i = 0; i < totalSlides; i++) {
+      const dot = document.createElement('div');
+      dot.className = `indicator-dot ${i === 0 ? 'active' : ''}`;
+      dot.onclick = () => jumpToSlide(i);
+      indicatorsContainer.appendChild(dot);
+    }
+    const dots = document.querySelectorAll('.indicator-dot');
+
+    function updateNavigation() {
+      slides.forEach((slide, i) => {
+        if (i === currentSlideIndex) {
+          slide.classList.add('active');
+        } else {
+          slide.classList.remove('active');
+        }
+      });
+
+      dots.forEach((dot, i) => {
+        if (i === currentSlideIndex) {
+          dot.classList.add('active');
+        } else {
+          dot.classList.remove('active');
+        }
+      });
+
+      prevBtn.disabled = currentSlideIndex === 0;
+      nextBtn.disabled = currentSlideIndex === totalSlides - 1;
+    }
+
+    function changeSlide(direction) {
+      const targetIndex = currentSlideIndex + direction;
+      if (targetIndex >= 0 && targetIndex < totalSlides) {
+        currentSlideIndex = targetIndex;
+        updateNavigation();
+      }
+    }
+
+    function jumpToSlide(index) {
+      if (index >= 0 && index < totalSlides) {
+        currentSlideIndex = index;
+        updateNavigation();
+      }
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'Spacebar') {
+        e.preventDefault();
+        changeSlide(1);
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        changeSlide(-1);
+      }
+    });
+  </script>
+</body>
+</html>
