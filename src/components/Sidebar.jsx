@@ -283,7 +283,11 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
     <>
       {/* 1. DESKTOP SIDEBAR VIEW */}
       <aside className="sidebar desktop-sidebar">
-        <div className="brand-container" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        <div 
+          className="brand-container" 
+          onClick={() => setActiveTab('dashboard')} 
+          style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}
+        >
           {hasCustomLogo ? (
             <img 
               src={activeTenant.logo_url} 

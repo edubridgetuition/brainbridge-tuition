@@ -707,7 +707,11 @@ function App() {
             ? "EduBridge – Tuition ERP" 
             : (activeTenant ? activeTenant.name : "EduBridge – Tuition ERP");
           return (
-            <div className="brand-container-mobile" style={{ display: 'flex', alignItems: 'center' }}>
+            <div 
+              className="brand-container-mobile" 
+              onClick={() => handleSetActiveTab('dashboard')} 
+              style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}
+            >
               {hasCustomLogo ? (
                 <img 
                   src={activeTenant.logo_url} 
