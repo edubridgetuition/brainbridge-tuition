@@ -27,6 +27,7 @@ export default function Settings({ currentUser, activeTenant, onTenantUpdate, ve
   const [address, setAddress] = useState(activeTenant?.address || '');
   const [logoUrl, setLogoUrl] = useState(activeTenant?.logo_url || '');
   const [themeColor, setThemeColor] = useState(activeTenant?.theme_color || '#2563eb');
+  const [customOwnerTitle, setCustomOwnerTitle] = useState(activeTenant?.custom_owner_title || 'Owner admin');
   
   // Aligning receipt variables with database schema
   const [receiptSubHeader, setReceiptSubHeader] = useState(activeTenant?.receipt_sub_header || '');
@@ -191,6 +192,7 @@ export default function Settings({ currentUser, activeTenant, onTenantUpdate, ve
       address: address.trim(),
       logo_url: logoUrl,
       theme_color: themeColor,
+      custom_owner_title: customOwnerTitle.trim(),
       receipt_sub_header: receiptSubHeader.trim(),
       receipt_footer_note_1: receiptFooterNote1.trim(),
       receipt_footer_note_2: receiptFooterNote2.trim(),
@@ -481,6 +483,17 @@ export default function Settings({ currentUser, activeTenant, onTenantUpdate, ve
                     />
                   </div>
                   <div className="form-group">
+                    <label className="form-label">Owner Admin Title *</label>
+                    <input 
+                      type="text" 
+                      className="form-control"
+                      value={customOwnerTitle}
+                      onChange={(e) => setCustomOwnerTitle(e.target.value)}
+                      placeholder="E.g. Owner admin, Principal, Director"
+                      required
+                    />
+                  </div>
+                  <div className="form-group" style={{ gridColumn: 'span 2' }}>
                     <label className="form-label">Contact WhatsApp Number *</label>
                     <input 
                       type="text" 

@@ -671,7 +671,7 @@ export default function Dashboard({ setActiveTab, currentUser, verifyAction, act
                 ? 'Welcome to super admin panel'
                 : currentUser?.staffId 
                   ? (activeTenant?.custom_teacher_subtitle || 'Welcome to tuition management system') 
-                  : (activeTenant?.custom_owner_subtitle || 'Welcome to Admin panel')}
+                  : 'Welcome to Admin panel'}
             </p>
           </div>
         </div>
