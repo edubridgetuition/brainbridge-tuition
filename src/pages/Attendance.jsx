@@ -69,8 +69,10 @@ export default function Attendance({ currentUser, verifyAction }) {
           dbService.getAttendance(selectedDate)
         ]);
         
-        // Filter students belonging to this batch
-        const batchStudents = allStudents.filter(s => s.batch_id === selectedBatch);
+        // Filter and sort students belonging to this batch alphabetically
+        const batchStudents = allStudents
+          .filter(s => s.batch_id === selectedBatch)
+          .sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
         setStudents(batchStudents);
 
         // Map existing attendance log or default to 'Present'
@@ -149,6 +151,7 @@ export default function Attendance({ currentUser, verifyAction }) {
   };
 
   const handleSave = async () => {
+    if (!window.confirm("Are you sure you want to save?")) return;
     const action = async () => {
       try {
         setSaving(true);
