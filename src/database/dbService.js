@@ -1359,6 +1359,118 @@ export const dbService = {
     );
   },
 
+  async sendMessage(senderId, senderName, receiverId, receiverName, text) {
+    const msg = {
+      sender_id: senderId,
+      sender_name: senderName,
+      receiver_id: receiverId,
+      receiver_name: receiverName,
+      text: text.trim(),
+      timestamp: new Date().toISOString(),
+      read: false
+    };
+    return runQuery(
+      async () => {
+        const docRef = await addDoc(collection(db, "chats"), msg);
+        return { id: docRef.id, ...msg };
+      },
+      () => {
+        const list = getLocalData('bb_chats', []);
+        const newMsg = { id: generateUUID(), ...msg };
+        list.push(newMsg);
+        saveLocalData('bb_chats', list);
+        return newMsg;
+      }
+    );
+  },
+
+  listenToMessages(userId1, userId2, callback) {
+    if (isFirebaseConfigured && localStorage.getItem('bb_db_mode') !== 'local' && !forceLocalMode) {
+      const q = query(
+        collection(db, "chats"),
+        orderBy("timestamp", "asc")
+      );
+      return onSnapshot(q, (snapshot) => {
+        const allMsgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const filtered = allMsgs.filter(m => 
+          (m.sender_id === userId1 && m.receiver_id === userId2) ||
+          (m.sender_id === userId2 && m.receiver_id === userId1)
+        );
+        callback(filtered);
+      }, (error) => {
+        console.error("Error listening to messages:", error);
+      });
+    } else {
+      const interval = setInterval(() => {
+        const list = getLocalData('bb_chats', []);
+        const filtered = list.filter(m => 
+          (m.sender_id === userId1 && m.receiver_id === userId2) ||
+          (m.sender_id === userId2 && m.receiver_id === userId1)
+        );
+        callback(filtered);
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  },
+
+  async markMessagesAsRead(senderId, receiverId) {
+    return runQuery(
+      async () => {
+        const q = query(
+          collection(db, "chats"),
+          where("sender_id", "==", senderId),
+          where("receiver_id", "==", receiverId),
+          where("read", "==", false)
+        );
+        const querySnapshot = await getDocs(q);
+        const promises = querySnapshot.docs.map(d => {
+          const docRef = doc(db, "chats", d.id);
+          return updateDoc(docRef, { read: true });
+        });
+        await Promise.all(promises);
+        return true;
+      },
+      () => {
+        const list = getLocalData('bb_chats', []);
+        let updated = false;
+        const newList = list.map(m => {
+          if (m.sender_id === senderId && m.receiver_id === receiverId && !m.read) {
+            updated = true;
+            return { ...m, read: true };
+          }
+          return m;
+        });
+        if (updated) {
+          saveLocalData('bb_chats', newList);
+        }
+        return true;
+      }
+    );
+  },
+
+  listenToAllUnreadMessages(receiverId, callback) {
+    if (isFirebaseConfigured && localStorage.getItem('bb_db_mode') !== 'local' && !forceLocalMode) {
+      const q = query(
+        collection(db, "chats"),
+        where("receiver_id", "==", receiverId),
+        where("read", "==", false)
+      );
+      return onSnapshot(q, (snapshot) => {
+        const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        callback(list);
+      }, (error) => {
+        console.error("Error listening to unread messages:", error);
+      });
+    } else {
+      const interval = setInterval(() => {
+        const list = getLocalData('bb_chats', []);
+        const unread = list.filter(m => m.receiver_id === receiverId && !m.read);
+        callback(unread);
+      }, 2000);
+      return () => clearInterval(interval);
+    }
+  },
+
   listenToNotifications(studentId, callback) {
     if (isFirebaseConfigured && localStorage.getItem('bb_db_mode') !== 'local' && !forceLocalMode) {
       const q = query(

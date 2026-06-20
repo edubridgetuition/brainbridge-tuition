@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   LayoutDashboard, 
   Users, 
@@ -19,12 +19,25 @@ import {
   Key,
   TrendingUp,
   Settings,
-  Megaphone
+  Megaphone,
+  MessageSquare
 } from 'lucide-react';
 import { dbService } from '../database/dbService';
 
 export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout, activeTenant, setActiveTenant, allTenants = [] }) {
   const [dbMode, setDbModeState] = useState(dbService.getDbMode());
+  const [unreadMsgCount, setUnreadMsgCount] = useState(0);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    const currentUserId = currentUser.role === 'parent' ? currentUser.studentId : (currentUser.staffId || 'owner');
+    const unsubscribe = dbService.listenToAllUnreadMessages(currentUserId, (unreadList) => {
+      setUnreadMsgCount(unreadList.length);
+    });
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [currentUser]);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
@@ -212,7 +225,8 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
     {
       title: 'Core',
       items: [
-        { id: 'dashboard', label: 'Home', icon: LayoutDashboard }
+        { id: 'dashboard', label: 'Home', icon: LayoutDashboard },
+        { id: 'chat', label: 'Live Chat', icon: MessageSquare }
       ]
     },
     {
@@ -258,6 +272,7 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
   const mobileMoreItems = (currentUser?.role === 'admin' || currentUser?.role === 'superadmin'
     ? [
         ...(currentUser?.role === 'superadmin' ? [{ id: 'manage_centers', label: 'Manage Tuition Centre', icon: Shield }] : []),
+        { id: 'chat', label: 'Live Chat', icon: MessageSquare },
         { id: 'timetable', label: 'Timetable', icon: Calendar },
         { id: 'inquiries', label: 'Inquiries', icon: FileText },
         { id: 'staff', label: 'Staff Management', icon: UserCheck, role: 'admin' },
@@ -269,6 +284,7 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
         { id: 'settings', label: 'Settings', icon: Settings, role: 'owner' }
       ]
     : [
+        { id: 'chat', label: 'Live Chat', icon: MessageSquare },
         { id: 'attendance', label: 'Attendance', icon: CheckSquare },
         { id: 'timetable', label: 'Timetable', icon: Calendar },
         { id: 'tests', label: 'Test Marks', icon: FileSpreadsheet },
@@ -402,10 +418,15 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
                         <button
                           className={`nav-item ${isActive ? 'active' : ''}`}
                           onClick={() => setActiveTab(item.id)}
-                          style={{ width: '100%', background: 'none', border: 'none', textAlign: 'left' }}
+                          style={{ width: '100%', background: 'none', border: 'none', textAlign: 'left', display: 'flex', alignItems: 'center' }}
                         >
                           <Icon className="nav-icon" />
-                          <span>{item.label}</span>
+                          <span style={{ flexGrow: 1 }}>{item.label}</span>
+                          {item.id === 'chat' && unreadMsgCount > 0 && (
+                            <span style={{ backgroundColor: '#ef4444', color: 'white', padding: '0.15rem 0.4rem', borderRadius: '10px', fontSize: '0.7rem', fontWeight: '800', marginLeft: '0.5rem', minWidth: '18px', textAlign: 'center' }}>
+                              {unreadMsgCount}
+                            </span>
+                          )}
                         </button>
                       </li>
                     );
@@ -646,8 +667,13 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
                     className={`mobile-grid-item ${isActive ? 'active' : ''}`}
                     onClick={() => handleTabClick(item.id)}
                   >
-                    <div className="mobile-grid-icon-wrapper">
+                    <div className="mobile-grid-icon-wrapper" style={{ position: 'relative' }}>
                       <Icon size={22} />
+                      {item.id === 'chat' && unreadMsgCount > 0 && (
+                        <span style={{ position: 'absolute', top: '-5px', right: '-8px', backgroundColor: '#ef4444', color: 'white', padding: '0.1rem 0.3rem', borderRadius: '10px', fontSize: '0.65rem', fontWeight: '800', minWidth: '15px', textAlign: 'center', lineHeight: '1' }}>
+                          {unreadMsgCount}
+                        </span>
+                      )}
                     </div>
                     <span className="mobile-grid-label">{item.label}</span>
                   </button>
