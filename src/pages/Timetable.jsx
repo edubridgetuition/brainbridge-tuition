@@ -1,9 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { dbService, formatDateDisplay } from '../database/dbService';
 import { 
   Plus, 
   Edit, 
-  Trash2
+  Trash2,
+  Calendar,
+  Terminal,
+  Sparkles,
+  Play,
+  CheckCircle2,
+  AlertTriangle,
+  X
 } from 'lucide-react';
 
 export default function Timetable({ currentUser, verifyAction, activeTenant }) {
@@ -89,6 +96,15 @@ export default function Timetable({ currentUser, verifyAction, activeTenant }) {
   });
   const [aiIsGenerating, setAiIsGenerating] = useState(false);
   const [aiIsPublishing, setAiIsPublishing] = useState(false);
+  const [aiCommand, setAiCommand] = useState('');
+  const [aiLogs, setAiLogs] = useState([]);
+  const terminalEndRef = useRef(null);
+
+  useEffect(() => {
+    if (terminalEndRef.current) {
+      terminalEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [aiLogs]);
 
   const formatTime12h = (time24) => {
     if (!time24) return '';
@@ -99,100 +115,302 @@ export default function Timetable({ currentUser, verifyAction, activeTenant }) {
     return `${String(displayHour).padStart(2, '0')}:${minutes} ${ampm}`;
   };
 
-  const parseTimingStr = (timingStr) => {
-    if (!timingStr) return { start: '16:00', end: '17:00' };
-    try {
-      const parts = timingStr.split('-');
-      if (parts.length !== 2) return { start: '16:00', end: '17:00' };
-      
-      const parseTime = (tStr) => {
-        const clean = tStr.trim().toUpperCase();
-        const match = clean.match(/(\d+):(\d+)\s*(AM|PM)/);
-        if (!match) return '16:00';
-        let hrs = parseInt(match[1], 10);
-        const mins = match[2];
-        const ampm = match[3];
-        if (ampm === 'PM' && hrs < 12) hrs += 12;
-        if (ampm === 'AM' && hrs === 12) hrs = 0;
-        return `${String(hrs).padStart(2, '0')}:${mins}`;
-      };
-      
-      return {
-        start: parseTime(parts[0]),
-        end: parseTime(parts[1])
-      };
-    } catch (e) {
-      return { start: '16:00', end: '17:00' };
+  const parseCommandToSlots = (command, baseMondayDate) => {
+    const logs = [];
+    const draftedSlots = [];
+    
+    logs.push("🤖 Antigravity AI Parser initialized...");
+    logs.push(`📅 Week Starting Monday: ${baseMondayDate}`);
+    
+    if (!command || !command.trim()) {
+      logs.push("⚠️ Error: Empty command input. Please type an instruction.");
+      return { slots: [], logs };
     }
+    
+    const sentences = command
+      .split(/[.\n;]+/)
+      .map(s => s.trim())
+      .filter(s => s.length > 0);
+      
+    logs.push(`📝 Found ${sentences.length} instruction sentence(s) in command.`);
+    
+    const dayKeywords = {
+      Monday: ['monday', 'mon', 'somvar', 'som', 'somvaar', 'doshamba'],
+      Tuesday: ['tuesday', 'tue', 'mangalvar', 'mangal', 'mangalvaar', 'seshamba'],
+      Wednesday: ['wednesday', 'wed', 'budhvar', 'budh', 'budhvaar', 'chaharshamba'],
+      Thursday: ['thursday', 'thu', 'guruvar', 'guru', 'guruvaar', 'panjshamba'],
+      Friday: ['friday', 'fri', 'shukravar', 'shukra', 'shukravaar', 'juma'],
+      Saturday: ['saturday', 'sat', 'shanivar', 'shani', 'shanivaar', 'shamba']
+    };
+    
+    const dayOffsets = {
+      Monday: 0,
+      Tuesday: 1,
+      Wednesday: 2,
+      Thursday: 3,
+      Friday: 4,
+      Saturday: 5
+    };
+    
+    const getSlotDate = (dayName, mondayDateStr) => {
+      const monday = new Date(mondayDateStr);
+      const offset = dayOffsets[dayName] || 0;
+      const targetDate = new Date(monday);
+      targetDate.setDate(monday.getDate() + offset);
+      return targetDate.toISOString().split('T')[0];
+    };
+    
+    sentences.forEach((sentence, sIdx) => {
+      logs.push(`-----------------------------------------`);
+      logs.push(`👉 Sentence #${sIdx + 1}: "${sentence.length > 50 ? sentence.substring(0, 47) + '...' : sentence}"`);
+      
+      const matchedDays = [];
+      const lowerSentence = sentence.toLowerCase();
+      
+      if (lowerSentence.includes('daily') || lowerSentence.includes('har roz') || lowerSentence.includes('roz') || lowerSentence.includes('everyday')) {
+        matchedDays.push('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday');
+      } else {
+        Object.entries(dayKeywords).forEach(([dayName, keywords]) => {
+          const hasKeyword = keywords.some(keyword => {
+            const regex = new RegExp(`\\b${keyword}\\b`, 'i');
+            return regex.test(sentence);
+          });
+          if (hasKeyword) {
+            matchedDays.push(dayName);
+          }
+        });
+      }
+      
+      if (matchedDays.length === 0) {
+        logs.push("👉 Day missing. Defaulting to Monday.");
+        matchedDays.push('Monday');
+      } else {
+        logs.push(`👉 Mapped days: ${matchedDays.join(', ')}`);
+      }
+      
+      const timeRangeRegex = /(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\s*(?:-|to|se|tak|until|\s+)\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i;
+      const timeMatch = sentence.match(timeRangeRegex);
+      
+      let startTime = '16:00';
+      let endTime = '17:00';
+      
+      const parseTimeVal = (h, m, ampm) => {
+        let hr = parseInt(h, 10);
+        let min = m ? parseInt(m, 10) : 0;
+        let suffix = ampm ? ampm.toUpperCase() : null;
+        
+        if (!suffix) {
+          if (hr >= 1 && hr <= 8) {
+            suffix = 'PM';
+          } else if (hr >= 9 && hr <= 11) {
+            suffix = 'AM';
+          } else {
+            suffix = 'PM';
+          }
+        }
+        
+        if (suffix === 'PM' && hr < 12) hr += 12;
+        if (suffix === 'AM' && hr === 12) hr = 0;
+        
+        return `${String(hr).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+      };
+      
+      if (timeMatch) {
+        startTime = parseTimeVal(timeMatch[1], timeMatch[2], timeMatch[3]);
+        endTime = parseTimeVal(timeMatch[4], timeMatch[5], timeMatch[6] || timeMatch[3]);
+        logs.push(`👉 Time Extracted: ${formatTime12h(startTime)} - ${formatTime12h(endTime)}`);
+      } else {
+        const singleTimeRegex = /(\d{1,2})(?::(\d{2}))?\s*(am|pm)/i;
+        const singleMatch = sentence.match(singleTimeRegex);
+        if (singleMatch) {
+          startTime = parseTimeVal(singleMatch[1], singleMatch[2], singleMatch[3]);
+          const hr = parseInt(startTime.split(':')[0], 10);
+          const min = startTime.split(':')[1];
+          const endHr = (hr + 1) % 24;
+          endTime = `${String(endHr).padStart(2, '0')}:${min}`;
+          logs.push(`👉 Time Extracted: ${formatTime12h(startTime)} (Defaulted duration to 1 hour: ${formatTime12h(endTime)})`);
+        } else {
+          logs.push(`⚠️ Time missing. Defaulting to 4:00 PM - 5:00 PM.`);
+        }
+      }
+      
+      let bestBatch = null;
+      let highestScore = -1;
+      
+      batches.forEach(b => {
+        let score = 0;
+        const bName = b.name.toLowerCase();
+        const bSubject = b.subject.toLowerCase();
+        
+        if (lowerSentence.includes(bName)) {
+          score += 10;
+        }
+        
+        if (lowerSentence.includes(bSubject) || (bSubject === 'mathematics' && (lowerSentence.includes('math') || lowerSentence.includes('maths')))) {
+          score += 5;
+        }
+        
+        const standards = ['10th', '11th', '12th', '9th', '8th'];
+        standards.forEach(std => {
+          if (bName.includes(std.toLowerCase()) && (lowerSentence.includes(std) || lowerSentence.includes(std.replace('th', '')))) {
+            score += 3;
+          }
+        });
+        
+        if (b.teacher_name && lowerSentence.includes(b.teacher_name.split(' ')[0].toLowerCase())) {
+          score += 2;
+        }
+        
+        if (score > highestScore) {
+          highestScore = score;
+          bestBatch = b;
+        }
+      });
+      
+      if (bestBatch && highestScore > 0) {
+        logs.push(`👉 Batch matched: "${bestBatch.name}" (Subject: ${bestBatch.subject}, Score: ${highestScore})`);
+      } else {
+        bestBatch = batches[0];
+        logs.push(`⚠️ Batch missing or unmatched. Defaulting to first batch: "${bestBatch.name}"`);
+      }
+      
+      let teacher = bestBatch.teacher_name || 'Tutor';
+      batches.forEach(b => {
+        if (b.teacher_name) {
+          const firstName = b.teacher_name.split(' ')[0].toLowerCase();
+          const lastName = b.teacher_name.split(' ').slice(-1)[0].toLowerCase();
+          if (lowerSentence.includes(firstName) || lowerSentence.includes(lastName)) {
+            teacher = b.teacher_name;
+          }
+        }
+      });
+      logs.push(`👉 Teacher Assigned: ${teacher}`);
+      
+      let room = 'Room A';
+      const roomRegex = /\b(room\s*[a-g1-9]|hall\s*[1-9]|lab\s*[1-9]?)\b/i;
+      const roomMatch = sentence.match(roomRegex);
+      if (roomMatch) {
+        room = roomMatch[1].toUpperCase();
+        if (room.startsWith('ROOM')) {
+          room = 'Room ' + room.substring(4).trim();
+        }
+        logs.push(`👉 Room Assigned: ${room}`);
+      } else {
+        const occupiedRooms = new Set();
+        draftedSlots.forEach(ds => {
+          if (ds.date === getSlotDate(matchedDays[0] || 'Monday', baseMondayDate) &&
+              (startTime < ds.end_time && endTime > ds.start_time)) {
+            occupiedRooms.add(ds.room);
+          }
+        });
+        
+        const candidateRooms = ['Room A', 'Room B', 'Room C', 'Hall 1'];
+        const freeRoom = candidateRooms.find(r => !occupiedRooms.has(r));
+        if (freeRoom) {
+          room = freeRoom;
+          logs.push(`👉 Room Auto-allocated: ${room} (free slot)`);
+        } else {
+          room = 'Room A';
+          logs.push(`👉 Room Auto-allocated default: ${room}`);
+        }
+      }
+      
+      let topic = `Practice Session: ${bestBatch.subject}`;
+      const topicRegex = /(?:topic|lesson|chapter)\s*(?:is|:|-)?\s*["']?([^"'\n.,]+)["']?/i;
+      const topicMatch = sentence.match(topicRegex);
+      if (topicMatch) {
+        topic = topicMatch[1].trim();
+        logs.push(`👉 Topic Assigned: "${topic}"`);
+      } else {
+        logs.push(`👉 Topic: "${topic}"`);
+      }
+      
+      matchedDays.forEach(day => {
+        const slotDate = getSlotDate(day, baseMondayDate);
+        draftedSlots.push({
+          date: slotDate,
+          dayName: day,
+          batch_id: bestBatch.id,
+          batchName: bestBatch.name,
+          subject: bestBatch.subject,
+          start_time: startTime,
+          end_time: endTime,
+          topic: topic,
+          teacher_name: teacher,
+          room: room,
+          hasConflict: false,
+          conflictReason: ''
+        });
+      });
+    });
+    
+    logs.push(`-----------------------------------------`);
+    logs.push(`🔍 Running conflict checks...`);
+    
+    draftedSlots.forEach((slot, idx) => {
+      for (let i = 0; i < draftedSlots.length; i++) {
+        if (i === idx) continue;
+        const other = draftedSlots[i];
+        
+        if (slot.date === other.date) {
+          const overlap = (slot.start_time < other.end_time && slot.end_time > other.start_time);
+          if (overlap) {
+            if (slot.room === other.room) {
+              slot.hasConflict = true;
+              slot.conflictReason = `Room conflict: ${slot.room} is occupied by ${other.batchName}`;
+            }
+            if (slot.teacher_name === other.teacher_name) {
+              slot.hasConflict = true;
+              slot.conflictReason = `Teacher conflict: ${slot.teacher_name} is teaching ${other.batchName}`;
+            }
+          }
+        }
+      }
+      
+      if (slot.hasConflict) {
+        logs.push(`⚠️ Conflict on ${slot.dayName} (${slot.date}) at ${formatTime12h(slot.start_time)}: ${slot.conflictReason}`);
+      } else {
+        logs.push(`✅ Slot on ${slot.dayName} (${slot.date}) at ${formatTime12h(slot.start_time)} verified!`);
+      }
+    });
+    
+    logs.push(`-----------------------------------------`);
+    logs.push(`🎉 Parser complete! ${draftedSlots.length} drafted slot(s) generated.`);
+    
+    return { slots: draftedSlots, logs };
   };
 
-  const generateAiTimetable = () => {
+  const processAiCommand = () => {
     if (batches.length === 0) {
       alert("No batches defined. Cannot generate timetable.");
       return;
     }
-    setAiIsGenerating(true);
+    if (!aiCommand.trim()) {
+      alert("Please enter a scheduling command.");
+      return;
+    }
     
-    setTimeout(() => {
-      const generated = [];
-      const mondayDate = new Date(aiSelectedMonday);
-      const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-      
-      for (let d = 0; d < 6; d++) {
-        const currentDate = new Date(mondayDate);
-        currentDate.setDate(mondayDate.getDate() + d);
-        const dateStr = currentDate.toISOString().split('T')[0];
-        
-        const allocationRegistry = {};
-        
-        batches.forEach((batch) => {
-          const { start, end } = parseTimingStr(batch.timing);
-          const timeKey = `${start}-${end}`;
-          
-          if (!allocationRegistry[timeKey]) {
-            allocationRegistry[timeKey] = {
-              rooms: new Set(),
-              teachers: new Set()
-            };
-          }
-          
-          const registry = allocationRegistry[timeKey];
-          const teacher = batch.teacher_name || 'Tutor';
-          
-          let room = 'Room A';
-          const defaultRooms = ['Room A', 'Room B', 'Room C', 'Hall 1', 'Hall 2'];
-          for (const candidateRoom of defaultRooms) {
-            if (!registry.rooms.has(candidateRoom)) {
-              room = candidateRoom;
-              break;
-            }
-          }
-          
-          let teacherConflict = registry.teachers.has(teacher);
-          
-          generated.push({
-            date: dateStr,
-            dayName: dayNames[d],
-            batch_id: batch.id,
-            batchName: batch.name,
-            subject: batch.subject,
-            start_time: start,
-            end_time: end,
-            topic: `Practice Session: ${batch.subject}`,
-            teacher_name: teacher,
-            room: room,
-            hasConflict: teacherConflict,
-            conflictReason: teacherConflict ? `Teacher ${teacher} already has a class scheduled at ${formatTime12h(start)} - ${formatTime12h(end)}` : ''
-          });
-          
-          registry.rooms.add(room);
-          registry.teachers.add(teacher);
-        });
+    setAiIsGenerating(true);
+    setAiLogs([]);
+    setAiDraftSlots([]);
+    
+    const { slots, logs } = parseCommandToSlots(aiCommand, aiSelectedMonday);
+    
+    let idx = 0;
+    const timer = setInterval(() => {
+      if (idx < logs.length) {
+        setAiLogs(prev => [...prev, logs[idx]]);
+        idx++;
+      } else {
+        clearInterval(timer);
+        setAiDraftSlots(slots);
+        setAiIsGenerating(false);
       }
-      
-      setAiDraftSlots(generated);
-      setAiIsGenerating(false);
-    }, 1000);
+    }, 100);
+  };
+
+  const handleRemoveDraftSlot = (index) => {
+    setAiDraftSlots(prev => prev.filter((_, idx) => idx !== index));
   };
 
   const handlePublishAiTimetable = async () => {
@@ -639,15 +857,68 @@ export default function Timetable({ currentUser, verifyAction, activeTenant }) {
 
       {activeSubTab === 'ai' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-          <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#1e3a8a', margin: 0 }}>🤖 AI Timetable Draft Generator</h3>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
-              Specify the week's starting Monday date. The generator will draft conflict-free room schedules, avoiding overlapping classes for the same rooms/teachers.
-            </p>
-            
-            <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap', alignItems: 'flex-end', marginTop: '0.5rem' }}>
-              <div className="form-group" style={{ marginBottom: 0, minWidth: '200px' }}>
-                <label className="form-label">Week Starting (Monday)</label>
+          <style>{`
+            @keyframes blink {
+              50% { opacity: 0; }
+            }
+            .terminal-cursor {
+              animation: blink 1s step-start infinite;
+            }
+            .chip-button {
+              background: var(--bg-card);
+              border: 1px solid var(--border-color);
+              padding: 0.5rem 0.85rem;
+              border-radius: 50px;
+              font-size: 0.78rem;
+              font-weight: 600;
+              color: var(--text-secondary);
+              cursor: pointer;
+              transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+            .chip-button:hover {
+              transform: translateY(-2px);
+              border-color: var(--primary);
+              background: var(--primary-glow);
+              color: var(--primary);
+            }
+            .terminal-window {
+              background: #090d16;
+              border: 1px solid #1e293b;
+              border-radius: var(--radius-lg);
+              padding: 1.25rem;
+              font-family: 'Consolas', 'Courier New', monospace;
+              font-size: 0.84rem;
+              line-height: 1.6;
+              color: #a7f3d0;
+              box-shadow: inset 0 2px 8px rgba(0,0,0,0.8), var(--shadow-premium);
+              max-height: 320px;
+              overflow-y: auto;
+            }
+            .terminal-log-line {
+              margin-bottom: 0.25rem;
+              word-break: break-word;
+            }
+            .log-success { color: #10b981; text-shadow: 0 0 1px #10b981; }
+            .log-warning { color: #ef4444; text-shadow: 0 0 1px #ef4444; }
+            .log-info { color: #38bdf8; text-shadow: 0 0 1px #38bdf8; }
+            .log-normal { color: #a7f3d0; }
+          `}</style>
+
+          <div className="card" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
+              <div>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Sparkles size={20} style={{ color: 'var(--primary)' }} /> AI Command Timetable Generator
+                </h3>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.35rem', margin: 0 }}>
+                  Enter commands in Hinglish, Hindi, or English to schedule your classes automatically.
+                </p>
+              </div>
+
+              <div className="form-group" style={{ marginBottom: 0, minWidth: '220px' }}>
+                <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <Calendar size={14} /> Week Starting (Monday)
+                </label>
                 <input 
                   type="date" 
                   className="form-control" 
@@ -655,22 +926,95 @@ export default function Timetable({ currentUser, verifyAction, activeTenant }) {
                   onChange={(e) => setAiSelectedMonday(e.target.value)} 
                 />
               </div>
-              
+            </div>
+
+            <hr style={{ border: 0, borderTop: '1px solid var(--border-color)', margin: '0' }} />
+
+            <div className="form-group" style={{ margin: 0 }}>
+              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: '800' }}>
+                <Terminal size={14} style={{ color: 'var(--primary)' }} /> Write Scheduling Command
+              </label>
+              <textarea
+                className="form-control"
+                style={{ 
+                  minHeight: '90px', 
+                  fontSize: '0.9rem', 
+                  lineHeight: '1.5', 
+                  fontFamily: 'inherit',
+                  borderColor: 'var(--border-color)',
+                  borderRadius: 'var(--radius-md)'
+                }}
+                placeholder="E.g., Monday and Wednesday ko Class 10 Math 4 PM se 5:30 PM tak kar do in Room A. Teacher: Rakesh Sharma. Topic: Quadratic Equations."
+                value={aiCommand}
+                onChange={(e) => setAiCommand(e.target.value)}
+                disabled={aiIsGenerating}
+              />
+            </div>
+
+            <div>
+              <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: '800', display: 'block', marginBottom: '0.5rem' }}>
+                💡 Click to try quick examples:
+              </span>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.6rem' }}>
+                <button 
+                  type="button"
+                  className="chip-button"
+                  onClick={() => setAiCommand("Monday ko Class 10 Math 4pm se 5pm kar do Room A me, Teacher Rakesh")}
+                  disabled={aiIsGenerating}
+                >
+                  🇮🇳 Hinglish: 10th Math Mon 4-5 PM
+                </button>
+                <button 
+                  type="button"
+                  className="chip-button"
+                  onClick={() => setAiCommand("Schedule Physics for Class 11 on Tuesday 5:30 to 6:30 PM, Room B, Neha Patel. Topic: Electrostatics.")}
+                  disabled={aiIsGenerating}
+                >
+                  🇬🇧 English: 11th Physics Tue 5:30-6:30 PM
+                </button>
+                <button 
+                  type="button"
+                  className="chip-button"
+                  onClick={() => setAiCommand("Monday and Wednesday Class 12 Accounts 6:30 PM to 7:30 PM, Room C, Mehta sir")}
+                  disabled={aiIsGenerating}
+                >
+                  🔄 Multi-day: 12th Accounts Mon/Wed
+                </button>
+                <button 
+                  type="button"
+                  className="chip-button"
+                  onClick={() => setAiCommand("Daily Class 10 Math 4 PM - 5 PM kar do Room A me, teacher Rakesh. Topic: Geometry Practice.")}
+                  disabled={aiIsGenerating}
+                >
+                  📅 Recurring: Daily Math 4-5 PM
+                </button>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
               <button 
                 className="btn btn-primary" 
-                onClick={generateAiTimetable}
+                onClick={processAiCommand}
                 disabled={aiIsGenerating}
-                style={{ width: 'auto', display: 'inline-flex', alignItems: 'center' }}
+                style={{ width: 'auto', display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: 'linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%)', boxShadow: '0 4px 14px var(--primary-glow)' }}
               >
-                {aiIsGenerating ? 'Generating Draft...' : 'Draft Weekly Timetable'}
+                {aiIsGenerating ? (
+                  <>
+                    <span className="spinner-border spinner-border-sm" style={{ width: '12px', height: '12px', borderWidth: '2px', borderStyle: 'solid', animation: 'spin 1s linear infinite' }} /> Parsing command...
+                  </>
+                ) : (
+                  <>
+                    <Play size={16} /> Process Command
+                  </>
+                )}
               </button>
 
-              {aiDraftSlots.length > 0 && (
+              {aiDraftSlots.length > 0 && !aiIsGenerating && (
                 <button 
                   className="btn" 
                   onClick={handlePublishAiTimetable}
                   disabled={aiIsPublishing}
-                  style={{ backgroundColor: '#10b981', color: '#ffffff', width: 'auto', display: 'inline-flex', alignItems: 'center' }}
+                  style={{ backgroundColor: '#10b981', color: '#ffffff', width: 'auto', display: 'inline-flex', alignItems: 'center', gap: '0.4rem', boxShadow: '0 4px 14px rgba(16, 185, 129, 0.25)' }}
                 >
                   {aiIsPublishing ? 'Publishing...' : 'Publish AI Timetable'}
                 </button>
@@ -678,11 +1022,58 @@ export default function Timetable({ currentUser, verifyAction, activeTenant }) {
             </div>
           </div>
 
-          {/* AI Draft Preview */}
-          {aiDraftSlots.length > 0 && (
-            <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {/* Terminal Console Logs */}
+          {aiLogs.length > 0 && (
+            <div className="card" style={{ padding: '1.25rem', backgroundColor: '#05070c', borderColor: '#111827' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                <span style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: '800', fontFamily: 'monospace', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: aiIsGenerating ? '#eab308' : '#22c55e', animation: aiIsGenerating ? 'pulse 1.5s infinite' : 'none' }} />
+                  ANTIGRAVITY AI TERMINAL OUTPUT
+                </span>
+                <button 
+                  style={{ background: 'none', border: 'none', color: '#64748b', fontSize: '0.72rem', cursor: 'pointer', fontFamily: 'monospace' }}
+                  onClick={() => setAiLogs([])}
+                  disabled={aiIsGenerating}
+                >
+                  Clear Console
+                </button>
+              </div>
+
+              <div className="terminal-window">
+                {aiLogs.map((log, lIdx) => {
+                  let cls = 'log-normal';
+                  if (log.includes('SUCCESS') || log.includes('✅') || log.includes('complete')) {
+                    cls = 'log-success';
+                  } else if (log.includes('Error') || log.includes('⚠️') || log.includes('Conflict') || log.includes('missing')) {
+                    cls = 'log-warning';
+                  } else if (log.includes('👉') || log.includes('📅') || log.includes('📝')) {
+                    cls = 'log-info';
+                  }
+                  
+                  return (
+                    <div key={lIdx} className={`terminal-log-line ${cls}`}>
+                      {log}
+                      {lIdx === aiLogs.length - 1 && aiIsGenerating && (
+                        <span className="terminal-cursor" style={{ fontWeight: 'bold' }}>_</span>
+                      )}
+                    </div>
+                  );
+                })}
+                <div ref={terminalEndRef} />
+              </div>
+            </div>
+          )}
+
+          {/* AI Draft Preview Grid */}
+          {aiDraftSlots.length > 0 && !aiIsGenerating && (
+            <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h4 style={{ fontSize: '1rem', fontWeight: '800', margin: 0 }}>📋 Generated Weekly Draft Preview</h4>
+                <div>
+                  <h4 style={{ fontSize: '1rem', fontWeight: '800', margin: 0 }}>📋 Generated Weekly Draft Preview</h4>
+                  <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: '0.2rem 0 0 0' }}>
+                    Review drafted slots and click publish. Conflicts must be cleared or acknowledged.
+                  </p>
+                </div>
                 <button 
                   style={{ background: 'none', border: 'none', color: 'var(--danger)', fontSize: '0.8rem', cursor: 'pointer', fontWeight: '700' }}
                   onClick={() => setAiDraftSlots([])}
@@ -702,6 +1093,7 @@ export default function Timetable({ currentUser, verifyAction, activeTenant }) {
                       <th>Assigned Teacher</th>
                       <th>Assigned Room</th>
                       <th>Optimization Status</th>
+                      <th style={{ textAlign: 'center' }}>Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -725,6 +1117,16 @@ export default function Timetable({ currentUser, verifyAction, activeTenant }) {
                               ✅ Optimal (Conflict-Free)
                             </span>
                           )}
+                        </td>
+                        <td data-label="Action" style={{ textAlign: 'center' }}>
+                          <button 
+                            type="button"
+                            className="btn btn-secondary" 
+                            style={{ padding: '0.3rem 0.5rem', color: 'var(--danger)', display: 'inline-flex', alignItems: 'center' }}
+                            onClick={() => handleRemoveDraftSlot(idx)}
+                          >
+                            <Trash2 size={13} />
+                          </button>
                         </td>
                       </tr>
                     ))}
