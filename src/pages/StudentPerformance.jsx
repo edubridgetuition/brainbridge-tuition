@@ -14,6 +14,8 @@ export default function StudentPerformance({ currentUser, verifyAction, activeTe
   // Selector States
   const [selectedBatchId, setSelectedBatchId] = useState('All');
   const [selectedStudentId, setSelectedStudentId] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [viewMode, setViewMode] = useState('list'); // 'list' or 'details'
   
   // AI State
   const [aiLoading, setAiLoading] = useState(false);
@@ -75,8 +77,12 @@ export default function StudentPerformance({ currentUser, verifyAction, activeTe
 
       if (currentUser?.role === 'parent' && currentUser.studentId) {
         setSelectedStudentId(currentUser.studentId);
-      } else if (studentList.length > 0) {
-        setSelectedStudentId(studentList[0].id);
+        setViewMode('details');
+      } else {
+        setViewMode('list');
+        if (studentList.length > 0) {
+          setSelectedStudentId(studentList[0].id);
+        }
       }
     } catch (err) {
       console.error("Failed to load performance metrics:", err);
@@ -312,6 +318,11 @@ export default function StudentPerformance({ currentUser, verifyAction, activeTe
     ? students 
     : students.filter(s => s.batch_id === selectedBatchId);
 
+  const searchedStudents = filteredStudents.filter(s => 
+    s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    s.mobile.includes(searchQuery)
+  );
+
   return (
     <div className="fade-in">
       
@@ -325,9 +336,18 @@ export default function StudentPerformance({ currentUser, verifyAction, activeTe
             </div>
             
             {metrics && hasReportAccess && (
-              <button className="btn btn-primary" onClick={handlePrint}>
-                <Download size={18} style={{ marginRight: '0.4rem' }} /> Print Report Card
-              </button>
+              <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                {isAdmin && viewMode === 'details' && (
+                  <button className="btn btn-secondary" onClick={() => { setViewMode('list'); setAiFeedback(null); }}>
+                    Back to Directory
+                  </button>
+                )}
+                {viewMode === 'details' && (
+                  <button className="btn btn-primary" onClick={handlePrint}>
+                    <Download size={18} style={{ marginRight: '0.4rem' }} /> Print Report Card
+                  </button>
+                )}
+              </div>
             )}
           </div>
 
@@ -344,18 +364,31 @@ export default function StudentPerformance({ currentUser, verifyAction, activeTe
                 </select>
               </div>
 
-              <div className="form-group" style={{ marginBottom: 0, minWidth: '220px', flex: 1 }}>
-                <label className="form-label" style={{ fontWeight: '700' }}>Select Student</label>
-                <select className="form-control" value={selectedStudentId} onChange={e => handleStudentChange(e.target.value)} disabled={filteredStudents.length === 0}>
-                  {filteredStudents.length === 0 ? (
-                    <option value="">No students in batch</option>
-                  ) : (
-                    filteredStudents.map(s => (
-                      <option key={s.id} value={s.id}>{s.name} (Roll: {s.mobile.slice(-4)})</option>
-                    ))
-                  )}
-                </select>
-              </div>
+              {viewMode === 'list' ? (
+                <div className="form-group" style={{ marginBottom: 0, minWidth: '220px', flex: 1 }}>
+                  <label className="form-label" style={{ fontWeight: '700' }}>Filter by Student (Name or Roll Number)</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Search by student name or phone roll digits..."
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                  />
+                </div>
+              ) : (
+                <div className="form-group" style={{ marginBottom: 0, minWidth: '220px', flex: 1 }}>
+                  <label className="form-label" style={{ fontWeight: '700' }}>Select Student</label>
+                  <select className="form-control" value={selectedStudentId} onChange={e => handleStudentChange(e.target.value)} disabled={filteredStudents.length === 0}>
+                    {filteredStudents.length === 0 ? (
+                      <option value="">No students in batch</option>
+                    ) : (
+                      filteredStudents.map(s => (
+                        <option key={s.id} value={s.id}>{s.name} (Roll: {s.mobile.slice(-4)})</option>
+                      ))
+                    )}
+                  </select>
+                </div>
+              )}
             </div>
           )}
 
@@ -365,6 +398,87 @@ export default function StudentPerformance({ currentUser, verifyAction, activeTe
               <Award size={48} style={{ margin: '0 auto 1rem', color: 'var(--text-muted)' }} />
               <p style={{ fontWeight: '600', fontSize: '1.1rem' }}>Access Restricted</p>
               <p style={{ fontSize: '0.88rem' }}>SuperAdmin has disabled student performance reporting access for your account role.</p>
+            </div>
+          ) : viewMode === 'list' && isAdmin ? (
+            /* Student-wise Performance Directory List */
+            <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', padding: '1.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#1e3a8a', margin: 0 }}>👥 Student-wise Performance Overview</h3>
+                <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Showing {searchedStudents.length} students</span>
+              </div>
+              
+              {searchedStudents.length === 0 ? (
+                <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                  No students found matching your filters.
+                </div>
+              ) : (
+                <div className="table-container" style={{ margin: 0, overflowX: 'auto' }}>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Student Name</th>
+                        <th>Roll Number</th>
+                        <th>Batch</th>
+                        <th style={{ textAlign: 'center' }}>Attendance Rate</th>
+                        <th style={{ textAlign: 'center' }}>Avg Exam Score</th>
+                        <th style={{ textAlign: 'center' }}>Hw Efficiency</th>
+                        <th style={{ textAlign: 'center' }}>Standing / Grade</th>
+                        <th style={{ textAlign: 'center' }}>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {searchedStudents.map(student => {
+                        const m = calculateMetrics(student.id);
+                        if (!m) return null;
+                        return (
+                          <tr key={student.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                            <td data-label="Student Name" style={{ fontWeight: '700', color: 'var(--text-primary)' }}>
+                              {student.name}
+                            </td>
+                            <td data-label="Roll Number">{student.mobile.slice(-4)}</td>
+                            <td data-label="Batch">{m.batchName}</td>
+                            <td data-label="Attendance Rate" style={{ textAlign: 'center', fontWeight: '700', color: m.attendanceRate >= 90 ? '#10b981' : m.attendanceRate >= 75 ? '#f59e0b' : '#ef4444' }}>
+                              {m.attendanceRate}%
+                            </td>
+                            <td data-label="Avg Exam Score" style={{ textAlign: 'center', fontWeight: '700', color: m.averageScore >= 75 ? '#10b981' : m.averageScore >= 50 ? '#f59e0b' : '#ef4444' }}>
+                              {m.averageScore}%
+                            </td>
+                            <td data-label="Hw Efficiency" style={{ textAlign: 'center', fontWeight: '700', color: m.homeworkRate >= 90 ? '#10b981' : m.homeworkRate >= 70 ? '#f59e0b' : '#ef4444' }}>
+                              {m.homeworkRate}%
+                            </td>
+                            <td data-label="Standing / Grade" style={{ textAlign: 'center' }}>
+                              <span style={{
+                                fontSize: '0.75rem',
+                                fontWeight: '800',
+                                backgroundColor: `${m.color}15`,
+                                color: m.color,
+                                padding: '0.2rem 0.6rem',
+                                borderRadius: '50px',
+                                display: 'inline-block'
+                              }}>
+                                {m.grade} ({m.label})
+                              </span>
+                            </td>
+                            <td data-label="Action" style={{ textAlign: 'center' }}>
+                              <button 
+                                className="btn btn-secondary" 
+                                onClick={() => {
+                                  setSelectedStudentId(student.id);
+                                  setViewMode('details');
+                                  setAiFeedback(null);
+                                }}
+                                style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem', height: 'auto', width: 'auto', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
+                              >
+                                <Eye size={12} /> View Details
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           ) : !metrics ? (
             <div className="card" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
