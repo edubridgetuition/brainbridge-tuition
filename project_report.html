@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EduBridge ERP - Comprehensive Technical Report</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --panel-bg: #111827;
+      --card-bg: rgba(30, 41, 59, 0.4);
+      --card-hover: rgba(30, 41, 59, 0.6);
+      --primary: #3b82f6;
+      --primary-glow: rgba(59, 130, 246, 0.15);
+      --accent: #8b5cf6;
+      --accent-glow: rgba(139, 92, 246, 0.15);
+      --success: #10b981;
+      --success-glow: rgba(16, 185, 129, 0.15);
+      --danger: #ef4444;
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --border: #334155;
+      --code-bg: #1e293b;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: var(--bg);
+      color: var(--text-main);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* Layout structure */
+    .app-container {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* Sidebar styles */
+    .sidebar {
+      width: 280px;
+      background-color: var(--panel-bg);
+      border-right: 1px solid var(--border);
+      position: fixed;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      display: flex;
+      flex-direction: column;
+      padding: 1.75rem;
+      z-index: 100;
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding-bottom: 2rem;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 2rem;
+    }
+
+    .logo-circle {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: 800;
+      font-size: 1.25rem;
+      box-shadow: 0 4px 12px var(--primary-glow);
+    }
+
+    .logo-text h1 {
+      font-size: 1.15rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #fff, #9ca3af);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .logo-text p {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .nav-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .nav-item button {
+      width: 100%;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      text-align: left;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.88rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      transition: all 0.2s ease;
+    }
+
+    .nav-item button:hover {
+      color: var(--text-main);
+      background-color: var(--card-bg);
+    }
+
+    .nav-item.active button {
+      color: #ffffff;
+      background: linear-gradient(135deg, var(--primary), rgba(59, 130, 246, 0.4));
+      box-shadow: 0 4px 12px var(--primary-glow);
+    }
+
+    /* Main Content styles */
+    .main-content {
+      flex: 1;
+      margin-left: 280px;
+      padding: 3rem;
+      max-width: 1200px;
+    }
+
+    .header-banner {
+      margin-bottom: 3rem;
+      position: relative;
+    }
+
+    .header-banner::after {
+      content: '';
+      position: absolute;
+      top: -20px;
+      right: -20px;
+      width: 200px;
+      height: 200px;
+      background: radial-gradient(circle, var(--primary-glow) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .badge {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--primary);
+      background-color: var(--primary-glow);
+      padding: 0.25rem 0.75rem;
+      border-radius: 50px;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      margin-bottom: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .title {
+      font-size: 2.5rem;
+      font-weight: 800;
+      color: #ffffff;
+      margin-bottom: 0.5rem;
+      letter-spacing: -0.02em;
+    }
+
+    .subtitle {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      font-weight: 400;
+    }
+
+    /* Report Sections */
+    .section-card {
+      background-color: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2.5rem;
+      margin-bottom: 2.5rem;
+      box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5);
+    }
+
+    .section-title {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.75rem;
+    }
+
+    .section-title svg {
+      color: var(--primary);
+    }
+
+    p.desc {
+      color: var(--text-muted);
+      margin-bottom: 1.5rem;
+      font-size: 1rem;
+    }
+
+    /* Grid layout inside sections */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    /* Feature block card */
+    .feature-block {
+      background-color: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      transition: all 0.25s ease;
+    }
+
+    .feature-block:hover {
+      background-color: var(--card-hover);
+      transform: translateY(-2px);
+      border-color: var(--primary);
+    }
+
+    .feature-block h3 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .feature-block h3 svg {
+      color: var(--accent);
+    }
+
+    .feature-block p {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+    }
+
+    /* Tables styling */
+    .table-wrapper {
+      width: 100%;
+      overflow-x: auto;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      margin: 1.5rem 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.88rem;
+    }
+
+    th {
+      background-color: rgba(15, 23, 42, 0.8);
+      color: #ffffff;
+      font-weight: 700;
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--border);
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+    }
+
+    td {
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-main);
+      vertical-align: top;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background-color: rgba(255,255,255,0.02);
+    }
+
+    /* Data types badges in table */
+    .type-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--accent);
+      background-color: var(--accent-glow);
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      border: 1px solid rgba(139, 92, 246, 0.2);
+    }
+
+    .key-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: #b45309;
+      background-color: rgba(217, 119, 6, 0.12);
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      border: 1px solid rgba(217, 119, 6, 0.2);
+    }
+
+    /* Algorithm details */
+    .algorithm-container {
+      background-color: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      color: #e2e8f0;
+      overflow-x: auto;
+      margin: 1rem 0;
+    }
+
+    .algorithm-step {
+      margin-bottom: 0.5rem;
+    }
+    
+    .comment {
+      color: #64748b;
+      font-style: italic;
+    }
+
+    .keyword {
+      color: #f472b6;
+      font-weight: 600;
+    }
+
+    .function-name {
+      color: #60a5fa;
+    }
+
+    .string {
+      color: #34d399;
+    }
+
+    /* Flow diagram styles */
+    .diagram-container {
+      background-color: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
+      margin: 1.5rem 0;
+    }
+
+    .diagram-node {
+      background-color: var(--panel-bg);
+      border: 1px solid var(--primary);
+      border-radius: 8px;
+      padding: 0.75rem 1.25rem;
+      text-align: center;
+      font-weight: 600;
+      min-width: 180px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+      position: relative;
+    }
+
+    .diagram-arrow {
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      line-height: 1;
+    }
+
+    /* Responsive overrides */
+    @media (max-width: 1024px) {
+      .sidebar {
+        width: 80px;
+        padding: 1rem 0.5rem;
+      }
+      .logo-text, .nav-item span {
+        display: none;
+      }
+      .logo-circle {
+        margin: 0 auto;
+      }
+      .nav-item button {
+        justify-content: center;
+        padding: 0.75rem;
+      }
+      .main-content {
+        margin-left: 80px;
+        padding: 2rem;
+      }
+      .grid-2, .grid-3 {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-container">
+    
+    <!-- Sidebar navigation -->
+    <aside class="sidebar">
+      <div class="logo-container">
+        <div class="logo-circle">EB</div>
+        <div class="logo-text">
+          <h1>EduBridge ERP</h1>
+          <p>Technical Architecture</p>
+        </div>
+      </div>
+      
+      <nav>
+        <ul class="nav-list">
+          <li class="nav-item active"><button onclick="switchTab('overview')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg><span>System Modules</span></button></li>
+          <li class="nav-item"><button onclick="switchTab('workflows')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg><span>Working Flows & APIs</span></button></li>
+          <li class="nav-item"><button onclick="switchTab('algorithms')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><span>Core Algorithms</span></button></li>
+          <li class="nav-item"><button onclick="switchTab('database')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"/></svg><span>Data Dictionary</span></button></li>
+        </ul>
+      </nav>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      
+      <!-- Top header banner -->
+      <header class="header-banner">
+        <span class="badge">EduBridge Technical Documentation</span>
+        <h2 class="title">System Architecture & Feature Report</h2>
+        <p class="subtitle">Complete functional overview, API specs, database structure, and core algorithms of the Multi-Tenant Tuition ERP.</p>
+      </header>
+
+      <!-- TAB 1: OVERVIEW & MODULES -->
+      <div id="tab-overview" class="tab-content">
+        
+        <section class="section-card">
+          <h2 class="section-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+            Module-Wise Feature Breakdown
+          </h2>
+          <p class="desc">The application consists of several modular systems designed for administrators, teachers, and student/parent viewports under a secure multi-tenant structure.</p>
+          
+          <div class="grid-2">
+            <div class="feature-block">
+              <h3>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                SuperAdmin Panel
+              </h3>
+              <p>Acts as the master licensing dashboard. Enables creating new tenants, toggling page-level visibility (students register, timetable features, analytics), configures custom receipt footprints (subheader and footer disclaimer notes), and monitors overall platform usage statistics (number of students, database size in KBs per tenant).</p>
+            </div>
+            
+            <div class="feature-block">
+              <h3>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                Timetable (Manual & AI Solver)
+              </h3>
+              <p>Provides dual options: a manual calendar grid scheduler to assign batch classes, and a local deterministic AI algorithm designed to resolve room conflicts and teacher timing overlaps instantly by matching slot availabilities.</p>
+            </div>
+
+            <div class="feature-block">
+              <h3>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                Staff Management
+              </h3>
+              <p>Manages approval flow for newly registered teachers. Clicking a teacher's name triggers a modal detailing credentials, designation, and an interactive **Subjects Taught** editor. Supports standard checkbox listings, custom tag definitions, and a secure password reset dispatcher.</p>
+            </div>
+
+            <div class="feature-block">
+              <h3>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                Student Performance Analytics
+              </h3>
+              <p>Aggregates test marks, homework completion efficiency, and class attendance percentages. Generates dynamic line charts of academic progress, peers rankings benchmarks, chapter-specific Gemini AI diagnostic remarks, and exports a clean printable Report Card PDF.</p>
+            </div>
+
+            <div class="feature-block">
+              <h3>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                Homework & Submission Tracker
+              </h3>
+              <p>Allows teachers to assign study materials and assignments. Supports uploading Base64 attachment files (constrained under a strict 50KB memory limit to optimize storage). Features a submission sheet indicating Status (Submitted, Late, Not Submitted) and submission date stamps.</p>
+            </div>
+
+            <div class="feature-block">
+              <h3>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="12" y1="4" x2="12" y2="20"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
+                Fees & Collections
+              </h3>
+              <p>Tracks due dates, outstanding fees, and paid records. Features a clean search engine mapping dates, amount ranges, and student names. Generates a custom receipts pop-up and dispatches direct payment collection links via WhatsApp.</p>
+            </div>
+          </div>
+        </section>
+
+      </div>
+
+      <!-- TAB 2: WORKFLOWS & APIS -->
+      <div id="tab-workflows" class="tab-content" style="display: none;">
+        
+        <section class="section-card">
+          <h2 class="section-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+            Core Operations Workflow
+          </h2>
+          
+          <div class="diagram-container">
+            <div class="diagram-node" style="border-color: var(--primary);">Tenant URL Entry</div>
+            <div class="diagram-arrow">↓</div>
+            <div class="diagram-node" style="border-color: var(--accent);">Resolve Tenant Code (e.g. owner_a)</div>
+            <div class="diagram-arrow">↓</div>
+            <div class="diagram-node" style="border-color: var(--primary);">Load Database Scoped Keys / Collections</div>
+            <div class="diagram-arrow">↓</div>
+            <div class="diagram-node" style="border-color: var(--success);">Synchronize LocalStorage & Firestore</div>
+          </div>
+
+          <p class="desc" style="margin-top: 1rem;">The system utilizes a secure wrapper framework resolving settings and feature availability scoped by the active tenant code, ensuring isolated namespaces for multi-tenancy.</p>
+        </section>
+
+        <section class="section-card">
+          <h2 class="section-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+            API Specifications & Data Flows
+          </h2>
+          
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Module Name</th>
+                  <th>Method Signature (Frontend wrapper)</th>
+                  <th>Operation Type</th>
+                  <th>Source / Target Collection</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- SuperAdmin -->
+                <tr>
+                  <td rowspan="2" style="font-weight: 700;">SuperAdmin</td>
+                  <td><code class="type-badge">getTenants()</code></td>
+                  <td>Read</td>
+                  <td>Firestore <code class="string">"tenants"</code></td>
+                  <td>Retrieves global listings of all registered coaching centers and licensing features mapping.</td>
+                </tr>
+                <tr>
+                  <td><code class="type-badge">updateTenantFeatures(id, features)</code></td>
+                  <td>Write</td>
+                  <td>Firestore <code class="string">"tenants"</code></td>
+                  <td>Saves toggled page permissions for a specific tenant code.</td>
+                </tr>
+                
+                <!-- Staff Management -->
+                <tr>
+                  <td rowspan="3" style="font-weight: 700;">Staff Management</td>
+                  <td><code class="type-badge">getStaffAccounts()</code></td>
+                  <td>Read</td>
+                  <td>Firestore / LocalStorage <code class="string">"staff_accounts"</code></td>
+                  <td>Loads list of registered teachers and staff details for approval grid.</td>
+                </tr>
+                <tr>
+                  <td><code class="type-badge">updateStaffAccount(id, data)</code></td>
+                  <td>Write</td>
+                  <td>Firestore / LocalStorage <code class="string">"staff_accounts"</code></td>
+                  <td>Updates teacher profile details (such as assigned subjects array and specialization string).</td>
+                </tr>
+                <tr>
+                  <td><code class="type-badge">updateStaffPassword(id, password)</code></td>
+                  <td>Write</td>
+                  <td>Firestore / LocalStorage <code class="string">"staff_accounts"</code></td>
+                  <td>Resets credentials and dispatches updated password alert via WhatsApp API.</td>
+                </tr>
+
+                <!-- Timetable -->
+                <tr>
+                  <td rowspan="3" style="font-weight: 700;">Timetable</td>
+                  <td><code class="type-badge">getTimetable(date)</code></td>
+                  <td>Read</td>
+                  <td>Firestore / LocalStorage <code class="string">"timetable"</code></td>
+                  <td>Fetches class schedules matching specified date filters. Excludes archived slots.</td>
+                </tr>
+                <tr>
+                  <td><code class="type-badge">addTimetableSlot(slot)</code></td>
+                  <td>Write</td>
+                  <td>Firestore / LocalStorage <code class="string">"timetable"</code></td>
+                  <td>Creates a single scheduled event.</td>
+                </tr>
+                <tr>
+                  <td><code class="type-badge">updateTimetableSlot(id, data)</code></td>
+                  <td>Write</td>
+                  <td>Firestore / LocalStorage <code class="string">"timetable"</code></td>
+                  <td>Updates scheduled parameters or sets archived = true for cancellation.</td>
+                </tr>
+
+                <!-- Homework -->
+                <tr>
+                  <td rowspan="3" style="font-weight: 700;">Homework</td>
+                  <td><code class="type-badge">getHomework()</code></td>
+                  <td>Read</td>
+                  <td>Firestore / LocalStorage <code class="string">"homework"</code></td>
+                  <td>Fetches active homework list, excluding archived assignments.</td>
+                </tr>
+                <tr>
+                  <td><code class="type-badge">addHomework(hw)</code></td>
+                  <td>Write</td>
+                  <td>Firestore / LocalStorage <code class="string">"homework"</code></td>
+                  <td>Creates homework assignment, including uploader Base64 preview strings.</td>
+                </tr>
+                <tr>
+                  <td><code class="type-badge">updateHomeworkSubmissions(id, map)</code></td>
+                  <td>Write</td>
+                  <td>Firestore / LocalStorage <code class="string">"homework"</code></td>
+                  <td>Saves the submissions map (student registration IDs mapped to status/dates).</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+      </div>
+
+      <!-- TAB 3: ALGORITHMS -->
+      <div id="tab-algorithms" class="tab-content" style="display: none;">
+        
+        <section class="section-card">
+          <h2 class="section-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            Core Algorithm: AI Timetable Scheduler
+          </h2>
+          <p class="desc">EduBridge utilizes a local conflict-resolution algorithm to generate schedule blocks while respecting multiple constraints (teacher availability, room capacities, and batch assignments).</p>
+
+          <div class="algorithm-container">
+<span class="keyword">function</span> <span class="function-name">solveTimetable</span>(batches, teacherAvailabilities, roomCapacities, targetDate) {
+  <span class="keyword">let</span> scheduleDraft = [];
+  <span class="keyword">let</span> teacherBookings = <span class="keyword">new</span> <span class="function-name">Map</span>(); <span class="comment">// Maps "TeacherName_TimeBlock" -> boolean</span>
+  <span class="keyword">let</span> roomBookings = <span class="keyword">new</span> <span class="function-name">Map</span>();    <span class="comment">// Maps "RoomName_TimeBlock" -> boolean</span>
+
+  <span class="keyword">for</span> (<span class="keyword">let</span> batch <span class="keyword">of</span> batches) {
+    <span class="keyword">let</span> timeBlock = batch.timing; <span class="comment">// e.g. "04:00 PM - 05:00 PM"</span>
+    <span class="keyword">let</span> teacher = batch.teacher_name;
+    
+    <span class="comment">// Constraint 1: Check Teacher double-booking</span>
+    <span class="keyword">let</span> teacherKey = `${teacher}_${timeBlock}`;
+    <span class="keyword">if</span> (teacherBookings.<span class="function-name">has</span>(teacherKey)) {
+      <span class="keyword">continue</span>; <span class="comment">// Skip slot to prevent teacher overlap conflict</span>
+    }
+    
+    <span class="comment">// Constraint 2: Find available room without double-booking</span>
+    <span class="keyword">let</span> allocatedRoom = <span class="keyword">null</span>;
+    <span class="keyword">for</span> (<span class="keyword">let</span> room <span class="keyword">of</span> roomCapacities) {
+      <span class="keyword">let</span> roomKey = `${room.name}_${timeBlock}`;
+      <span class="keyword">if</span> (!roomBookings.<span class="function-name">has</span>(roomKey)) {
+        allocatedRoom = room.name;
+        roomBookings.<span class="function-name">set</span>(roomKey, <span class="keyword">true</span>);
+        <span class="keyword">break</span>;
+      }
+    }
+
+    <span class="keyword">if</span> (allocatedRoom) {
+      teacherBookings.<span class="function-name">set</span>(teacherKey, <span class="keyword">true</span>);
+      scheduleDraft.<span class="function-name">push</span>({
+        batch_id: batch.id,
+        date: targetDate,
+        start_time: parseStart(timeBlock),
+        end_time: parseEnd(timeBlock),
+        subject: batch.subject,
+        teacher_name: teacher,
+        room: allocatedRoom
+      });
+    }
+  }
+  <span class="keyword">return</span> scheduleDraft;
+}
+          </div>
+        </section>
+
+        <section class="section-card">
+          <h2 class="section-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20v-6M6 20V10M18 20V4"/></svg>
+            Core Algorithm: Student Academic Standing Rating
+          </h2>
+          <p class="desc">A heuristic formula calculates cumulative indicators to score and rank student progress based on attendance, test marks, and homework regularity.</p>
+          
+          <div class="algorithm-container">
+<span class="keyword">const</span> <span class="function-name">calculateStudentStanding</span>(attendanceRate, testMarksList, homeworkList, studentId) {
+  <span class="comment">// 1. Attendance Weight (30%)</span>
+  <span class="keyword">let</span> attendanceScore = attendanceRate * 100;
+
+  <span class="comment">// 2. Test Scores Weight (50%)</span>
+  <span class="keyword">let</span> studentMarks = testMarksList.filter(m => m.student_id === studentId);
+  <span class="keyword">let</span> avgTestPercent = studentMarks.length > 0
+    ? (studentMarks.reduce((sum, m) => sum + (m.marks_obtained / m.max_marks), 0) / studentMarks.length) * 100
+    : 0;
+
+  <span class="comment">// 3. Homework Submission Weight (20%)</span>
+  <span class="keyword">let</span> studentHw = homeworkList.filter(h => h.submissions && h.submissions[studentId]);
+  <span class="keyword">let</span> homeworkScore = studentHw.length > 0
+    ? (studentHw.filter(h => h.submissions[studentId].status === 'Submitted' || h.submissions[studentId].status === 'Late').length / studentHw.length) * 100
+    : 0;
+
+  <span class="comment">// Cumulative Grade Calculation</span>
+  <span class="keyword">let</span> totalScore = (attendanceScore * 0.3) + (avgTestPercent * 0.5) + (homeworkScore * 0.2);
+  
+  <span class="keyword">if</span> (totalScore >= 90) <span class="keyword">return</span> <span class="string">'A+'</span>;
+  <span class="keyword">if</span> (totalScore >= 75) <span class="keyword">return</span> <span class="string">'A'</span>;
+  <span class="keyword">if</span> (totalScore >= 60) <span class="keyword">return</span> <span class="string">'B'</span>;
+  <span class="keyword">if</span> (totalScore >= 45) <span class="keyword">return</span> <span class="string">'C'</span>;
+  <span class="keyword">return</span> <span class="string">'F'</span>;
+}
+          </div>
+        </section>
+
+      </div>
+
+      <!-- TAB 4: DATABASE DICTIONARY -->
+      <div id="tab-database" class="tab-content" style="display: none;">
+        
+        <section class="section-card">
+          <h2 class="section-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"/></svg>
+            Database Collections Schema (Data Dictionary)
+          </h2>
+          <p class="desc">The following data dictionaries list the exact schemas, datatypes, key constraints, and purposes of every collection stored in Firestore (scoped under the SaaS tenant path) and LocalStorage.</p>
+
+          <!-- Table 1: Tenants -->
+          <h3 style="margin-top: 2rem; color: #ffffff;">1. Collection: <code class="string">"tenants"</code></h3>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Stores core licensing configurations and branding parameters for each center. (Global Namespace)</p>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Field Attribute</th>
+                  <th>Data Type</th>
+                  <th>Key Constraint</th>
+                  <th>Description / Mock Example</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code class="type-badge">id</code></td>
+                  <td>String</td>
+                  <td><code class="key-badge">Document ID</code></td>
+                  <td>The unique tenant code identifier (e.g. <code class="string">"owner_a"</code>, <code class="string">"edubridge"</code>).</td>
+                </tr>
+                <tr>
+                  <td><code class="type-badge">name</code></td>
+                  <td>String</td>
+                  <td>-</td>
+                  <td>Coaching/Tuition center name (e.g. <code class="string">"EduBridge Tuition"</code>).</td>
+                </tr>
+                <tr>
+                  <td><code class="type-badge">logo_url</code></td>
+                  <td>String</td>
+                  <td>-</td>
+                  <td>Path pointing to custom loaded branding logo assets.</td>
+                </tr>
+                <tr>
+                  <td><code class="type-badge">owner_whatsapp</code></td>
+                  <td>String</td>
+                  <td>-</td>
+                  <td>Contact mobile number used for system alerts and WhatsApp redirects.</td>
+                </tr>
+                <tr>
+                  <td><code class="type-badge">admin_password</code></td>
+                  <td>String</td>
+                  <td>-</td>
+                  <td>Secured password credential for tuition Owner.</td>
+                </tr>
+                <tr>
+                  <td><code class="type-badge">features</code></td>
+                  <td>Map (Object)</td>
+                  <td>-</td>
+                  <td>Boolean map containing page permission controls (e.g., <code class="type-badge">{ students: true, timetable: true }</code>).</td>
+                </tr>
+                <tr>
+                  <td><code class="type-badge">created_at</code></td>
+                  <td>ISO String</td>
+                  <td>-</td>
+                  <td>Timestamp of registration date.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Table 2: Batches -->
+          <h3 style="margin-top: 2rem; color: #ffffff;">2. Collection: <code class="string">"batches"</code></h3>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Defines student classroom groups under a specific subject and timing block.</p>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Field Attribute</th>
+                  <th>Data Type</th>
+                  <th>Key Constraint</th>
+                  <th>Description / Mock Example</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code class="type-badge">id</code></td>
+                  <td>String</td>
+                  <td><code class="key-badge">Document ID</code></td>
+                  <td>Generated batch key (e.g. <code class="string">"b1"</code>, <code class="string">"10th_maths"</code>).</td>
+                </tr>
+                <tr>
+                  <td><code class="type-badge">name</code></td>
+                  <td>String</td>
+                  <td>-</td>
+                  <td>Batch display title (e.g. <code class="string">"10th Maths"</code>).</td>
+                </tr>
+                <tr>
+                  <td><code class="type-badge">subject</code></td>
+                  <td>String</td>
+                  <td>-</td>
+                  <td>Academic topic/subject assigned (e.g. <code class="string">"Mathematics"</code>).</td>
+                </tr>
+                <tr>
+                  <td><code class="type-badge">timing</code></td>
+                  <td>String</td>
+                  <td>-</td>
+                  <td>Scheduled duration block (e.g. <code class="string">"04:00 PM - 05:00 PM"</code>).</td>
+                </tr>
+                <tr>
+                  <td><code class="type-badge">teacher_name</code></td>
+                  <td>String</td>
+                  <td>-</td>
+                  <td>Primary instructor name assigned to this batch.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Table 3: Students -->
+          <h3 style="margin-top: 2rem; color: #ffffff;">3. Collection: <code class="string">"students"</code></h3>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Maintains student profiles, parent details, and active classroom links.</p>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Field Attribute</th>
+                  <th>Data Type</th>
+                  <th>Key Constraint</th>
+                  <th>Description / Mock Example</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code class="type-badge">id</code></td>
+                  <td>String</td>
+                  <td><code class="key-badge">Document ID</code></td>
+                  <td>Custom string combining name and ID (e.g. <code class="string">"Amit_Sharma_1001"</code>).</td>
+                </tr>
+                <tr>
+                  <td><code class="type-badge">student_id</code></td>
+                  <td>Number</td>
+                  <td><code class="key-badge">Unique Numeric ID</code></td>
+                  <td>Numerical sequence identifier used for logins (e.g. <code class="type-badge">1001</code>).</td>
+                </tr>
+                <tr>
+                  <td><code class="type-badge">name</code></td>
+                  <td>String</td>
+                  <td>-</td>
+                  <td>Full name of the student.</td>
+                </tr>
+                <tr>
+                  <td><code class="type-badge">mobile</code></td>
+                  <td>String</td>
+                  <td>-</td>
+                  <td>Student contact number.</td>
+                </tr>
+                <tr>
+                  <td><code class="type-badge">parent_mobile</code></td>
+                  <td>String</td>
+                  <td>-</td>
+                  <td>Father/Mother mobile number. Used for fee reminders and auto-generated passwords.</td>
+                </tr>
+                <tr>
+                  <td><code class="type-badge">parent_name</code></td>
+                  <td>String</td>
+                  <td>-</td>
+                  <td>Name of parent/guardian.</td>
+                </tr>
+                <tr>
+                  <td><code class="type-badge">batch_id</code></td>
+                  <td>String</td>
+                  <td><code class="key-badge">Foreign Key</code></td>
+                  <td>Refers to the associated <code class="type-badge">batches.id</code> identifier.</td>
+                </tr>
+                <tr>
+                  <td><code class="type-badge">archived</code></td>
+                  <td>Boolean</td>
+                  <td>-</td>
+                  <td>Indicates whether the student record is archived (deleted from active views).</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Table 4: Staff Accounts -->
+          <h3 style="margin-top: 2rem; color: #ffffff;">4. Collection: <code class="string">"staff_accounts"</code></h3>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Stores credentials, profile statistics, and subjects assigned to teachers.</p>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Field Attribute</th>
+                  <th>Data Type</th>
+                  <th>Key Constraint</th>
+                  <th>Description / Mock Example</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code class="type-badge">id</code></td>
+                  <td>String</td>
+                  <td><code class="key-badge">Document ID</code></td>
+                  <td>Custom key combining name and mobile (e.g. <code class="string">"Aditya_7227001692"</code>).</td>
+                </tr>
+                <tr>
+                  <td><code class="type-badge">name</code></td>
+                  <td>String</td>
+                  <td>-</td>
+                  <td>Full name of teacher.</td>
+                </tr>
+                <tr>
+                  <td><code class="type-badge">mobile</code></td>
+                  <td>String</td>
+                  <td>-</td>
+                  <td>Primary phone number used as username credentials.</td>
+                </tr>
+                <tr>
+                  <td><code class="type-badge">password</code></td>
+                  <td>String</td>
+                  <td>-</td>
+                  <td>Registered credentials.</td>
+                </tr>
+                <tr>
+                  <td><code class="type-badge">subjects</code></td>
+                  <td>Array (Strings)</td>
+                  <td>-</td>
+                  <td>List of subjects this teacher is assigned to teach (e.g. <code class="type-badge">["Mathematics", "Physics"]</code>).</td>
+                </tr>
+                <tr>
+                  <td><code class="type-badge">subject</code></td>
+                  <td>String</td>
+                  <td>-</td>
+                  <td>Comma-separated copy of subjects array. Backwards compatible with legacy views (e.g. <code class="string">"Mathematics, Physics"</code>).</td>
+                </tr>
+                <tr>
+                  <td><code class="type-badge">status</code></td>
+                  <td>String</td>
+                  <td>-</td>
+                  <td>Registration approval status: <code class="string">"Pending"</code>, <code class="string">"Approved"</code>, or <code class="string">"Rejected"</code>.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+        </section>
+
+      </div>
+
+    </main>
+
+  </div>
+
+  <script>
+    function switchTab(tabId) {
+      // Hide all tabs
+      document.querySelectorAll('.tab-content').forEach(el => {
+        el.style.display = 'none';
+      });
+      // Show active tab
+      document.getElementById('tab-' + tabId).style.display = 'block';
+      
+      // Update sidebar active classes
+      document.querySelectorAll('.nav-item').forEach(el => {
+        el.classList.remove('active');
+      });
+      // Set caller to active
+      event.currentTarget.closest('.nav-item').classList.add('active');
+    }
+  </script>
+</body>
+</html>
