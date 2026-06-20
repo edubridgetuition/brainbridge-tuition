@@ -1,6 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { dbService } from '../database/dbService';
-import { Phone, MapPin, Check, X, Mail, BookOpen, UserCheck, Eye, EyeOff, Key } from 'lucide-react';
+import { Phone, MapPin, Check, X, Mail, BookOpen, UserCheck, Eye, EyeOff, Key, Pencil } from 'lucide-react';
+
+const STANDARD_SUBJECTS = [
+  'Mathematics',
+  'Physics',
+  'Chemistry',
+  'Biology',
+  'English',
+  'Science',
+  'Social Studies',
+  'History',
+  'Geography',
+  'Civics',
+  'Economics',
+  'Accountancy',
+  'Business Studies',
+  'Computer Science',
+  'Hindi',
+  'Sanskrit'
+];
 
 export default function StaffManagement({ currentUser, verifyAction, activeTenant }) {
   const [staffList, setStaffList] = useState([]);
@@ -13,6 +32,11 @@ export default function StaffManagement({ currentUser, verifyAction, activeTenan
   const [newResetPassword, setNewResetPassword] = useState('');
   const [resetPasswordLoading, setResetPasswordLoading] = useState(false);
   const [resetError, setResetError] = useState('');
+  
+  const [isEditingSubjects, setIsEditingSubjects] = useState(false);
+  const [tempSubjects, setTempSubjects] = useState([]);
+  const [customSubject, setCustomSubject] = useState('');
+  const [savingSubjects, setSavingSubjects] = useState(false);
 
   const getFeature = (key, defaultVal) => {
     if (!activeTenant || !activeTenant.features) return defaultVal;
@@ -82,6 +106,59 @@ export default function StaffManagement({ currentUser, verifyAction, activeTenan
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    if (selectedStaffForView) {
+      setIsEditingSubjects(false);
+      setCustomSubject('');
+      if (Array.isArray(selectedStaffForView.subjects)) {
+        setTempSubjects(selectedStaffForView.subjects);
+      } else if (selectedStaffForView.subject) {
+        setTempSubjects(selectedStaffForView.subject.split(',').map(s => s.trim()).filter(Boolean));
+      } else {
+        setTempSubjects([]);
+      }
+    }
+  }, [selectedStaffForView]);
+
+  const handleAddCustomSubject = () => {
+    const val = customSubject.trim();
+    if (val && !tempSubjects.includes(val)) {
+      setTempSubjects(prev => [...prev, val]);
+    }
+    setCustomSubject('');
+  };
+
+  const handleSaveSubjects = async () => {
+    if (!selectedStaffForView) return;
+    try {
+      setSavingSubjects(true);
+      const subjectsArray = tempSubjects.map(s => s.trim()).filter(Boolean);
+      const subjectString = subjectsArray.join(', ');
+      
+      const updateData = {
+        subjects: subjectsArray,
+        subject: subjectString
+      };
+
+      // 1. Update in database
+      await dbService.updateStaffAccount(selectedStaffForView.id, updateData);
+
+      // 2. Update local state staffList
+      setStaffList(prev => prev.map(s => s.id === selectedStaffForView.id ? { ...s, ...updateData } : s));
+
+      // 3. Update active view profile details in selectedStaffForView
+      setSelectedStaffForView(prev => ({ ...prev, ...updateData }));
+
+      setIsEditingSubjects(false);
+      alert('Subjects updated successfully!');
+    } catch (err) {
+      console.error('Error saving subjects:', err);
+      alert('Failed to update subjects: ' + err.message);
+    } finally {
+      setSavingSubjects(false);
+    }
+  };
 
   const handleOpenApproveModal = (staff) => {
     setSelectedStaffForApproval(staff);
@@ -712,6 +789,211 @@ export default function StaffManagement({ currentUser, verifyAction, activeTenan
                     {selectedStaffForView.status === 'Approved' ? 'Active' : selectedStaffForView.status}
                   </span>
                 </div>
+              </div>
+
+              {/* Subjects Taught Section */}
+              <div style={{ borderTop: '1px dashed #e2e8f0', paddingTop: '1rem', marginTop: '0.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', margin: 0 }}>Subjects Taught</label>
+                  {!isEditingSubjects && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsEditingSubjects(true);
+                        if (Array.isArray(selectedStaffForView.subjects)) {
+                          setTempSubjects([...selectedStaffForView.subjects]);
+                        } else if (selectedStaffForView.subject) {
+                          setTempSubjects(selectedStaffForView.subject.split(',').map(s => s.trim()).filter(Boolean));
+                        } else {
+                          setTempSubjects([]);
+                        }
+                        setCustomSubject('');
+                      }}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: '#2563eb',
+                        fontSize: '0.75rem',
+                        fontWeight: '800',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.25rem',
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        backgroundColor: '#eff6ff',
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      <Pencil size={11} />
+                      <span>Edit Subjects</span>
+                    </button>
+                  )}
+                </div>
+
+                {isEditingSubjects ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    {/* Checkbox Grid for Standard Subjects */}
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
+                      gap: '0.5rem',
+                      backgroundColor: '#f8fafc',
+                      padding: '0.75rem',
+                      borderRadius: '8px',
+                      border: '1px solid #e2e8f0',
+                      maxHeight: '180px',
+                      overflowY: 'auto'
+                    }}>
+                      {STANDARD_SUBJECTS.map((sub) => {
+                        const isChecked = tempSubjects.includes(sub);
+                        return (
+                          <label key={sub} style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.4rem',
+                            fontSize: '0.8rem',
+                            fontWeight: isChecked ? '700' : '500',
+                            color: isChecked ? '#1e3a8a' : '#475569',
+                            padding: '0.35rem 0.5rem',
+                            backgroundColor: isChecked ? '#eff6ff' : '#ffffff',
+                            border: isChecked ? '1px solid #bfdbfe' : '1px solid #e2e8f0',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            userSelect: 'none',
+                            transition: 'all 0.15s ease'
+                          }}>
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setTempSubjects(prev => [...prev, sub]);
+                                } else {
+                                  setTempSubjects(prev => prev.filter(item => item !== sub));
+                                }
+                              }}
+                              style={{ accentColor: '#2563eb', cursor: 'pointer' }}
+                            />
+                            <span>{sub}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+
+                    {/* Custom Subject Adder */}
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                      <input
+                        type="text"
+                        placeholder="Add custom subject (e.g. Applied Calculus)"
+                        className="form-control"
+                        value={customSubject}
+                        onChange={(e) => setCustomSubject(e.target.value)}
+                        style={{ fontSize: '0.8rem', padding: '0.4rem 0.6rem', flex: 1 }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddCustomSubject();
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddCustomSubject}
+                        className="btn btn-secondary"
+                        style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', fontWeight: '700' }}
+                      >
+                        Add
+                      </button>
+                    </div>
+
+                    {/* Temporary tag display */}
+                    {tempSubjects.length > 0 && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginTop: '0.2rem' }}>
+                        {tempSubjects.map((sub, i) => (
+                          <span key={i} style={{
+                            fontSize: '0.72rem',
+                            fontWeight: '700',
+                            color: '#1e3a8a',
+                            backgroundColor: '#eff6ff',
+                            border: '1px solid #bfdbfe',
+                            padding: '0.15rem 0.45rem',
+                            borderRadius: '4px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.25rem'
+                          }}>
+                            <span>{sub}</span>
+                            <button
+                              type="button"
+                              onClick={() => setTempSubjects(prev => prev.filter(item => item !== sub))}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                cursor: 'pointer',
+                                color: '#3b82f6',
+                                padding: 0,
+                                display: 'flex',
+                                alignItems: 'center'
+                              }}
+                            >
+                              <X size={10} />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Actions */}
+                    <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', marginTop: '0.25rem' }}>
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingSubjects(false)}
+                        className="btn btn-secondary"
+                        style={{ padding: '0.35rem 0.75rem', fontSize: '0.78rem', fontWeight: '700' }}
+                        disabled={savingSubjects}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSaveSubjects}
+                        className="btn btn-primary"
+                        style={{ padding: '0.35rem 0.75rem', fontSize: '0.78rem', fontWeight: '700', backgroundColor: '#10b981', borderColor: '#10b981' }}
+                        disabled={savingSubjects}
+                      >
+                        {savingSubjects ? 'Saving...' : 'Save Subjects'}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.25rem' }}>
+                    {(() => {
+                      const subjectsToShow = selectedStaffForView.subjects && Array.isArray(selectedStaffForView.subjects)
+                        ? selectedStaffForView.subjects
+                        : (selectedStaffForView.subject ? selectedStaffForView.subject.split(',').map(s => s.trim()).filter(Boolean) : []);
+                      
+                      if (subjectsToShow.length === 0) {
+                        return <span style={{ color: '#64748b', fontSize: '0.85rem', fontStyle: 'italic' }}>No subjects assigned</span>;
+                      }
+
+                      return subjectsToShow.map((sub, i) => (
+                        <span key={i} style={{
+                          fontSize: '0.74rem',
+                          fontWeight: '700',
+                          color: '#1e3a8a',
+                          backgroundColor: '#eff6ff',
+                          border: '1px solid #dbeafe',
+                          padding: '0.2rem 0.5rem',
+                          borderRadius: '6px',
+                          display: 'inline-block'
+                        }}>
+                          {sub}
+                        </span>
+                      ));
+                    })()}
+                  </div>
+                )}
               </div>
 
               <div style={{ borderTop: '1px dashed #e2e8f0', paddingTop: '1rem', marginTop: '0.5rem' }}>

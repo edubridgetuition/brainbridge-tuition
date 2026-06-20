@@ -1823,6 +1823,27 @@ export const dbService = {
     );
   },
 
+  async updateStaffAccount(staffId, updatedData) {
+    await dbService.logActivity(`Updated staff account details for "${staffId}"`);
+    return runQuery(
+      async () => {
+        const docRef = doc(db, "staff_accounts", staffId);
+        await updateDoc(docRef, updatedData);
+        return true;
+      },
+      () => {
+        const list = getLocalData('bb_staff_accounts', []);
+        const idx = list.findIndex(s => s.id === staffId);
+        if (idx !== -1) {
+          list[idx] = { ...list[idx], ...updatedData };
+          saveLocalData('bb_staff_accounts', list);
+          return true;
+        }
+        return false;
+      }
+    );
+  },
+
   async updateParentPassword(studentId, newPassword) {
     const cleanPassword = String(newPassword || '').trim();
     return runQuery(
