@@ -13,7 +13,8 @@ import {
   Upload, 
   BookOpen, 
   Home,
-  CheckSquare
+  CheckSquare,
+  Key
 } from 'lucide-react';
 import { dbService } from '../database/dbService';
 
@@ -50,6 +51,14 @@ export default function Settings({ currentUser, activeTenant, onTenantUpdate, ve
   const [saveError, setSaveError] = useState('');
   const [fileLimitWarning, setFileLimitWarning] = useState('');
   const [saving, setSaving] = useState(false);
+
+  // Change Password states
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [pwdError, setPwdError] = useState('');
+  const [pwdSuccess, setPwdSuccess] = useState('');
+  const [pwdLoading, setPwdLoading] = useState(false);
 
   // Add Row form states
   const [newStdName, setNewStdName] = useState('');
@@ -222,6 +231,69 @@ export default function Settings({ currentUser, activeTenant, onTenantUpdate, ve
     }
   };
 
+  const handlePasswordSubmit = async (e) => {
+    e.preventDefault();
+    setPwdError('');
+    setPwdSuccess('');
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setPwdError('Please fill in all fields.');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPwdError('New password and confirm password do not match.');
+      return;
+    }
+
+    const passwordRegex = /^(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$&*-]).{8,}$/;
+    if (!passwordRegex.test(newPassword)) {
+      setPwdError('Password must contain at least 8 characters, an uppercase letter, a number, and a special character (!@#$&*-).');
+      return;
+    }
+
+    const action = async () => {
+      try {
+        setPwdLoading(true);
+        const tenantId = activeTenant?.id;
+        if (!tenantId) {
+          throw new Error('No active tuition code found.');
+        }
+
+        const tenant = await dbService.verifyTenantCode(tenantId);
+        if (!tenant) {
+          throw new Error('Tuition center profile not found.');
+        }
+
+        const requiredPassword = tenant.admin_password || 'admin123';
+        if (currentPassword !== requiredPassword) {
+          setPwdError('Current password is incorrect.');
+          setPwdLoading(false);
+          return;
+        }
+
+        await dbService.updateTenant(tenantId, { admin_password: newPassword.trim() });
+        await dbService.logActivity('Changed admin password from settings panel');
+
+        setPwdSuccess('Password changed successfully!');
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+        setTimeout(() => setPwdSuccess(''), 3000);
+      } catch (err) {
+        setPwdError(err.message || 'Failed to change password.');
+      } finally {
+        setPwdLoading(false);
+      }
+    };
+
+    if (verifyAction) {
+      verifyAction(action);
+    } else {
+      await action();
+    }
+  };
+
   return (
     <div className="container" style={{ paddingBottom: '3rem' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
@@ -229,7 +301,8 @@ export default function Settings({ currentUser, activeTenant, onTenantUpdate, ve
           <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <SettingsIcon size={28} style={{ color: 'var(--primary)' }} /> Settings: {
               activeSubTab === 'branding' ? 'Profile & Branding' :
-              activeSubTab === 'classrooms' ? 'Classes' : 'Fees Structure'
+              activeSubTab === 'classrooms' ? 'Classes' :
+              activeSubTab === 'fees_structure' ? 'Fees Structure' : 'Change Password'
             }
           </h1>
           <p className="page-subtitle">Configure your tuition identity, branding themes, standards pricing lists, and classrooms.</p>
@@ -357,6 +430,29 @@ export default function Settings({ currentUser, activeTenant, onTenantUpdate, ve
         >
           <CreditCard size={16} />
           <span>Fees Structure</span>
+        </button>
+
+        <button
+          onClick={() => setActiveSubTab('security')}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: activeSubTab === 'security' ? 'var(--primary)' : 'var(--text-muted)',
+            borderBottom: '2px solid ' + (activeSubTab === 'security' ? 'var(--primary)' : 'transparent'),
+            fontWeight: '800',
+            fontSize: '0.98rem',
+            paddingBottom: '0.85rem',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            fontFamily: 'inherit',
+            marginBottom: '-1px'
+          }}
+        >
+          <Key size={16} />
+          <span>Change Password</span>
         </button>
       </div>
 
@@ -843,6 +939,103 @@ export default function Settings({ currentUser, activeTenant, onTenantUpdate, ve
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* TAB 4: CHANGE PASSWORD */}
+          {activeSubTab === 'security' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', maxWidth: '440px' }}>
+              <div>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#1e3a8a', marginBottom: '0.5rem' }}>
+                  <Key size={20} style={{ color: 'var(--primary)' }} /> Change Admin Password
+                </h3>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Update the owner login password for this tuition center portal.</p>
+              </div>
+
+              {pwdSuccess && (
+                <div style={{
+                  backgroundColor: 'var(--success-bg)',
+                  color: 'var(--success)',
+                  border: '1px solid var(--success-border)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '0.85rem 1rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  fontWeight: '700',
+                  fontSize: '0.85rem'
+                }}>
+                  <Check size={16} /> {pwdSuccess}
+                </div>
+              )}
+
+              {pwdError && (
+                <div style={{
+                  backgroundColor: 'var(--danger-bg)',
+                  color: 'var(--danger)',
+                  border: '1px solid var(--danger-border)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '0.85rem 1rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  fontWeight: '700',
+                  fontSize: '0.85rem'
+                }}>
+                  <AlertCircle size={16} /> {pwdError}
+                </div>
+              )}
+
+              <form onSubmit={handlePasswordSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <div className="form-group">
+                  <label className="form-label">Current Password *</label>
+                  <input 
+                    type="password"
+                    className="form-control"
+                    placeholder="Enter current password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">New Password *</label>
+                  <input 
+                    type="password"
+                    className="form-control"
+                    placeholder="Enter new password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    required
+                  />
+                  <small style={{ color: 'var(--text-muted)', fontSize: '0.68rem', display: 'block', marginTop: '0.25rem' }}>
+                    Password must contain at least 8 characters, an uppercase letter, a number, and a special character (!@#$&*-).
+                  </small>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Confirm New Password *</label>
+                  <input 
+                    type="password"
+                    className="form-control"
+                    placeholder="Confirm new password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <button 
+                  type="submit" 
+                  className="btn btn-primary"
+                  disabled={pwdLoading}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '0.65rem 1rem', marginTop: '0.5rem' }}
+                >
+                  <Key size={14} />
+                  <span>{pwdLoading ? 'Updating...' : 'Update Password'}</span>
+                </button>
+              </form>
             </div>
           )}
 
