@@ -1069,18 +1069,19 @@ function TimetableInner({ currentUser, verifyAction, activeTenant }) {
 
               <div className="terminal-window">
                 {aiLogs.map((log, lIdx) => {
+                  const logStr = String(log || '');
                   let cls = 'log-normal';
-                  if (log.includes('SUCCESS') || log.includes('✅') || log.includes('complete')) {
+                  if (logStr.includes('SUCCESS') || logStr.includes('✅') || logStr.includes('complete')) {
                     cls = 'log-success';
-                  } else if (log.includes('Error') || log.includes('⚠️') || log.includes('Conflict') || log.includes('missing')) {
+                  } else if (logStr.includes('Error') || logStr.includes('⚠️') || logStr.includes('Conflict') || logStr.includes('missing')) {
                     cls = 'log-warning';
-                  } else if (log.includes('👉') || log.includes('📅') || log.includes('📝')) {
+                  } else if (logStr.includes('👉') || logStr.includes('📅') || logStr.includes('📝')) {
                     cls = 'log-info';
                   }
                   
                   return (
                     <div key={lIdx} className={`terminal-log-line ${cls}`}>
-                      {log}
+                      {logStr}
                       {lIdx === aiLogs.length - 1 && aiIsGenerating && (
                         <span className="terminal-cursor" style={{ fontWeight: 'bold' }}>_</span>
                       )}
