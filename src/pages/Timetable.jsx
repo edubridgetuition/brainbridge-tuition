@@ -13,7 +13,7 @@ import {
   X
 } from 'lucide-react';
 
-export default function Timetable({ currentUser, verifyAction, activeTenant }) {
+function TimetableInner({ currentUser, verifyAction, activeTenant }) {
   const [batches, setBatches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -396,33 +396,45 @@ export default function Timetable({ currentUser, verifyAction, activeTenant }) {
   };
 
   const processAiCommand = () => {
-    if (!batches || batches.length === 0) {
-      alert("No batches defined. Cannot generate timetable.");
-      return;
-    }
-    if (!aiCommand.trim()) {
-      alert("Please enter a scheduling command.");
-      return;
-    }
-    
-    setAiIsGenerating(true);
-    setAiLogs([]);
-    setAiDraftSlots([]);
-    
-    const { slots, logs } = parseCommandToSlots(aiCommand, aiSelectedMonday);
-    
-    let idx = 0;
-    let timer = null;
-    timer = setInterval(() => {
-      if (idx < logs.length) {
-        setAiLogs(prev => [...prev, logs[idx]]);
-        idx++;
-      } else {
-        if (timer) clearInterval(timer);
-        setAiDraftSlots(slots);
-        setAiIsGenerating(false);
+    try {
+      if (!batches || batches.length === 0) {
+        alert("No batches defined. Cannot generate timetable.");
+        return;
       }
-    }, 100);
+      if (!aiCommand.trim()) {
+        alert("Please enter a scheduling command.");
+        return;
+      }
+      
+      setAiIsGenerating(true);
+      setAiLogs([]);
+      setAiDraftSlots([]);
+      
+      const { slots, logs } = parseCommandToSlots(aiCommand, aiSelectedMonday);
+      
+      let idx = 0;
+      let timer = null;
+      timer = setInterval(() => {
+        try {
+          if (idx < logs.length) {
+            setAiLogs(prev => [...prev, logs[idx]]);
+            idx++;
+          } else {
+            if (timer) clearInterval(timer);
+            setAiDraftSlots(slots);
+            setAiIsGenerating(false);
+          }
+        } catch (err) {
+          if (timer) clearInterval(timer);
+          setAiIsGenerating(false);
+          throw err;
+        }
+      }, 100);
+    } catch (e) {
+      console.error("AI Command process error:", e);
+      alert("Error processing command: " + e.message);
+      setAiIsGenerating(false);
+    }
   };
 
   const handleRemoveDraftSlot = (index) => {
@@ -1370,5 +1382,67 @@ export default function Timetable({ currentUser, verifyAction, activeTenant }) {
       )}
 
     </div>
+  );
+}
+
+class TimetableErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error("TimetableErrorBoundary caught an error", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="card" style={{ padding: '2.5rem', border: '2px solid #ef4444', backgroundColor: 'rgba(239, 68, 68, 0.05)' }}>
+          <h3 style={{ color: '#ef4444', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0, fontFamily: 'sans-serif' }}>
+            ⚠️ Timetable Error Caught
+          </h3>
+          <p style={{ fontSize: '0.88rem', margin: '0.75rem 0', color: 'var(--text-secondary)' }}>
+            Something went wrong while loading or processing the timetable. Please copy the error below:
+          </p>
+          <pre style={{
+            background: '#090d16',
+            color: '#f87171',
+            padding: '1rem',
+            borderRadius: '8px',
+            fontFamily: 'monospace',
+            fontSize: '0.82rem',
+            overflowX: 'auto',
+            margin: 0,
+            whiteSpace: 'pre-wrap'
+          }}>
+            {this.state.error ? this.state.error.message : 'Unknown error'}
+            {"\n\nStack:\n"}
+            {this.state.error ? this.state.error.stack : ''}
+          </pre>
+          <button 
+            className="btn btn-secondary" 
+            style={{ marginTop: '1.25rem' }} 
+            onClick={() => this.setState({ hasError: false, error: null })}
+          >
+            Reset view
+          </button>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+export default function Timetable(props) {
+  return (
+    <TimetableErrorBoundary>
+      <TimetableInner {...props} />
+    </TimetableErrorBoundary>
   );
 }
