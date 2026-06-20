@@ -531,49 +531,6 @@ export default function Settings({ currentUser, activeTenant, onTenantUpdate, ve
                 </div>
               </div>
 
-              <hr style={{ border: 'none', borderTop: '1px solid var(--border-color)' }} />
-
-              {/* Invoices Notes Customizer */}
-              <div>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem', color: '#1e3a8a' }}>
-                  <FileText size={20} /> Receipt & Invoice Settings
-                </h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                  <div className="form-group">
-                    <label className="form-label">Receipt Sub-Header / Contact Info</label>
-                    <textarea 
-                      className="form-control"
-                      rows={2}
-                      value={receiptSubHeader}
-                      onChange={(e) => setReceiptSubHeader(e.target.value)}
-                      placeholder="E.g. Official tuition fees receipt. Tel: +91 9876543210"
-                      style={{ resize: 'vertical', fontFamily: 'inherit' }}
-                    />
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                    <div className="form-group">
-                      <label className="form-label">Receipt Footer Note 1</label>
-                      <input 
-                        type="text"
-                        className="form-control"
-                        value={receiptFooterNote1}
-                        onChange={(e) => setReceiptFooterNote1(e.target.value)}
-                        placeholder="E.g. * This is a computer-generated invoice."
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Receipt Footer Note 2</label>
-                      <input 
-                        type="text"
-                        className="form-control"
-                        value={receiptFooterNote2}
-                        onChange={(e) => setReceiptFooterNote2(e.target.value)}
-                        placeholder="E.g. * Thank you for studying with us!"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
           )}
 
@@ -840,6 +797,50 @@ export default function Settings({ currentUser, activeTenant, onTenantUpdate, ve
                       </label>
                     );
                   })}
+                </div>
+              </div>
+
+              <hr style={{ border: 'none', borderTop: '1px solid var(--border-color)' }} />
+
+              {/* Invoices Notes Customizer */}
+              <div>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem', color: '#1e3a8a' }}>
+                  <FileText size={20} /> Receipt & Invoice Settings
+                </h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                  <div className="form-group">
+                    <label className="form-label">Receipt Sub-Header / Contact Info</label>
+                    <textarea 
+                      className="form-control"
+                      rows={2}
+                      value={receiptSubHeader}
+                      onChange={(e) => setReceiptSubHeader(e.target.value)}
+                      placeholder="E.g. Official tuition fees receipt. Tel: +91 9876543210"
+                      style={{ resize: 'vertical', fontFamily: 'inherit' }}
+                    />
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div className="form-group">
+                      <label className="form-label">Receipt Footer Note 1</label>
+                      <input 
+                        type="text"
+                        className="form-control"
+                        value={receiptFooterNote1}
+                        onChange={(e) => setReceiptFooterNote1(e.target.value)}
+                        placeholder="E.g. * This is a computer-generated invoice."
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Receipt Footer Note 2</label>
+                      <input 
+                        type="text"
+                        className="form-control"
+                        value={receiptFooterNote2}
+                        onChange={(e) => setReceiptFooterNote2(e.target.value)}
+                        placeholder="E.g. * Thank you for studying with us!"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
