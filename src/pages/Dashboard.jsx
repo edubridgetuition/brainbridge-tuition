@@ -1,6 +1,24 @@
 import React, { useEffect, useState } from 'react';
 import { dbService, formatDateDisplay, sendWhatsAppMessage } from '../database/dbService';
-import { Users, BookOpen, CheckCircle, IndianRupee, Bell, Play, FileSpreadsheet, Star, Quote, Plus, Calendar, ClipboardList, Download, ChevronDown } from 'lucide-react';
+import { Users, BookOpen, CheckCircle, IndianRupee, Bell, Play, FileSpreadsheet, Star, Quote, Plus, Calendar, ClipboardList, Download, ChevronDown, X, AlertCircle } from 'lucide-react';
+
+const formatRelativeTime = (timestamp) => {
+  if (!timestamp) return '';
+  const now = new Date();
+  const date = new Date(timestamp);
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays < 7) return `${diffDays}d ago`;
+  
+  return formatDateDisplay(timestamp.split('T')[0]);
+};
 
 export default function Dashboard({ setActiveTab, currentUser, verifyAction, activeTenant }) {
   const isSubAdmin = import.meta.env.VITE_ROLE === 'admin2' || sessionStorage.getItem('bb_current_admin') === 'admin2';
@@ -35,6 +53,8 @@ export default function Dashboard({ setActiveTab, currentUser, verifyAction, act
   const [students, setStudents] = useState([]);
   const [enrollmentFilter, setEnrollmentFilter] = useState('Monthly'); // 'Monthly', 'Weekly', 'Date-wise'
   const [attendanceDate, setAttendanceDate] = useState('-');
+  const [parentAttendanceLogs, setParentAttendanceLogs] = useState([]);
+  const [parentNotifications, setParentNotifications] = useState([]);
 
   useEffect(() => {
     const handleCloseModals = () => {
@@ -52,14 +72,15 @@ export default function Dashboard({ setActiveTab, currentUser, verifyAction, act
           const studentId = currentUser.studentId;
           const batchId = currentUser.batchId;
 
-          const [batches, fees, allAttendance, testMarks, tests, homework, materials] = await Promise.all([
+          const [batches, fees, allAttendance, testMarks, tests, homework, materials, notifications] = await Promise.all([
             dbService.getBatches(),
             dbService.getFees(),
             dbService.getAllAttendance(),
             dbService.getAllTestMarks(),
             dbService.getTests(),
             dbService.getHomework(),
-            dbService.getStudyMaterials()
+            dbService.getStudyMaterials(),
+            dbService.getNotifications()
           ]);
 
           // Student's specific batch name
@@ -85,6 +106,15 @@ export default function Dashboard({ setActiveTab, currentUser, verifyAction, act
           const studentAttendance = allAttendance.filter(a => a.student_id === studentId);
           const presentCount = studentAttendance.filter(a => a.status === 'Present').length;
           const attRate = studentAttendance.length > 0 ? Math.round((presentCount / studentAttendance.length) * 100) : 100;
+
+          // Latest 5 attendance records sorted desc
+          const sortedAttendance = [...studentAttendance].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
+          setParentAttendanceLogs(sortedAttendance);
+
+          // Notifications filtered and sorted desc
+          const studentNotifications = notifications.filter(n => n.student_id === studentId);
+          const sortedNotifications = [...studentNotifications].sort((a, b) => b.timestamp.localeCompare(a.timestamp)).slice(0, 5);
+          setParentNotifications(sortedNotifications);
 
           // Individual Test Marks
           const studentMarks = testMarks.filter(tm => tm.student_id === studentId);
@@ -480,6 +510,172 @@ export default function Dashboard({ setActiveTab, currentUser, verifyAction, act
               </div>
             </div>
           )}
+        </div>
+
+        {/* Daily Attendance and Notifications Feed */}
+        <div className="dashboard-split-layout" style={{ marginTop: '2rem' }}>
+          {/* Daily Attendance Tracker */}
+          <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h3 style={{ fontSize: '1.2rem', margin: 0 }}>Daily Attendance Tracker</h3>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '0.25rem' }}>
+                  Date-wise present or absent record timeline.
+                </p>
+              </div>
+              <Calendar size={20} style={{ color: 'var(--primary)' }} />
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', marginTop: '0.5rem' }}>
+              {parentAttendanceLogs && parentAttendanceLogs.length > 0 ? (
+                parentAttendanceLogs.map(log => {
+                  const isPresent = log.status === 'Present';
+                  return (
+                    <div 
+                      key={log.id} 
+                      style={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center', 
+                        padding: '0.85rem 1rem', 
+                        backgroundColor: '#f8fafc', 
+                        borderRadius: '12px', 
+                        border: '1px solid #e2e8f0' 
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <span style={{ fontSize: '1.1rem' }}>📅</span>
+                        <span style={{ fontWeight: '700', color: 'var(--text-primary)', fontSize: '0.9rem' }}>
+                          {formatDateDisplay(log.date)}
+                        </span>
+                      </div>
+                      <span 
+                        style={{
+                          backgroundColor: isPresent ? '#d1fae5' : '#fee2e2',
+                          color: isPresent ? '#065f46' : '#991b1b',
+                          padding: '0.35rem 0.85rem',
+                          fontWeight: '800',
+                          borderRadius: '20px',
+                          fontSize: '0.78rem',
+                          border: isPresent ? '1px solid #a7f3d0' : '1px solid #fecaca'
+                        }}
+                      >
+                        {isPresent ? 'Present' : 'Absent'}
+                      </span>
+                    </div>
+                  );
+                })
+              ) : (
+                <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                  No attendance logs found yet.
+                </div>
+              )}
+            </div>
+            
+            {parentAttendanceLogs && parentAttendanceLogs.length > 0 && (
+              <button 
+                onClick={() => setActiveTab('attendance')} 
+                className="btn btn-secondary" 
+                style={{ 
+                  width: '100%', 
+                  padding: '0.65rem', 
+                  fontSize: '0.85rem', 
+                  fontWeight: '700', 
+                  border: '1px solid var(--border-color)',
+                  marginTop: '0.5rem'
+                }}
+              >
+                View Full Attendance Report
+              </button>
+            )}
+          </div>
+
+          {/* Notifications Alerts Card */}
+          <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h3 style={{ fontSize: '1.2rem', margin: 0 }}>Recent Notifications</h3>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '0.25rem' }}>
+                  Alerts and broadcast messages.
+                </p>
+              </div>
+              <Bell size={20} style={{ color: '#d97706' }} />
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', marginTop: '0.5rem' }}>
+              {parentNotifications && parentNotifications.length > 0 ? (
+                parentNotifications.map(notif => {
+                  let IconComponent = Bell;
+                  let iconBg = '#fef3c7';
+                  let iconColor = '#d97706';
+                  
+                  if (notif.type === 'attendance') {
+                    if (notif.title.includes('Present')) {
+                      IconComponent = CheckCircle;
+                      iconBg = '#d1fae5';
+                      iconColor = '#059669';
+                    } else {
+                      IconComponent = X;
+                      iconBg = '#fee2e2';
+                      iconColor = '#dc2626';
+                    }
+                  } else if (notif.type === 'fee' || notif.title.toLowerCase().includes('fee')) {
+                    IconComponent = IndianRupee;
+                    iconBg = '#e0f2fe';
+                    iconColor = '#0284c7';
+                  }
+
+                  return (
+                    <div 
+                      key={notif.id} 
+                      style={{ 
+                        display: 'flex', 
+                        gap: '0.75rem', 
+                        padding: '1rem', 
+                        backgroundColor: '#f8fafc', 
+                        borderRadius: '12px', 
+                        border: '1px solid #e2e8f0',
+                        alignItems: 'flex-start'
+                      }}
+                    >
+                      <div 
+                        style={{
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '50%',
+                          backgroundColor: iconBg,
+                          color: iconColor,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0
+                        }}
+                      >
+                        <IconComponent size={16} />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                          <h4 style={{ margin: 0, fontSize: '0.88rem', fontWeight: '800', color: 'var(--text-primary)' }}>
+                            {notif.title}
+                          </h4>
+                          <span style={{ fontSize: '0.72rem', color: '#64748b', whiteSpace: 'nowrap', marginLeft: '0.5rem' }}>
+                            {formatRelativeTime(notif.timestamp)}
+                          </span>
+                        </div>
+                        <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
+                          {notif.message}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                  No recent notifications.
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     );
