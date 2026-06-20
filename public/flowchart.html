@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EduBridge ERP - Application Flowchart</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg: #070a13;
+      --card-bg: rgba(15, 23, 42, 0.6);
+      --primary: #2563eb;
+      --primary-glow: rgba(37, 99, 235, 0.25);
+      --border: rgba(255, 255, 255, 0.08);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: var(--bg);
+      color: var(--text-main);
+      min-height: 100vh;
+      padding: 2rem;
+    }
+
+    header {
+      max-width: 1200px;
+      margin: 0 auto 3rem auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 1.5rem;
+    }
+
+    .brand-logo {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 800;
+      font-size: 1.3rem;
+      background: linear-gradient(135deg, #fff, var(--text-muted));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .badge {
+      background-color: var(--primary-glow);
+      color: #60a5fa;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      padding: 0.3rem 0.8rem;
+      font-size: 0.8rem;
+      font-weight: 700;
+      border-radius: 50px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 4rem;
+    }
+
+    .section {
+      background-color: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 2.5rem;
+      backdrop-filter: blur(8px);
+      box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .section-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      background: linear-gradient(135deg, #ffffff, #94a3b8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .section-desc {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      margin-bottom: 2rem;
+      line-height: 1.5;
+    }
+
+    .mermaid-container {
+      background-color: rgba(0, 0, 0, 0.25);
+      border-radius: 12px;
+      padding: 1.5rem;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      overflow-x: auto;
+      display: flex;
+      justify-content: center;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand-logo">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="color: var(--primary);"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+      <span>EduBridge ERP</span>
+    </div>
+    <span class="badge">Application Flowcharts</span>
+  </header>
+
+  <div class="container">
+    
+    <!-- Section 1: Auth & Routing -->
+    <div class="section">
+      <h2 class="section-title">🔑 Phase 1: Launch & Authentication Flow</h2>
+      <p class="section-desc">Shows how the application handles session checking, role-based dashboard routing, and new user sign-up approval waitlist states.</p>
+      <div class="mermaid-container">
+        <pre class="mermaid">
+graph TD
+    A["📱 App Launched"] --> B{"Session Checked?"}
+    B -- "Session Valid (Auto-login)" --> C{"Determine Role"}
+    B -- "No Session / Logged Out" --> D["🔐 Login Screen"]
+    
+    D --> E["Enter Email / Phone & Password"]
+    E --> F{"Credentials Valid?"}
+    F -- "Yes" --> C
+    F -- "No" --> G["⚠️ Display Error (Retry)"]
+    G --> D
+
+    D -. "New User?" .-> H["📝 Registration Portal"]
+    H --> I["Select Role: Teacher or Student"]
+    I --> J["Enter Center Tuition Code"]
+    J --> K["Submit Info & Set Password"]
+    K --> L["⏳ Pending Admin Approval Screen"]
+    L -. "Admin Approves" .-> D
+    
+    C -- "Role = Admin" --> DashboardAdmin["👑 Admin Dashboard"]
+    C -- "Role = Teacher" --> DashboardTeacher["👨‍🏫 Teacher Dashboard"]
+    C -- "Role = Student/Parent" --> DashboardStudent["🎓 Student/Parent Portal"]
+        </pre>
+      </div>
+    </div>
+
+    <!-- Section 2: Admin Flow -->
+    <div class="section">
+      <h2 class="section-title">👑 Phase 2: Admin Workflow (Tuition Owner)</h2>
+      <p class="section-desc">Owner operations including staff credentials approval, classroom slot allocation checks, fee ledgers, receipts printing, and automated WhatsApp reminders routing.</p>
+      <div class="mermaid-container">
+        <pre class="mermaid">
+graph TD
+    DashboardAdmin["👑 Admin Dashboard"] --> MenuAdmin{"Select Operation"}
+    
+    MenuAdmin --> M1["👥 Staff Approval Board"]
+    M1 --> M1_1["Approve/Reject Teacher Registration"]
+    M1_1 --> DashboardAdmin
+    
+    MenuAdmin --> M2["🧑‍🎓 Student Directory"]
+    M2 --> M2_1["Add/Register Student"]
+    M2_1 --> M2_2["Assign to Batch & Roll Number"]
+    M2_2 --> DashboardAdmin
+    
+    MenuAdmin --> M3["📅 Timetable Scheduler"]
+    M3 --> M3_1["Configure Room Capacity"]
+    M3_1 --> M3_2["Schedule Batch Time slots"]
+    M3_2 --> M3_3{"Conflict Detected?"}
+    M3_3 -- "Yes" --> M3_4["⚠️ Block & Show Slot Clash"]
+    M3_3 -- "No" --> M3_5["✅ Save Schedule"]
+    M3_4 --> M3_2
+    M3_5 --> DashboardAdmin
+    
+    MenuAdmin --> M4["💳 Fee & Collections Manager"]
+    M4 --> M4_1["View Pending Dues List"]
+    M4_1 --> M4_2["Generate One-Tap Payment Link"]
+    M4_2 --> M4_3["📲 Send Auto WhatsApp Reminder"]
+    M4_1 --> M4_4["Log Payment: Cash / UPI / Card"]
+    M4_4 --> M4_5["🖨️ Print Custom Fee Receipt"]
+    M4_3 --> DashboardAdmin
+    M4_5 --> DashboardAdmin
+    
+    MenuAdmin --> M5["⚙️ Settings & Customization"]
+    M5 --> M5_1["Upload Academy Logo"]
+    M5_1 --> M5_2["Edit Receipt Terms & Footnotes"]
+    M5_2 --> DashboardAdmin
+
+    MenuAdmin --> LogoutAdmin["🚪 Click Logout"]
+    LogoutAdmin --> ClearSession["🧹 Clear Session Data"]
+    ClearSession --> LaunchScreen["🔐 Redirect to Login Screen"]
+        </pre>
+      </div>
+    </div>
+
+    <!-- Section 3: Teacher Flow -->
+    <div class="section">
+      <h2 class="section-title">👨‍🏫 Phase 3: Teacher Workflow</h2>
+      <p class="section-desc">Academic batch logs including visual trend diagnostics entries, assignments image attachments, and daily attendance cloud storage sync operations.</p>
+      <div class="mermaid-container">
+        <pre class="mermaid">
+graph TD
+    DashboardTeacher["👨‍🏫 Teacher Dashboard"] --> MenuTeacher{"Select Action"}
+    
+    MenuTeacher --> T1["📝 Daily Attendance Log"]
+    T1 --> T1_1["Select Batch & Date"]
+    T1_1 --> T1_2["Mark Present / Absent"]
+    T1_2 --> T1_3["💾 Sync Attendance Cloud Vault"]
+    T1_3 --> DashboardTeacher
+    
+    MenuTeacher --> T2["📊 Test Marks Manager"]
+    T2 --> T2_1["Create Test Scheme (Max Marks, Topic)"]
+    T2_1 --> T2_2["Enter Marks for Student Roll list"]
+    T2_2 --> T2_3["Generate visual trend analytics"]
+    T2_3 --> DashboardTeacher
+    
+    MenuTeacher --> T3["📚 Assignments & Homework"]
+    T3 --> T3_1["Write Assignment Details"]
+    T3_1 --> T3_2["Attach Homework image file (<50KB)"]
+    T3_2 --> T3_3["Publish to Student Portal"]
+    T3_3 --> DashboardTeacher
+
+    MenuTeacher --> LogoutTeacher["🚪 Click Logout"]
+    LogoutTeacher --> ClearSessionT["🧹 Clear Session Data"]
+    ClearSessionT --> LaunchScreen["🔐 Redirect to Login Screen"]
+        </pre>
+      </div>
+    </div>
+
+    <!-- Section 4: Student Flow -->
+    <div class="section">
+      <h2 class="section-title">🎓 Phase 4: Student/Parent Workflow</h2>
+      <p class="section-desc">Parent dashboard visual analytics view, fee balance checks, homework assignments check, and Google Gemini AI automated tip generators.</p>
+      <div class="mermaid-container">
+        <pre class="mermaid">
+graph TD
+    DashboardStudent["🎓 Student/Parent Portal"] --> MenuStudent{"Select Tab"}
+    
+    MenuStudent --> S1["📅 Class Timetable"]
+    S1 --> S1_1["View Today's Batches & Room Numbers"]
+    S1_1 --> DashboardStudent
+    
+    MenuStudent --> S2["📚 Assignments Dashboard"]
+    S2 --> S2_1["View Active Tasks & PDF Attachments"]
+    S2_1 --> S2_2["Mark Assignment Completed"]
+    S2_2 --> DashboardStudent
+    
+    MenuStudent --> S3["📊 Progress Report Card"]
+    S3 --> S3_1["View Attendance Graphs"]
+    S3_1 --> S3_2["Check Test Scores Trend Line"]
+    S3_2 --> S3_3["🤖 Fetch Gemini AI Study Diagnostics Tips"]
+    S3_3 --> S3_4["🖨️ Download PDF Report Card"]
+    S3_4 --> DashboardStudent
+    
+    MenuStudent --> S4["💳 Receipts & Fees History"]
+    S4 --> S4_1["View Pending Fee Schedule"]
+    S4_1 --> S4_2["Open Paid Invoices Receipts"]
+    S4_2 --> DashboardStudent
+
+    MenuStudent --> LogoutStudent["🚪 Click Logout"]
+    LogoutStudent --> ClearSessionS["🧹 Clear Session Data"]
+    ClearSessionS --> LaunchScreen["🔐 Redirect to Login Screen"]
+        </pre>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Load Mermaid script to dynamically compile and draw vectors -->
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ 
+      startOnLoad: true,
+      theme: 'dark',
+      securityLevel: 'loose',
+      themeVariables: {
+        background: '#0a0f1d',
+        primaryColor: '#2563eb',
+        primaryTextColor: '#f8fafc',
+        lineColor: '#38bdf8',
+        nodeBorder: '#1e293b'
+      }
+    });
+  </script>
+</body>
+</html>
