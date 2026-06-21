@@ -766,47 +766,13 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
               height: '64px',
               borderRadius: '16px',
               objectFit: 'contain',
-              marginBottom: '1rem',
+              marginBottom: '1.5rem',
               boxShadow: '0 4px 12px rgba(15, 23, 42, 0.08)',
               backgroundColor: '#fff',
               cursor: 'pointer'
             }}
             title="Double click to access Super Admin"
           />
-
-          <h2 style={{
-            fontFamily: 'var(--font-heading)',
-            fontSize: '1.75rem',
-            fontWeight: '800',
-            background: 'linear-gradient(135deg, #1e3a8a 30%, #3b82f6 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            marginBottom: '0.1rem',
-            textAlign: 'center',
-            lineHeight: '1.1'
-          }}>
-            EduBridge
-          </h2>
-          <h3 style={{
-            fontFamily: 'var(--font-heading)',
-            fontSize: '1.1rem',
-            fontWeight: '700',
-            color: '#3b82f6',
-            marginBottom: '0.85rem',
-            textAlign: 'center',
-            marginTop: 0
-          }}>
-            Tuition ERP
-          </h3>
-          <p style={{
-            fontSize: '0.82rem',
-            color: 'var(--text-secondary)',
-            marginBottom: '1.5rem',
-            textAlign: 'center',
-            fontWeight: '500'
-          }}>
-            Academic dashboard and portal login.
-          </p>
 
           {/* Messages */}
           {error && (
