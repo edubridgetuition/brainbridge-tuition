@@ -346,7 +346,7 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
       try {
         const tenant = await dbService.verifyTenantCode(cleanCode);
         if (tenant) {
-          await onTenantCodeSubmit(cleanCode);
+          await onTenantCodeSubmit(tenant.id);
         } else {
           onChangeTenantCode();
         }
@@ -464,7 +464,7 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
         return;
       }
 
-      await onTenantCodeSubmit(cleanCode);
+      await onTenantCodeSubmit(tenant.id);
 
       const student = await dbService.verifyParentLogin(studentId.trim(), password);
       onLogin({
@@ -584,8 +584,8 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
         return;
       }
 
-      await onTenantCodeSubmit(cleanCode);
-      dbService.setTenantCode(cleanCode);
+      await onTenantCodeSubmit(tenant.id);
+      dbService.setTenantCode(tenant.id);
 
       const canvas = canvasRef.current;
       const signatureData = canvas ? canvas.toDataURL('image/png') : '';
@@ -1088,8 +1088,8 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
                   }
 
                   // Set active tenant in system
-                  await onTenantCodeSubmit(cleanCode);
-                  dbService.setTenantCode(cleanCode);
+                  await onTenantCodeSubmit(tenant.id);
+                  dbService.setTenantCode(tenant.id);
 
                   // Add staff account with default placeholders for required database fields
                   await dbService.addStaffAccount({

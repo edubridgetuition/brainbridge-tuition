@@ -471,7 +471,7 @@ function App() {
         onTenantCodeSubmit={async (code) => {
           const tenant = await dbService.verifyTenantCode(code);
           if (tenant) {
-            dbService.setTenantCode(code);
+            dbService.setTenantCode(tenant.id);
             setActiveTenant(tenant);
           }
           return tenant;
