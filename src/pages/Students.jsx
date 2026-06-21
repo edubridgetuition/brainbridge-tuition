@@ -31,6 +31,9 @@ export default function Students({ currentUser, verifyAction, activeTenant, auto
     }
   }, [autoOpenRegister, onCloseRegister]);
   const [batches, setBatches] = useState([]);
+  const [staffList, setStaffList] = useState([]);
+  const [isCustomTeacherBatch, setIsCustomTeacherBatch] = useState(false);
+  const [customTeacherNameBatch, setCustomTeacherNameBatch] = useState('');
   const [loading, setLoading] = useState(true);
   const [activeSubTab, setActiveSubTab] = useState('students'); // 'students' or 'summary'
   
@@ -38,7 +41,7 @@ export default function Students({ currentUser, verifyAction, activeTenant, auto
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedBatch, setSelectedBatch] = useState('All');
   const [selectedStandard, setSelectedStandard] = useState('All');
-
+  
   // Modal State
   const [showModal, setShowModal] = useState(false);
   const [showBatchModal, setShowBatchModal] = useState(false);
@@ -78,12 +81,14 @@ export default function Students({ currentUser, verifyAction, activeTenant, auto
   useEffect(() => {
     async function loadData() {
       try {
-        const [studentList, batchList] = await Promise.all([
+        const [studentList, batchList, staffListDocs] = await Promise.all([
           dbService.getStudents(),
-          dbService.getBatches()
+          dbService.getBatches(),
+          dbService.getStaffAccounts()
         ]);
         setStudents(studentList);
         setBatches(batchList);
+        setStaffList(staffListDocs || []);
         if (batchList.length > 0) {
           setFormData(prev => ({ ...prev, batch_id: batchList[0].id }));
         }
@@ -282,6 +287,18 @@ export default function Students({ currentUser, verifyAction, activeTenant, auto
     }
   };
 
+  const openBatchModal = () => {
+    setIsCustomTeacherBatch(false);
+    setCustomTeacherNameBatch('');
+    setBatchForm({
+      name: '',
+      subject: '',
+      timing: '',
+      teacher_name: ''
+    });
+    setShowBatchModal(true);
+  };
+
   // Filter & Search Logic
   const filteredStudents = students.filter(student => {
     const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -335,7 +352,7 @@ export default function Students({ currentUser, verifyAction, activeTenant, auto
         {activeSubTab === 'students' && (
           <div style={{ display: 'flex', gap: '0.75rem' }}>
             {showCreateBatch && (
-              <button className="btn btn-secondary" onClick={() => setShowBatchModal(true)} style={{ border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <button className="btn btn-secondary" onClick={openBatchModal} style={{ border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 <Plus size={16} />
                 <span>Create Batch</span>
               </button>
@@ -753,15 +770,45 @@ export default function Students({ currentUser, verifyAction, activeTenant, auto
                   />
                 </div>
 
-                <div className="form-group">
+                 <div className="form-group">
                   <label className="form-label">Teacher Name</label>
-                  <input
-                    type="text"
+                  <select
                     className="form-control"
-                    placeholder="E.g. Rakesh Sharma"
-                    value={batchForm.teacher_name}
-                    onChange={(e) => setBatchForm(prev => ({ ...prev, teacher_name: e.target.value }))}
-                  />
+                    value={isCustomTeacherBatch ? 'Other' : (batchForm.teacher_name || '')}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === 'Other') {
+                        setIsCustomTeacherBatch(true);
+                        setBatchForm(prev => ({ ...prev, teacher_name: customTeacherNameBatch }));
+                      } else {
+                        setIsCustomTeacherBatch(false);
+                        setBatchForm(prev => ({ ...prev, teacher_name: val }));
+                      }
+                    }}
+                  >
+                    <option value="">Select Teacher</option>
+                    <option value={activeTenant?.custom_owner_title || 'Owner'}>{activeTenant?.custom_owner_title || 'Owner'}</option>
+                    {staffList.filter(s => s.status === 'Approved').map(t => (
+                      <option key={t.id} value={t.name}>{t.name} ({t.subject || 'General'})</option>
+                    ))}
+                    <option value="Other">Other (Type manually)</option>
+                  </select>
+
+                  {isCustomTeacherBatch && (
+                    <input
+                      type="text"
+                      className="form-control"
+                      style={{ marginTop: '0.5rem' }}
+                      placeholder="Enter teacher name manually"
+                      value={customTeacherNameBatch}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setCustomTeacherNameBatch(val);
+                        setBatchForm(prev => ({ ...prev, teacher_name: val }));
+                      }}
+                      required
+                    />
+                  )}
                 </div>
               </div>
 

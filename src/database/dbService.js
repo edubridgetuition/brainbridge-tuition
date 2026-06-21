@@ -1511,7 +1511,10 @@ export const dbService = {
   },
 
   async verifyTenantCode(code) {
-    const cleanCode = String(code || '').trim().toLowerCase();
+    let cleanCode = String(code || '').trim().toLowerCase();
+    if (cleanCode === 'ak007') {
+      cleanCode = 'akash academy';
+    }
     if (!cleanCode) return null;
     
     return runQuery(
@@ -2115,7 +2118,7 @@ export const dbService = {
     
     // Set tenant code temporarily so that sub-collection queries work under correct tenant
     const origTenantCode = dbService.getTenantCode();
-    dbService.setTenantCode(cleanCode);
+    dbService.setTenantCode(tenant.id);
     
     try {
       if (role === 'owner') {
@@ -2155,12 +2158,15 @@ export const dbService = {
     const cleanCode = String(centreName || '').trim().toLowerCase();
     const cleanPassword = String(newPassword || '').trim();
     
+    const tenant = await dbService.verifyTenantCode(cleanCode);
+    const resolvedTenantCode = tenant ? tenant.id : cleanCode;
+    
     const origTenantCode = dbService.getTenantCode();
-    dbService.setTenantCode(cleanCode);
+    dbService.setTenantCode(resolvedTenantCode);
     
     try {
       if (role === 'owner') {
-        await dbService.updateTenant(cleanCode, { admin_password: cleanPassword });
+        await dbService.updateTenant(resolvedTenantCode, { admin_password: cleanPassword });
         return true;
       }
       if (role === 'staff') {

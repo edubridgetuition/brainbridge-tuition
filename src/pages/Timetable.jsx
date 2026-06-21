@@ -15,6 +15,9 @@ import {
 
 function TimetableInner({ currentUser, verifyAction, activeTenant }) {
   const [batches, setBatches] = useState([]);
+  const [staffList, setStaffList] = useState([]);
+  const [isCustomTeacherSlot, setIsCustomTeacherSlot] = useState(false);
+  const [customTeacherNameSlot, setCustomTeacherNameSlot] = useState('');
   const [loading, setLoading] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
@@ -489,17 +492,28 @@ function TimetableInner({ currentUser, verifyAction, activeTenant }) {
   useEffect(() => {
     async function loadData() {
       try {
-        const batchList = await dbService.getBatches();
+        const [batchList, staffListDocs] = await Promise.all([
+          dbService.getBatches(),
+          dbService.getStaffAccounts()
+        ]);
         setBatches(batchList);
+        setStaffList(staffListDocs || []);
         if (batchList.length > 0) {
-          // Initialize form defaults based on first batch
+          const defaultTeacher = batchList[0].teacher_name || '';
           setFormSlot(prev => ({
             ...prev,
             batch_id: batchList[0].id,
             subject: batchList[0].subject,
-            teacher_name: batchList[0].teacher_name,
+            teacher_name: defaultTeacher,
             room: 'Room A'
           }));
+          
+          const ownerTitle = activeTenant?.custom_owner_title || 'Owner';
+          const isOwner = defaultTeacher === 'Owner' || defaultTeacher === ownerTitle;
+          const isStaff = (staffListDocs || []).filter(s => s.status === 'Approved').some(s => s.name === defaultTeacher);
+          const isCustom = defaultTeacher !== '' && !isOwner && !isStaff;
+          setIsCustomTeacherSlot(isCustom);
+          setCustomTeacherNameSlot(isCustom ? defaultTeacher : '');
         }
       } catch (err) {
         console.error("Failed to load parameters for timetable:", err);
@@ -512,13 +526,21 @@ function TimetableInner({ currentUser, verifyAction, activeTenant }) {
   const handleFormBatchChange = (batchId) => {
     const selected = batches.find(b => b.id === batchId);
     if (selected) {
+      const defaultTeacher = selected.teacher_name || '';
       setFormSlot(prev => ({
         ...prev,
         batch_id: batchId,
         subject: selected.subject,
-        teacher_name: selected.teacher_name,
+        teacher_name: defaultTeacher,
         room: selected.id === 'b1' ? 'Room A' : selected.id === 'b2' ? 'Room B' : 'Room C'
       }));
+
+      const ownerTitle = activeTenant?.custom_owner_title || 'Owner';
+      const isOwner = defaultTeacher === 'Owner' || defaultTeacher === ownerTitle;
+      const isStaff = staffList.filter(s => s.status === 'Approved').some(s => s.name === defaultTeacher);
+      const isCustom = defaultTeacher !== '' && !isOwner && !isStaff;
+      setIsCustomTeacherSlot(isCustom);
+      setCustomTeacherNameSlot(isCustom ? defaultTeacher : '');
     }
   };
 
@@ -557,6 +579,7 @@ function TimetableInner({ currentUser, verifyAction, activeTenant }) {
   // Edit slot trigger
   const handleOpenEditModal = (slot) => {
     setEditingSlotId(slot.id);
+    const teacherName = slot.teacher_name || '';
     setFormSlot({
       date: slot.date,
       batch_id: slot.batch_id,
@@ -564,10 +587,55 @@ function TimetableInner({ currentUser, verifyAction, activeTenant }) {
       start_time: slot.start_time,
       end_time: slot.end_time,
       topic: slot.topic || '',
-      teacher_name: slot.teacher_name || '',
+      teacher_name: teacherName,
       room: slot.room || ''
     });
+
+    const ownerTitle = activeTenant?.custom_owner_title || 'Owner';
+    const isOwner = teacherName === 'Owner' || teacherName === ownerTitle;
+    const isStaff = staffList.filter(s => s.status === 'Approved').some(s => s.name === teacherName);
+    const isCustom = teacherName !== '' && !isOwner && !isStaff;
+    setIsCustomTeacherSlot(isCustom);
+    setCustomTeacherNameSlot(isCustom ? teacherName : '');
+
     setShowEditModal(true);
+  };
+
+  const handleOpenCreateModal = () => {
+    setIsCustomTeacherSlot(false);
+    setCustomTeacherNameSlot('');
+    if (batches.length > 0) {
+      const defaultTeacher = batches[0].teacher_name || '';
+      setFormSlot({
+        date: new Date().toISOString().split('T')[0],
+        batch_id: batches[0].id,
+        subject: batches[0].subject,
+        start_time: '16:00',
+        end_time: '17:00',
+        room: 'Room A',
+        teacher_name: defaultTeacher,
+        topic: ''
+      });
+
+      const ownerTitle = activeTenant?.custom_owner_title || 'Owner';
+      const isOwner = defaultTeacher === 'Owner' || defaultTeacher === ownerTitle;
+      const isStaff = staffList.filter(s => s.status === 'Approved').some(s => s.name === defaultTeacher);
+      const isCustom = defaultTeacher !== '' && !isOwner && !isStaff;
+      setIsCustomTeacherSlot(isCustom);
+      setCustomTeacherNameSlot(isCustom ? defaultTeacher : '');
+    } else {
+      setFormSlot({
+        date: new Date().toISOString().split('T')[0],
+        batch_id: '',
+        subject: '',
+        start_time: '16:00',
+        end_time: '17:00',
+        room: 'Room A',
+        teacher_name: '',
+        topic: ''
+      });
+    }
+    setShowCreateModal(true);
   };
 
   // Edit slot handler
@@ -684,7 +752,7 @@ function TimetableInner({ currentUser, verifyAction, activeTenant }) {
           </p>
         </div>
         {currentUser?.role !== 'parent' && activeSubTab === 'manual' && (
-          <button className="btn btn-primary" onClick={() => setShowCreateModal(true)}>
+          <button className="btn btn-primary" onClick={handleOpenCreateModal}>
             <Plus size={18} style={{ marginRight: '0.4rem' }} /> Schedule Class
           </button>
         )}
@@ -1242,12 +1310,43 @@ function TimetableInner({ currentUser, verifyAction, activeTenant }) {
                 <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '1rem' }}>
                   <div className="form-group">
                     <label className="form-label">Teacher Assigned</label>
-                    <input
-                      type="text"
+                    <select
                       className="form-control"
-                      value={formSlot.teacher_name}
-                      onChange={(e) => setFormSlot(prev => ({ ...prev, teacher_name: e.target.value }))}
-                    />
+                      value={isCustomTeacherSlot ? 'Other' : (formSlot.teacher_name || '')}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === 'Other') {
+                          setIsCustomTeacherSlot(true);
+                          setFormSlot(prev => ({ ...prev, teacher_name: customTeacherNameSlot }));
+                        } else {
+                          setIsCustomTeacherSlot(false);
+                          setFormSlot(prev => ({ ...prev, teacher_name: val }));
+                        }
+                      }}
+                    >
+                      <option value="">Select Teacher</option>
+                      <option value={activeTenant?.custom_owner_title || 'Owner'}>{activeTenant?.custom_owner_title || 'Owner'}</option>
+                      {staffList.filter(s => s.status === 'Approved').map(t => (
+                        <option key={t.id} value={t.name}>{t.name} ({t.subject || 'General'})</option>
+                      ))}
+                      <option value="Other">Other (Type manually)</option>
+                    </select>
+
+                    {isCustomTeacherSlot && (
+                      <input
+                        type="text"
+                        className="form-control"
+                        style={{ marginTop: '0.5rem' }}
+                        placeholder="Enter teacher name manually"
+                        value={customTeacherNameSlot}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setCustomTeacherNameSlot(val);
+                          setFormSlot(prev => ({ ...prev, teacher_name: val }));
+                        }}
+                        required
+                      />
+                    )}
                   </div>
                   <div className="form-group">
                     <label className="form-label">Room / Hall</label>
@@ -1349,12 +1448,43 @@ function TimetableInner({ currentUser, verifyAction, activeTenant }) {
                 <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '1rem' }}>
                   <div className="form-group">
                     <label className="form-label">Teacher Assigned</label>
-                    <input
-                      type="text"
+                    <select
                       className="form-control"
-                      value={formSlot.teacher_name}
-                      onChange={(e) => setFormSlot(prev => ({ ...prev, teacher_name: e.target.value }))}
-                    />
+                      value={isCustomTeacherSlot ? 'Other' : (formSlot.teacher_name || '')}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === 'Other') {
+                          setIsCustomTeacherSlot(true);
+                          setFormSlot(prev => ({ ...prev, teacher_name: customTeacherNameSlot }));
+                        } else {
+                          setIsCustomTeacherSlot(false);
+                          setFormSlot(prev => ({ ...prev, teacher_name: val }));
+                        }
+                      }}
+                    >
+                      <option value="">Select Teacher</option>
+                      <option value={activeTenant?.custom_owner_title || 'Owner'}>{activeTenant?.custom_owner_title || 'Owner'}</option>
+                      {staffList.filter(s => s.status === 'Approved').map(t => (
+                        <option key={t.id} value={t.name}>{t.name} ({t.subject || 'General'})</option>
+                      ))}
+                      <option value="Other">Other (Type manually)</option>
+                    </select>
+
+                    {isCustomTeacherSlot && (
+                      <input
+                        type="text"
+                        className="form-control"
+                        style={{ marginTop: '0.5rem' }}
+                        placeholder="Enter teacher name manually"
+                        value={customTeacherNameSlot}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setCustomTeacherNameSlot(val);
+                          setFormSlot(prev => ({ ...prev, teacher_name: val }));
+                        }}
+                        required
+                      />
+                    )}
                   </div>
                   <div className="form-group">
                     <label className="form-label">Room / Hall</label>
