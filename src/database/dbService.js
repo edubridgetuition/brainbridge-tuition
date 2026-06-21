@@ -1516,17 +1516,35 @@ export const dbService = {
     
     return runQuery(
       async () => {
+        // 1. Try matching by tenant document ID
         const docRef = firestoreDoc(db, "tenants", cleanCode);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           const data = docSnap.data();
           return { id: docSnap.id, ...data, features: data.features || DEFAULT_FEATURES };
         }
-        return null;
+        
+        // 2. Try matching by tenant Name (case-insensitive)
+        const querySnapshot = await getDocs(firestoreCollection(db, "tenants"));
+        let matchedTenant = null;
+        querySnapshot.forEach(doc => {
+          const data = doc.data();
+          const name = String(data.name || '').trim().toLowerCase();
+          if (name === cleanCode) {
+            matchedTenant = { id: doc.id, ...data, features: data.features || DEFAULT_FEATURES };
+          }
+        });
+        return matchedTenant;
       },
       () => {
         const list = getLocalData('bb_tenants', INITIAL_TENANTS);
-        const tenant = list.find(t => t.id === cleanCode);
+        // 1. Try matching by ID
+        let tenant = list.find(t => t.id === cleanCode);
+        if (tenant) {
+          return { ...tenant, features: tenant.features || DEFAULT_FEATURES };
+        }
+        // 2. Try matching by Name
+        tenant = list.find(t => String(t.name || '').trim().toLowerCase() === cleanCode);
         if (tenant) {
           return { ...tenant, features: tenant.features || DEFAULT_FEATURES };
         }
@@ -1897,6 +1915,83 @@ export const dbService = {
           throw new Error("Invalid staff credentials or account is not approved yet.");
         }
         return matched;
+      }
+    );
+  },
+
+  async verifyStaffLoginWithoutTenant(mobile, password) {
+    const cleanMobile = String(mobile || '').trim().replace(/\D/g, '');
+    const cleanPassword = String(password || '').trim();
+
+    if (!cleanMobile || !cleanPassword) {
+      throw new Error("Mobile number and password are required.");
+    }
+
+    return runQuery(
+      async () => {
+        const tenantsSnapshot = await getDocs(firestoreCollection(db, "tenants"));
+        const tenants = tenantsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        for (const tenant of tenants) {
+          try {
+            // Check if Owner
+            const ownerMob = String(tenant.owner_whatsapp || '').trim().replace(/\D/g, '');
+            const requiredPassword = tenant.admin_password || 'admin123';
+            if (ownerMob === cleanMobile && requiredPassword === cleanPassword) {
+              dbService.setTenantCode(tenant.id);
+              return { role: 'admin', username: 'Owner', tenant };
+            }
+
+            // Check if Staff
+            dbService.setTenantCode(tenant.id);
+            const querySnapshot = await getDocs(
+              query(collection(db, "staff_accounts"), where("status", "==", "Approved"))
+            );
+            
+            let matchedStaff = null;
+            querySnapshot.forEach(doc => {
+              const data = doc.data();
+              const mob = String(data.mobile || '').trim().replace(/\D/g, '');
+              if (mob === cleanMobile && String(data.password || '').trim() === cleanPassword) {
+                matchedStaff = { id: doc.id, ...data };
+              }
+            });
+
+            if (matchedStaff) {
+              return { role: 'staff', staff: matchedStaff, tenant };
+            }
+          } catch (e) {
+            console.error(`Failed to verify staff login for tenant ${tenant.id}:`, e);
+          }
+        }
+        dbService.setTenantCode(null);
+        throw new Error("Invalid mobile number or password, or account is not approved yet.");
+      },
+      () => {
+        const tenants = getLocalData('bb_tenants', INITIAL_TENANTS);
+        for (const tenant of tenants) {
+          // Check if Owner
+          const ownerMob = String(tenant.owner_whatsapp || '').trim().replace(/\D/g, '');
+          const requiredPassword = tenant.admin_password || 'admin123';
+          if (ownerMob === cleanMobile && requiredPassword === cleanPassword) {
+            dbService.setTenantCode(tenant.id);
+            return { role: 'admin', username: 'Owner', tenant };
+          }
+
+          // Check if Staff
+          const prefix = `bb_${tenant.id}_`;
+          const staffAccounts = JSON.parse(localStorage.getItem(prefix + 'staff_accounts') || '[]');
+          const matched = staffAccounts.find(s => 
+            String(s.mobile || '').trim().replace(/\D/g, '') === cleanMobile && 
+            String(s.password || '').trim() === cleanPassword && 
+            s.status === 'Approved'
+          );
+          if (matched) {
+            dbService.setTenantCode(tenant.id);
+            return { role: 'staff', staff: matched, tenant };
+          }
+        }
+        throw new Error("Invalid mobile number or password, or account is not approved yet.");
       }
     );
   },

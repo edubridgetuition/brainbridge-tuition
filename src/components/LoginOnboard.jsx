@@ -14,7 +14,7 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
 
   // Staff Registration States
   const [showStaffRegister, setShowStaffRegister] = useState(false);
-  const [staffStep, setStaffStep] = useState('code'); // 'code', 'profile', 'password', 'success'
+  const [staffStep, setStaffStep] = useState('form'); // 'form', 'success'
   const [staffCentreCode, setStaffCentreCode] = useState('');
   const [staffName, setStaffName] = useState('');
   const [staffMobile, setStaffMobile] = useState('');
@@ -73,7 +73,7 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
   const [loadingStaffReg, setLoadingStaffReg] = useState(false);
 
   const clearStaffForm = () => {
-    setStaffStep('code');
+    setStaffStep('form');
     setStaffCentreCode('');
     setStaffName('');
     setStaffMobile('');
@@ -169,19 +169,10 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
       setVerifiedAccountId(account.id);
       setVerifiedUserName(account.name);
 
-      // Generate 6-digit random OTP
-      const generatedOtp = String(Math.floor(100000 + Math.random() * 900000));
-      setForgotOtp(generatedOtp);
-
       // Trigger simulated toast notification
-      setMockToastMessage(`📧 [OTP Simulation] Email sent to ${forgotEmail} with OTP: ${generatedOtp}`);
       setShowMockToast(true);
 
-      setForgotSuccess('Verification OTP sent successfully!');
-      setTimeout(() => {
-        setForgotStep('otp');
-        setForgotSuccess('');
-      }, 1000);
+      setForgotSuccess('Simulated reset link sent! Check the simulated inbox popup on the top right.');
     } catch (err) {
       setForgotError(err.message || 'Verification failed. Account not found.');
     } finally {
@@ -387,65 +378,53 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
     e.preventDefault();
     clearMessages();
 
-    const cleanCode = centreName.trim().toLowerCase();
-    if (!cleanCode) {
-      setError('Please enter Centre Name.');
+    if (!username.trim()) {
+      setError('Please enter Mobile Number.');
+      return;
+    }
+
+    if (!password) {
+      setError('Please enter Password.');
       return;
     }
 
     try {
-      const tenant = await dbService.verifyTenantCode(cleanCode);
-      if (!tenant) {
-        setError('Invalid Centre Name.');
-        return;
-      }
+      const result = await dbService.verifyStaffLoginWithoutTenant(username.trim(), password);
+      const { tenant } = result;
 
       if (tenant.status === 'Pending') {
-        setError('Your Tuition Center registration is pending approval from the Master Admin.');
+        setError('Your Center registration is pending approval from the Master Admin.');
         return;
       }
       if (tenant.status === 'Rejected') {
-        setError('Your Tuition Center registration has been rejected by the Master Admin.');
+        setError('Your Center registration has been rejected by the Master Admin.');
         return;
       }
 
-      await onTenantCodeSubmit(cleanCode);
+      await onTenantCodeSubmit(tenant.id);
 
-      if (!username.trim()) {
-        setError('Please enter your login code.');
-        return;
+      if (result.role === 'admin') {
+        onLogin({
+          username: 'Owner',
+          role: 'admin',
+          studentId: null,
+          batchId: null,
+          must_change_password: tenant.must_change_password === true
+        });
+      } else {
+        const staff = result.staff;
+        onLogin({
+          username: staff.name,
+          role: 'admin', // Logs into Teacher Workspace
+          studentId: null,
+          batchId: null,
+          staffId: staff.id,
+          designation: staff.role || 'Teacher',
+          must_change_password: staff.must_change_password
+        });
       }
-      
-      const requiredPassword = tenant.admin_password || 'admin123';
-      if (password !== requiredPassword) {
-        // Fallback: Check staff accounts
-        try {
-          const staff = await dbService.verifyStaffLogin(username.trim(), password);
-          onLogin({
-            username: staff.name,
-            role: 'admin', // Logs into Teacher Workspace
-            studentId: null,
-            batchId: null,
-            staffId: staff.id,
-            designation: staff.role || 'Teacher',
-            must_change_password: staff.must_change_password
-          });
-          return;
-        } catch (err) {
-          setError('Invalid login code or password.');
-          return;
-        }
-      }
-      
-      onLogin({
-        username: username.trim(),
-        role: 'admin',
-        studentId: null,
-        batchId: null,
-        must_change_password: tenant.must_change_password === true
-      });
     } catch (err) {
-      setError('Authentication failed. Please try again.');
+      setError(err.message || 'Invalid Mobile Number or password.');
       console.error(err);
     }
   };
@@ -842,30 +821,14 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
           {/* Forms */}
           {activeTab === 'admin' && (
             <form onSubmit={handleAdminSubmit} style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              {/* Centre name */}
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <div style={{ position: 'relative' }}>
-                  <School size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
-                  <input
-                    type="text"
-                    className="form-control"
-                    placeholder="Centre name"
-                    value={centreName}
-                    onChange={(e) => handleCentreNameChange(e.target.value)}
-                    style={{ paddingLeft: '2.5rem' }}
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* Login code */}
+              {/* Mobile Number input replaces Login Code and hides Centre Name */}
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <div style={{ position: 'relative' }}>
                   <User size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
                   <input
-                    type="text"
+                    type="tel"
                     className="form-control"
-                    placeholder="e.g., login code"
+                    placeholder="Mobile Number"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     style={{ paddingLeft: '2.5rem' }}
@@ -928,7 +891,7 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
                   boxShadow: 'none'
                 }}
               >
-                Don't have an account? Sign Up as Staff
+                Don't have an account? Sign Up as Teacher
               </button>
             </form>
           )}
@@ -942,7 +905,7 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
                   <input
                     type="text"
                     className="form-control"
-                    placeholder="Centre name"
+                    placeholder="Class Name / Centre Name"
                     value={centreName}
                     onChange={(e) => handleCentreNameChange(e.target.value)}
                     style={{ paddingLeft: '2.5rem' }}
@@ -1070,39 +1033,6 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
                 </button>
               )}
             </div>
-            {/* Stepper Header */}
-            {staffStep !== 'success' && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '0.25rem 0 0.75rem 0', padding: '0.25rem' }}>
-                {['code', 'profile', 'password'].map((s, idx) => {
-                  const stepLabels = ['Tuition Code', 'Profile', 'Password'];
-                  const isActive = staffStep === s;
-                  const isDone = (s === 'code' && (staffStep === 'profile' || staffStep === 'password')) || 
-                                 (s === 'profile' && staffStep === 'password');
-                  return (
-                    <div key={s} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                      <div style={{
-                        width: '24px',
-                        height: '24px',
-                        borderRadius: '50%',
-                        backgroundColor: isActive ? 'var(--primary)' : isDone ? '#10b981' : '#e2e8f0',
-                        color: isActive || isDone ? '#fff' : '#64748b',
-                        fontSize: '0.75rem',
-                        fontWeight: '800',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}>
-                        {idx + 1}
-                      </div>
-                      <span style={{ fontSize: '0.74rem', fontWeight: isActive || isDone ? '700' : '500', color: isActive ? 'var(--primary)' : isDone ? '#10b981' : '#64748b' }}>
-                        {stepLabels[idx]}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
             {staffRegError && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem', backgroundColor: 'var(--danger-bg)', border: '1px solid var(--danger-border)', borderRadius: '8px', color: 'var(--danger)', fontSize: '0.78rem', fontWeight: '600' }}>
                 <ShieldAlert size={16} />
@@ -1110,214 +1040,27 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
               </div>
             )}
 
-            {/* Step 1: Enter Tuition Code */}
-            {staffStep === 'code' && (
+            {/* Single Step Teacher Registration Form */}
+            {staffStep === 'form' && (
               <form onSubmit={async (e) => {
                 e.preventDefault();
                 setStaffRegError('');
+
                 const cleanCode = staffCentreCode.trim().toLowerCase();
                 if (!cleanCode) {
-                  setStaffRegError('Please enter the Tuition Code.');
+                  setStaffRegError('Please enter the Class Name.');
                   return;
                 }
-                try {
-                  setLoadingStaffReg(true);
-                  const tenant = await dbService.verifyTenantCode(cleanCode);
-                  if (!tenant) {
-                    setStaffRegError('Invalid Tuition Code. Please contact your tuition owner.');
-                    return;
-                  }
-                  if (tenant.features?.teacher_login === false) {
-                    setStaffRegError('Staff registration is disabled for this Tuition Center.');
-                    return;
-                  }
-                  // Set active tenant in system
-                  await onTenantCodeSubmit(cleanCode);
-                  // Advance to profile step
-                  setStaffStep('profile');
-                } catch (err) {
-                  setStaffRegError('Failed to verify Tuition Code: ' + err.message);
-                } finally {
-                  setLoadingStaffReg(false);
-                }
-              }} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                  <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Tuition / Centre Code *</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    placeholder="Enter Tuition Code (e.g. owner_a)"
-                    value={staffCentreCode}
-                    onChange={(e) => setStaffCentreCode(e.target.value)}
-                    required
-                  />
-                </div>
-                <button type="submit" className="btn btn-primary" style={{ padding: '0.65rem', fontWeight: '800', marginTop: '0.5rem' }} disabled={loadingStaffReg}>
-                  {loadingStaffReg ? 'Verifying...' : 'Continue'}
-                </button>
-              </form>
-            )}
 
-            {/* Step 2: Profile Details */}
-            {staffStep === 'profile' && (
-              <form onSubmit={(e) => {
-                e.preventDefault();
-                setStaffRegError('');
-                if (!staffName.trim() || !staffMobile.trim() || !staffAddress.trim() || !staffGender || !staffDob || !staffEducation.trim() || !staffExperience.trim() || !staffEmail.trim() || !staffSubject.trim()) {
-                  setStaffRegError('Please fill in all required fields.');
+                if (!staffName.trim() || !staffEmail.trim() || !staffMobile.trim() || !staffPassword.trim() || !staffConfirmPassword.trim()) {
+                  setStaffRegError('Please fill in all fields.');
                   return;
                 }
+
                 if (staffMobile.length < 10) {
                   setStaffRegError('Please enter a valid 10-digit mobile number.');
                   return;
                 }
-                setStaffStep('password');
-              }} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                  <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Full Name *</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    placeholder="Enter full name"
-                    value={staffName}
-                    onChange={(e) => setStaffName(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                  <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Mobile Number *</label>
-                  <input
-                    type="tel"
-                    className="form-control"
-                    placeholder="10-digit mobile number"
-                    value={staffMobile}
-                    onChange={(e) => setStaffMobile(e.target.value.replace(/\D/g, '').substring(0, 10))}
-                    required
-                  />
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                  <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Email Address *</label>
-                  <input
-                    type="email"
-                    className="form-control"
-                    placeholder="Enter email address"
-                    value={staffEmail}
-                    onChange={(e) => setStaffEmail(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                    <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Gender *</label>
-                    <select
-                      className="form-control"
-                      value={staffGender}
-                      onChange={(e) => setStaffGender(e.target.value)}
-                      required
-                    >
-                      <option value="">Select Gender</option>
-                      <option value="Male">Male</option>
-                      <option value="Female">Female</option>
-                      <option value="Other">Other</option>
-                    </select>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                    <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Date of Birth *</label>
-                    <input
-                      type="date"
-                      className="form-control"
-                      value={staffDob}
-                      onChange={(e) => setStaffDob(e.target.value)}
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                    <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Subject Specialist *</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      placeholder="e.g. Physics"
-                      value={staffSubject}
-                      onChange={(e) => setStaffSubject(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                    <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Designation *</label>
-                    <select
-                      className="form-control"
-                      value={staffRole}
-                      onChange={(e) => setStaffRole(e.target.value)}
-                    >
-                      <option value="Teacher">Teacher / Lecturer</option>
-                      <option value="Accountant">Accountant</option>
-                      <option value="Admin Staff">Admin Staff</option>
-                      <option value="Assistant">Assistant</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                    <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Education *</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      placeholder="e.g. M.Sc, B.Ed"
-                      value={staffEducation}
-                      onChange={(e) => setStaffEducation(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                    <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Experience *</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      placeholder="e.g. 5 Years"
-                      value={staffExperience}
-                      onChange={(e) => setStaffExperience(e.target.value)}
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                  <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Residential Address *</label>
-                  <textarea
-                    className="form-control"
-                    rows="2"
-                    placeholder="Enter residential address"
-                    value={staffAddress}
-                    onChange={(e) => setStaffAddress(e.target.value)}
-                    style={{ resize: 'none', fontFamily: 'inherit' }}
-                    required
-                  />
-                </div>
-
-                <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
-                  <button type="submit" className="btn btn-primary" style={{ flex: 1, padding: '0.65rem', fontWeight: '800' }}>
-                    Next: Create Password
-                  </button>
-                  <button type="button" onClick={() => setStaffStep('code')} className="btn btn-secondary" style={{ padding: '0.65rem 1rem', fontWeight: '800' }}>
-                    Back
-                  </button>
-                </div>
-              </form>
-            )}
-
-            {/* Step 3: Create Password */}
-            {staffStep === 'password' && (
-              <form onSubmit={async (e) => {
-                e.preventDefault();
-                setStaffRegError('');
 
                 if (staffPassword !== staffConfirmPassword) {
                   setStaffRegError('Passwords do not match.');
@@ -1332,27 +1075,43 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
 
                 try {
                   setLoadingStaffReg(true);
+                  
+                  // Verify that the Class Name (Tenant Code) exists
+                  const tenant = await dbService.verifyTenantCode(cleanCode);
+                  if (!tenant) {
+                    setStaffRegError('Invalid Class Name. Please contact your administrator.');
+                    return;
+                  }
+                  if (tenant.features?.teacher_login === false) {
+                    setStaffRegError('Teacher sign up is disabled for this Center.');
+                    return;
+                  }
+
+                  // Set active tenant in system
+                  await onTenantCodeSubmit(cleanCode);
+                  dbService.setTenantCode(cleanCode);
+
+                  // Add staff account with default placeholders for required database fields
                   await dbService.addStaffAccount({
                     name: staffName.trim(),
                     mobile: staffMobile.trim(),
                     email: staffEmail.trim(),
-                    subject: staffSubject.trim(),
-                    role: staffRole,
-                    address: staffAddress.trim(),
+                    subject: 'General',
+                    role: 'Teacher',
+                    address: 'N/A',
                     password: staffPassword.trim(),
-                    gender: staffGender,
-                    dob: staffDob,
-                    education: staffEducation.trim(),
-                    experience: staffExperience.trim()
+                    gender: 'Male',
+                    dob: '2000-01-01',
+                    education: 'Graduate',
+                    experience: 'N/A'
                   });
 
-                  if (activeTenant) {
-                    const ownerMsg = `EduBridge: A new staff registration request from ${staffName} (${staffMobile}) is pending approval for ${activeTenant.name}.`;
-                    try {
-                      dbService.sendWhatsAppMessage(activeTenant.owner_whatsapp, ownerMsg);
-                    } catch (e) {
-                      console.error("WhatsApp trigger blocked or failed:", e);
-                    }
+                  // Trigger WhatsApp notification to the center owner
+                  const ownerMsg = `EduBridge: A new teacher registration request from ${staffName} (${staffMobile}) is pending approval for ${tenant.name}.`;
+                  try {
+                    dbService.sendWhatsAppMessage(tenant.owner_whatsapp, ownerMsg);
+                  } catch (whatsappErr) {
+                    console.error("WhatsApp trigger failed:", whatsappErr);
                   }
 
                   setStaffStep('success');
@@ -1364,11 +1123,59 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
               }} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Full Name *</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Enter Full Name"
+                    value={staffName}
+                    onChange={(e) => setStaffName(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Gmail ID *</label>
+                  <input
+                    type="email"
+                    className="form-control"
+                    placeholder="Enter Gmail ID"
+                    value={staffEmail}
+                    onChange={(e) => setStaffEmail(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Mobile Number *</label>
+                  <input
+                    type="tel"
+                    className="form-control"
+                    placeholder="Enter 10-Digit Mobile Number"
+                    value={staffMobile}
+                    onChange={(e) => setStaffMobile(e.target.value.replace(/\D/g, '').substring(0, 10))}
+                    required
+                  />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Class Name *</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Enter Class Name (e.g. owner_a)"
+                    value={staffCentreCode}
+                    onChange={(e) => setStaffCentreCode(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                   <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Create Password *</label>
                   <input
                     type="password"
                     className="form-control"
-                    placeholder="Enter password"
+                    placeholder="Create Password"
                     value={staffPassword}
                     onChange={(e) => setStaffPassword(e.target.value)}
                     required
@@ -1380,7 +1187,7 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
                   <input
                     type="password"
                     className="form-control"
-                    placeholder="Confirm password"
+                    placeholder="Confirm Password"
                     value={staffConfirmPassword}
                     onChange={(e) => setStaffConfirmPassword(e.target.value)}
                     required
@@ -1391,28 +1198,18 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
                   Password must contain at least 8 characters, an uppercase letter, a number, and a special character (!@#$&*-).
                 </span>
 
-                <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
-                  <button 
-                    type="submit" 
-                    className="btn btn-primary" 
-                    style={{ flex: 1, padding: '0.65rem', fontWeight: '800' }}
-                    disabled={loadingStaffReg}
-                  >
-                    {loadingStaffReg ? 'Submitting...' : 'Register as Staff'}
-                  </button>
-                  <button 
-                    type="button" 
-                    onClick={() => setStaffStep('profile')}
-                    className="btn btn-secondary" 
-                    style={{ padding: '0.65rem 1rem', fontWeight: '800' }}
-                  >
-                    Back
-                  </button>
-                </div>
+                <button 
+                  type="submit" 
+                  className="btn btn-primary" 
+                  style={{ width: '100%', padding: '0.65rem', fontWeight: '800', marginTop: '0.5rem' }}
+                  disabled={loadingStaffReg}
+                >
+                  {loadingStaffReg ? 'Registering...' : 'Sign Up'}
+                </button>
               </form>
             )}
 
-            {/* Step 4: Success Screen */}
+            {/* Success Screen */}
             {staffStep === 'success' && (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', padding: '1rem 0', textAlign: 'center' }}>
                 <div style={{ width: '56px', height: '56px', borderRadius: '50%', backgroundColor: 'rgba(16, 185, 129, 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#10b981' }}>
@@ -1420,7 +1217,7 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
                 </div>
                 <h3 style={{ fontSize: '1.2rem', fontWeight: '800', color: '#111827', margin: 0 }}>Registration Submitted</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.82rem', color: '#475569', lineHeight: '1.5', margin: 0 }}>
-                  <p>Your staff account profile has been submitted successfully!</p>
+                  <p>Your teacher account profile has been submitted successfully!</p>
                   <div style={{
                     padding: '0.5rem 0.75rem',
                     backgroundColor: 'rgba(245, 158, 11, 0.08)',
@@ -1433,7 +1230,7 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
                   }}>
                     Status: Pending Approval
                   </div>
-                  <p>The Tuition Owner has been notified. You will receive your Centre Code and login details via WhatsApp once approved.</p>
+                  <p>The Center Owner has been notified. You will be able to login using your Mobile Number once your account is approved.</p>
                 </div>
                 
                 <button
@@ -1777,16 +1574,16 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
                   >
                     <option value="student">Student / Parent</option>
                     <option value="staff">Teacher / Staff</option>
-                    <option value="owner">Tuition Owner (Admin)</option>
+                    <option value="owner">Center Owner (Admin)</option>
                   </select>
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                  <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Centre Name *</label>
+                  <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Class Name / Centre Name *</label>
                   <input
                     type="text"
                     className="form-control"
-                    placeholder="Enter center name code"
+                    placeholder="Enter Class Name / Centre Name"
                     value={forgotCentreCode}
                     onChange={(e) => setForgotCentreCode(e.target.value)}
                     required
@@ -1806,38 +1603,7 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
                 </div>
 
                 <button type="submit" className="btn btn-primary" style={{ padding: '0.65rem', fontWeight: '800', marginTop: '0.5rem' }} disabled={loadingForgot}>
-                  {loadingForgot ? 'Verifying...' : 'Send Verification OTP'}
-                </button>
-              </form>
-            )}
-
-            {/* STEP 2: ENTER OTP */}
-            {forgotStep === 'otp' && (
-              <form onSubmit={handleVerifyOtp} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div style={{ padding: '0.5rem 0.75rem', backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', color: '#1e3a8a', fontSize: '0.8rem', lineHeight: '1.4' }}>
-                  An OTP has been simulated for <strong>{forgotEmail}</strong>. Look at the simulated notification on the top right.
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                  <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>Enter 6-Digit OTP *</label>
-                  <input
-                    type="text"
-                    maxLength={6}
-                    className="form-control"
-                    placeholder="Enter OTP"
-                    value={forgotOtpInput}
-                    onChange={(e) => setForgotOtpInput(e.target.value.replace(/\D/g, ''))}
-                    required
-                    style={{ textAlign: 'center', letterSpacing: '0.5em', fontSize: '1.1rem', fontWeight: '700' }}
-                  />
-                </div>
-
-                <button type="submit" className="btn btn-primary" style={{ padding: '0.65rem', fontWeight: '800', marginTop: '0.5rem' }}>
-                  Verify OTP
-                </button>
-
-                <button type="button" onClick={() => setForgotStep('request')} style={{ background: 'none', border: 'none', color: '#64748b', fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'underline' }}>
-                  Back
+                  {loadingForgot ? 'Verifying...' : 'Send Reset Password Link'}
                 </button>
               </form>
             )}
@@ -1940,7 +1706,7 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
             <span style={{ fontSize: '0.65rem', color: '#94a3b8' }}>To: {forgotEmail}</span>
-            <span style={{ fontSize: '0.78rem', fontWeight: '800', color: '#ffffff' }}>Subject: EduBridge OTP Code</span>
+            <span style={{ fontSize: '0.78rem', fontWeight: '800', color: '#ffffff' }}>Subject: EduBridge Password Reset Link</span>
           </div>
           <div style={{
             backgroundColor: '#1e293b',
@@ -1951,25 +1717,31 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
             lineHeight: '1.4',
             color: '#cbd5e1'
           }}>
-            Hello <strong>{verifiedUserName}</strong>, your verification code is:
-            <div style={{
-              marginTop: '0.5rem',
-              textAlign: 'center',
-              fontSize: '1.4rem',
-              fontWeight: '900',
-              letterSpacing: '0.2em',
-              color: '#38bdf8',
-              backgroundColor: '#0f172a',
-              padding: '0.4rem',
-              borderRadius: '4px',
-              border: '1px dashed #38bdf8',
-              userSelect: 'all'
-            }}>
-              {forgotOtp}
-            </div>
-            <span style={{ display: 'block', fontSize: '0.62rem', color: '#94a3b8', textAlign: 'center', marginTop: '0.5rem' }}>
-              (Double click the code to select and copy it)
-            </span>
+            Hello <strong>{verifiedUserName}</strong>, you requested a password reset. Please click the button below to reset your password:
+            <button
+              onClick={() => {
+                setForgotStep('reset');
+                setForgotSuccess('');
+                setShowMockToast(false);
+              }}
+              style={{
+                marginTop: '0.75rem',
+                width: '100%',
+                padding: '0.6rem',
+                backgroundColor: '#3b82f6',
+                border: 'none',
+                borderRadius: '6px',
+                color: '#ffffff',
+                fontWeight: '800',
+                cursor: 'pointer',
+                textAlign: 'center',
+                transition: 'background-color 0.2s'
+              }}
+              onMouseOver={(e) => e.target.style.backgroundColor = '#2563eb'}
+              onMouseOut={(e) => e.target.style.backgroundColor = '#3b82f6'}
+            >
+              Reset Password Link
+            </button>
           </div>
         </div>
       )}
