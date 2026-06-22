@@ -1533,7 +1533,7 @@ export const dbService = {
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           const data = docSnap.data();
-          return { id: docSnap.id, ...data, features: data.features || DEFAULT_FEATURES };
+          return { ...data, id: docSnap.id, features: data.features || DEFAULT_FEATURES };
         }
         
         // 2. Try matching by tenant Name (case-insensitive)
@@ -1543,7 +1543,7 @@ export const dbService = {
           const data = doc.data();
           const name = String(data.name || '').trim().toLowerCase();
           if (name === cleanCode) {
-            matchedTenant = { id: doc.id, ...data, features: data.features || DEFAULT_FEATURES };
+            matchedTenant = { ...data, id: doc.id, features: data.features || DEFAULT_FEATURES };
           }
         });
         return matchedTenant;
@@ -1572,7 +1572,7 @@ export const dbService = {
         return querySnapshot.docs
           .map(doc => {
             const data = doc.data();
-            return { id: doc.id, ...data, features: data.features || DEFAULT_FEATURES };
+            return { ...data, id: doc.id, features: data.features || DEFAULT_FEATURES };
           })
           .filter(t => t.id !== 'ak007');
       },
@@ -1674,7 +1674,7 @@ export const dbService = {
     return runQuery(
       async () => {
         const querySnapshot = await getDocs(firestoreCollection(db, "tenants"));
-        const tenantsList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const tenantsList = querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
 
         const statsList = [];
         let totalStudents = 0;
@@ -1946,7 +1946,7 @@ export const dbService = {
     return runQuery(
       async () => {
         const tenantsSnapshot = await getDocs(firestoreCollection(db, "tenants"));
-        const tenants = tenantsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const tenants = tenantsSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
         
         for (const tenant of tenants) {
           try {
