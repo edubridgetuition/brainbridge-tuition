@@ -1499,12 +1499,21 @@ export const dbService = {
   },
 
   getTenantCode() {
-    return localStorage.getItem('bb_tenant_code') || '';
+    let code = localStorage.getItem('bb_tenant_code') || '';
+    if (code === 'ak007') {
+      code = 'akash academy';
+      localStorage.setItem('bb_tenant_code', 'akash academy');
+    }
+    return code;
   },
 
   setTenantCode(code) {
-    if (code) {
-      localStorage.setItem('bb_tenant_code', code);
+    let targetCode = code;
+    if (targetCode === 'ak007') {
+      targetCode = 'akash academy';
+    }
+    if (targetCode) {
+      localStorage.setItem('bb_tenant_code', targetCode);
     } else {
       localStorage.removeItem('bb_tenant_code');
     }
@@ -1560,15 +1569,19 @@ export const dbService = {
     return runQuery(
       async () => {
         const querySnapshot = await getDocs(firestoreCollection(db, "tenants"));
-        return querySnapshot.docs.map(doc => {
-          const data = doc.data();
-          return { id: doc.id, ...data, features: data.features || DEFAULT_FEATURES };
-        });
+        return querySnapshot.docs
+          .map(doc => {
+            const data = doc.data();
+            return { id: doc.id, ...data, features: data.features || DEFAULT_FEATURES };
+          })
+          .filter(t => t.id !== 'ak007');
       },
-      () => getLocalData('bb_tenants', INITIAL_TENANTS).map(t => ({
-        ...t,
-        features: t.features || DEFAULT_FEATURES
-      }))
+      () => getLocalData('bb_tenants', INITIAL_TENANTS)
+        .map(t => ({
+          ...t,
+          features: t.features || DEFAULT_FEATURES
+        }))
+        .filter(t => t.id !== 'ak007')
     );
   },
 
