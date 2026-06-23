@@ -358,19 +358,20 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
     }
   };
 
-  const handleSuperAdminSubmit = (e) => {
+  const handleSuperAdminSubmit = async (e) => {
     e.preventDefault();
     clearMessages();
     
-    if (superAdminPassword === 'Super123!') {
+    try {
+      const admin = await dbService.verifySuperAdminLogin(superAdminPassword);
       onLogin({
-        username: 'Super Admin',
-        role: 'superadmin',
+        username: admin.username,
+        role: admin.role,
         studentId: null,
         batchId: null
       });
-    } else {
-      setError('Invalid Super Admin password.');
+    } catch (err) {
+      setError(err.message || 'Invalid Super Admin password.');
     }
   };
 

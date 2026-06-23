@@ -306,7 +306,7 @@ function App() {
     setActiveTab('dashboard'); // reset to dashboard on login
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     if (currentUser?.isInspecting) {
       handleExitInspection();
       return;
@@ -315,6 +315,7 @@ function App() {
       ? 'Super Admin Portal' 
       : (currentUser?.role === 'admin' ? 'Admin Portal' : 'Parent Portal');
     if (window.confirm(`Are you sure you want to log out from the ${portalName}?`)) {
+      await dbService.signOutUser();
       sessionStorage.removeItem('bb_current_user');
       setCurrentUser(null);
     }

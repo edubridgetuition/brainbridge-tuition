@@ -1,5 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from "firebase/firestore";
+import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "",
@@ -26,3 +27,6 @@ export const db = isFirebaseConfigured
       experimentalAutoDetectLongPolling: true
     }) 
   : null;
+
+export const auth = isFirebaseConfigured ? getAuth(app) : null;
+

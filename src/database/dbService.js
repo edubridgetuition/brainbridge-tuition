@@ -1,4 +1,4 @@
-import { db, isFirebaseConfigured } from './firebase';
+import { db, isFirebaseConfigured, auth } from './firebase';
 import { 
   collection as firestoreCollection, 
   getDocs, 
@@ -14,6 +14,65 @@ import {
   where,
   onSnapshot
 } from "firebase/firestore";
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut
+} from "firebase/auth";
+
+// --- FIREBASE AUTHENTICATION HELPERS ---
+const AUTH_PROJECT_SECRET = "EduBridgeSecurePass2026!";
+
+// Helper to generate a unique deterministic email address for each user type
+const getVirtualEmail = (role, tenantId, docId, passwordHash) => {
+  const cleanTenant = String(tenantId || 'global').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
+  const cleanDocId = String(docId || 'user').trim().toLowerCase().replace(/[^a-z0-9_.-]/g, '');
+  const cleanHash = String(passwordHash || '').trim().toLowerCase();
+  return `${role}_${cleanTenant}_${cleanDocId}_${cleanHash.slice(0, 32)}@edubridge.internal`;
+};
+
+// Log in or dynamically register the user in Firebase Auth using the project secret
+const authenticateUserWithAuth = async (role, tenantId, docId, passwordHash) => {
+  if (!isFirebaseConfigured || !auth) return null;
+  const email = getVirtualEmail(role, tenantId, docId, passwordHash);
+  try {
+    const userCred = await signInWithEmailAndPassword(auth, email, AUTH_PROJECT_SECRET);
+    return userCred.user;
+  } catch (error) {
+    if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+      try {
+        const userCred = await createUserWithEmailAndPassword(auth, email, AUTH_PROJECT_SECRET);
+        return userCred.user;
+      } catch (createError) {
+        console.error("Failed to create Firebase Auth user:", createError);
+        throw createError;
+      }
+    }
+    console.error("Firebase Auth sign in error:", error);
+    throw error;
+  }
+};
+
+const signInGuest = async () => {
+  if (!isFirebaseConfigured || !auth) return null;
+  try {
+    const userCred = await signInWithEmailAndPassword(auth, 'guest@edubridge.com', 'guestPassword123!');
+    return userCred.user;
+  } catch (error) {
+    console.error("Failed to sign in as guest:", error);
+    throw error;
+  }
+};
+
+const signOutUser = async () => {
+  if (isFirebaseConfigured && auth) {
+    try {
+      await signOut(auth);
+    } catch (e) {
+      console.error("Sign out error:", e);
+    }
+  }
+};
 
 // --- SAAS MULTI-TENANCY DB WRAPPERS ---
 const collection = (dbInstance, name) => {
@@ -286,6 +345,7 @@ const runQuery = async (firebaseQueryFn, localStorageFallbackFn) => {
 export const dbService = {
   // --- HELPERS ---
   sendWhatsAppMessage,
+  signOutUser,
 
   // --- AUDIT LOGGING ---
   async logActivity(action) {
@@ -1014,7 +1074,10 @@ export const dbService = {
 
     return runQuery(
       async () => {
-        // 1. Verify Student exists
+        // 1. Sign in as guest to search students and parent accounts
+        await signInGuest();
+
+        // Verify Student exists
         let studentSnap = await getDocs(query(collection(db, "students"), where("student_id", "==", numId)));
         if (studentSnap.empty) {
           studentSnap = await getDocs(query(collection(db, "students"), where("student_id", "==", cleanStudentNumericId)));
@@ -1043,23 +1106,26 @@ export const dbService = {
         }
 
         if (!studentDoc) {
+          await signOutUser();
           throw new Error("Invalid Student ID number.");
         }
 
         if (studentData && (studentData.parent_portal_disabled === true || studentData.parent_portal_disabled === 'true')) {
+          await signOutUser();
           throw new Error("This parent portal access has been deleted/disabled. Please contact your tuition administrator.");
         }
 
         // Ensure student_id is set in the returned data
         const studentIdVal = studentData.student_id || studentData.student_numeric_id || numId;
 
-        // 2. Verify parent credentials (registered password or parent/student mobile number)
+        // Verify parent credentials (registered password or parent/student mobile number)
         const parentSnap = await getDoc(doc(db, "parent_accounts", studentId));
         let isValid = false;
         let needsUpgrade = false;
+        let dbPassword = "";
         
         if (parentSnap.exists()) {
-          const dbPassword = String(parentSnap.data().password || '').trim();
+          dbPassword = String(parentSnap.data().password || '').trim();
           if (dbPassword.length === 64) {
             if (dbPassword === hashedInput) {
               isValid = true;
@@ -1077,17 +1143,30 @@ export const dbService = {
           const sMobile = String(studentData.mobile || '').trim();
           if ((pMobile && pMobile === cleanPassword) || (sMobile && sMobile === cleanPassword)) {
             isValid = true;
+            needsUpgrade = true;
+            dbPassword = cleanPassword;
           }
         }
 
         if (!isValid) {
+          await signOutUser();
           throw new Error("Invalid Student ID or password.");
         }
+
+        // 3. Authenticate user's individual session using virtual email and project secret
+        await signOutUser(); // Sign out guest
+        const tenantId = dbService.getTenantCode();
+        const activeHash = needsUpgrade ? hashedInput : dbPassword;
+        await authenticateUserWithAuth('student', tenantId, studentId, activeHash);
 
         if (needsUpgrade) {
           try {
             const parentRef = doc(db, "parent_accounts", studentId);
-            await updateDoc(parentRef, { password: hashedInput });
+            await setDoc(parentRef, {
+              student_id: studentId,
+              student_numeric_id: studentIdVal,
+              password: hashedInput
+            }, { merge: true });
           } catch (e) {
             console.error("Failed to auto-upgrade parent password hash:", e);
           }
@@ -1580,6 +1659,9 @@ export const dbService = {
     
     return runQuery(
       async () => {
+        // Sign in as guest to resolve tenant credentials
+        await signInGuest();
+
         // 1. Try matching by tenant document ID
         const docRef = firestoreDoc(db, "tenants", cleanCode);
         const docSnap = await getDoc(docRef);
@@ -1598,6 +1680,10 @@ export const dbService = {
             matchedTenant = { ...data, id: doc.id, features: data.features || DEFAULT_FEATURES };
           }
         });
+        
+        if (!matchedTenant) {
+          await signOutUser();
+        }
         return matchedTenant;
       },
       () => {
@@ -1954,6 +2040,14 @@ export const dbService = {
 
     return runQuery(
       async () => {
+        const tenantId = dbService.getTenantCode();
+        if (!tenantId) {
+          throw new Error("No active tuition center selected.");
+        }
+
+        // 1. Sign in as guest to search the staff document
+        await signInGuest();
+
         const q = query(
           collection(db, "staff_accounts"), 
           where("status", "==", "Approved")
@@ -1961,37 +2055,51 @@ export const dbService = {
         const querySnapshot = await getDocs(q);
         
         let matchedStaff = null;
-        let needsUpgrade = false;
-        let staffDocRef = null;
-
         querySnapshot.forEach(docSnap => {
           const data = docSnap.data();
           const mob = String(data.mobile || '').trim().toLowerCase();
           const email = String(data.email || '').trim().toLowerCase();
           const name = String(data.name || '').trim().toLowerCase();
           if (mob === cleanUsername || email === cleanUsername || name === cleanUsername) {
-            const dbPassword = String(data.password || '').trim();
-            if (dbPassword.length === 64) {
-              if (dbPassword === hashedInput) {
-                matchedStaff = { id: docSnap.id, ...data };
-              }
-            } else {
-              if (dbPassword === cleanPassword) {
-                matchedStaff = { id: docSnap.id, ...data };
-                needsUpgrade = true;
-                staffDocRef = docSnap.ref;
-              }
-            }
+            matchedStaff = { id: docSnap.id, ...data };
           }
         });
 
         if (!matchedStaff) {
+          await signOutUser();
           throw new Error("Invalid staff credentials or account is not approved yet.");
         }
 
-        if (needsUpgrade && staffDocRef) {
+        // 2. Verify password against hash
+        const dbPassword = String(matchedStaff.password || '').trim();
+        let isMatched = false;
+        let needsUpgrade = false;
+
+        if (dbPassword.length === 64) {
+          if (dbPassword === hashedInput) {
+            isMatched = true;
+          }
+        } else {
+          if (dbPassword === cleanPassword) {
+            isMatched = true;
+            needsUpgrade = true;
+          }
+        }
+
+        if (!isMatched) {
+          await signOutUser();
+          throw new Error("Invalid staff credentials or account is not approved yet.");
+        }
+
+        // 3. Authenticate with virtual email
+        await signOutUser(); // Sign out guest first
+        const activeHash = needsUpgrade ? hashedInput : dbPassword;
+        await authenticateUserWithAuth('staff', tenantId, matchedStaff.id, activeHash);
+
+        if (needsUpgrade) {
           try {
-            await updateDoc(staffDocRef, { password: hashedInput });
+            const docRef = doc(db, "staff_accounts", matchedStaff.id);
+            await updateDoc(docRef, { password: hashedInput });
             matchedStaff.password = hashedInput;
           } catch (e) {
             console.error("Failed to auto-upgrade staff password hash:", e);
@@ -2051,6 +2159,9 @@ export const dbService = {
 
     return runQuery(
       async () => {
+        // 1. Sign in as guest to search tenants and staff accounts
+        await signInGuest();
+
         const tenantsSnapshot = await getDocs(firestoreCollection(db, "tenants"));
         const tenants = tenantsSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
         
@@ -2075,6 +2186,10 @@ export const dbService = {
             }
 
             if (ownerMatch) {
+              await signOutUser();
+              const activeHash = ownerNeedsUpgrade ? hashedInput : requiredPassword;
+              await authenticateUserWithAuth('owner', tenant.id, 'owner', activeHash);
+
               dbService.setTenantCode(tenant.id);
               if (ownerNeedsUpgrade) {
                 try {
@@ -2096,7 +2211,6 @@ export const dbService = {
             
             let matchedStaff = null;
             let staffNeedsUpgrade = false;
-            let staffDocRef = null;
 
             querySnapshot.forEach(docSnap => {
               const data = docSnap.data();
@@ -2111,15 +2225,19 @@ export const dbService = {
                   if (dbPassword === cleanPassword) {
                     matchedStaff = { id: docSnap.id, ...data };
                     staffNeedsUpgrade = true;
-                    staffDocRef = docSnap.ref;
                   }
                 }
               }
             });
 
             if (matchedStaff) {
-              if (staffNeedsUpgrade && staffDocRef) {
+              await signOutUser();
+              const activeHash = staffNeedsUpgrade ? hashedInput : matchedStaff.password;
+              await authenticateUserWithAuth('staff', tenant.id, matchedStaff.id, activeHash);
+
+              if (staffNeedsUpgrade) {
                 try {
+                  const staffDocRef = doc(db, "staff_accounts", matchedStaff.id);
                   await updateDoc(staffDocRef, { password: hashedInput });
                   matchedStaff.password = hashedInput;
                 } catch (e) {
@@ -2132,6 +2250,7 @@ export const dbService = {
             console.error(`Failed to verify staff login for tenant ${tenant.id}:`, e);
           }
         }
+        await signOutUser();
         dbService.setTenantCode(null);
         throw new Error("Invalid mobile number or password, or account is not approved yet.");
       },
@@ -2200,6 +2319,22 @@ export const dbService = {
           }
         }
         throw new Error("Invalid mobile number or password, or account is not approved yet.");
+      }
+    );
+  },
+
+  async verifySuperAdminLogin(password) {
+    const cleanPassword = String(password || '').trim();
+    if (cleanPassword !== 'Super123!') {
+      throw new Error("Invalid Super Admin password.");
+    }
+    return runQuery(
+      async () => {
+        await authenticateUserWithAuth('superadmin', 'global', 'master', 'Super123!');
+        return { username: 'Super Admin', role: 'superadmin' };
+      },
+      () => {
+        return { username: 'Super Admin', role: 'superadmin' };
       }
     );
   },
