@@ -87,6 +87,17 @@ const generateUUID = () => {
   });
 };
 
+// Cryptographic helper to hash passwords using SHA-256 (Web Crypto API)
+const hashPassword = async (password) => {
+  if (!password) return "";
+  const msgUint8 = new TextEncoder().encode(password.trim());
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  return hashHex;
+};
+
+
 // Initial Mock Data for LocalStorage Fallback
 const INITIAL_BATCHES = [
   { id: 'b1', name: '10th Maths', subject: 'Mathematics', timing: '04:00 PM - 05:00 PM', teacher_name: 'Rakesh Sharma' },
@@ -992,6 +1003,7 @@ export const dbService = {
     const numId = parseInt(studentNumericId) || 0;
     const cleanPassword = String(password || '').trim();
     const cleanStudentNumericId = String(studentNumericId || '').trim();
+    const hashedInput = await hashPassword(cleanPassword);
 
     const reverseFallbackMap = {
       '1001': 's1',
@@ -1044,10 +1056,23 @@ export const dbService = {
         // 2. Verify parent credentials (registered password or parent/student mobile number)
         const parentSnap = await getDoc(doc(db, "parent_accounts", studentId));
         let isValid = false;
+        let needsUpgrade = false;
         
-        if (parentSnap.exists() && String(parentSnap.data().password || '').trim() === cleanPassword) {
-          isValid = true;
-        } else {
+        if (parentSnap.exists()) {
+          const dbPassword = String(parentSnap.data().password || '').trim();
+          if (dbPassword.length === 64) {
+            if (dbPassword === hashedInput) {
+              isValid = true;
+            }
+          } else {
+            if (dbPassword === cleanPassword) {
+              isValid = true;
+              needsUpgrade = true;
+            }
+          }
+        }
+        
+        if (!isValid) {
           const pMobile = String(studentData.parent_mobile || '').trim();
           const sMobile = String(studentData.mobile || '').trim();
           if ((pMobile && pMobile === cleanPassword) || (sMobile && sMobile === cleanPassword)) {
@@ -1057,6 +1082,15 @@ export const dbService = {
 
         if (!isValid) {
           throw new Error("Invalid Student ID or password.");
+        }
+
+        if (needsUpgrade) {
+          try {
+            const parentRef = doc(db, "parent_accounts", studentId);
+            await updateDoc(parentRef, { password: hashedInput });
+          } catch (e) {
+            console.error("Failed to auto-upgrade parent password hash:", e);
+          }
         }
 
         return { id: studentId, student_id: studentIdVal, ...studentData };
@@ -1080,11 +1114,25 @@ export const dbService = {
         }
 
         const parents = getLocalData('bb_parent_accounts', []);
-        const parentAccount = parents.find(p => 
-          ((parseInt(p.student_numeric_id) === numId || String(p.student_numeric_id).trim() === cleanStudentNumericId) ||
-           (p.student_id === student.id)) && 
-          String(p.password || '').trim() === cleanPassword
-        );
+        let needsSave = false;
+        let parentAccount = null;
+
+        parents.forEach(p => {
+          if ((parseInt(p.student_numeric_id) === numId || String(p.student_numeric_id).trim() === cleanStudentNumericId || p.student_id === student.id)) {
+            const dbPassword = String(p.password || '').trim();
+            if (dbPassword.length === 64) {
+              if (dbPassword === hashedInput) {
+                parentAccount = p;
+              }
+            } else {
+              if (dbPassword === cleanPassword) {
+                parentAccount = p;
+                p.password = hashedInput;
+                needsSave = true;
+              }
+            }
+          }
+        });
         
         let isValid = false;
         if (parentAccount) {
@@ -1099,6 +1147,10 @@ export const dbService = {
 
         if (!isValid) {
           throw new Error("Invalid Student ID or password.");
+        }
+
+        if (needsSave) {
+          saveLocalData('bb_parent_accounts', parents);
         }
 
         const studentIdVal = student.student_id || numId;
@@ -1587,10 +1639,12 @@ export const dbService = {
 
   async addTenant(tenant) {
     const cleanId = String(tenant.id || '').trim().toLowerCase();
+    const hashedPassword = tenant.admin_password ? await hashPassword(tenant.admin_password) : '';
     const newTenant = {
       status: 'Approved',
       ...tenant,
       id: cleanId,
+      admin_password: hashedPassword,
       features: tenant.features || {
         students: true,
         timetable: true,
@@ -1630,17 +1684,21 @@ export const dbService = {
 
   async updateTenant(tenantId, data) {
     const cleanId = String(tenantId).trim().toLowerCase();
+    const updateData = { ...data };
+    if (updateData.admin_password) {
+      updateData.admin_password = await hashPassword(updateData.admin_password);
+    }
     return runQuery(
       async () => {
         const docRef = firestoreDoc(db, "tenants", cleanId);
-        await updateDoc(docRef, data);
+        await updateDoc(docRef, updateData);
         return true;
       },
       () => {
         const list = getLocalData('bb_tenants', INITIAL_TENANTS);
         const idx = list.findIndex(t => t.id === cleanId);
         if (idx !== -1) {
-          list[idx] = { ...list[idx], ...data };
+          list[idx] = { ...list[idx], ...updateData };
           saveLocalData('bb_tenants', list);
           return true;
         }
@@ -1830,8 +1888,10 @@ export const dbService = {
   },
 
   async addStaffAccount(staff) {
+    const hashedPassword = staff.password ? await hashPassword(staff.password) : '';
     const newStaff = {
       ...staff,
+      password: hashedPassword,
       status: 'Pending',
       must_change_password: true,
       created_at: new Date().toISOString()
@@ -1890,6 +1950,8 @@ export const dbService = {
       throw new Error("Login code/mobile and password are required.");
     }
 
+    const hashedInput = await hashPassword(cleanPassword);
+
     return runQuery(
       async () => {
         const q = query(
@@ -1899,14 +1961,26 @@ export const dbService = {
         const querySnapshot = await getDocs(q);
         
         let matchedStaff = null;
-        querySnapshot.forEach(doc => {
-          const data = doc.data();
+        let needsUpgrade = false;
+        let staffDocRef = null;
+
+        querySnapshot.forEach(docSnap => {
+          const data = docSnap.data();
           const mob = String(data.mobile || '').trim().toLowerCase();
           const email = String(data.email || '').trim().toLowerCase();
           const name = String(data.name || '').trim().toLowerCase();
           if (mob === cleanUsername || email === cleanUsername || name === cleanUsername) {
-            if (String(data.password || '').trim() === cleanPassword) {
-              matchedStaff = { id: doc.id, ...data };
+            const dbPassword = String(data.password || '').trim();
+            if (dbPassword.length === 64) {
+              if (dbPassword === hashedInput) {
+                matchedStaff = { id: docSnap.id, ...data };
+              }
+            } else {
+              if (dbPassword === cleanPassword) {
+                matchedStaff = { id: docSnap.id, ...data };
+                needsUpgrade = true;
+                staffDocRef = docSnap.ref;
+              }
             }
           }
         });
@@ -1914,22 +1988,52 @@ export const dbService = {
         if (!matchedStaff) {
           throw new Error("Invalid staff credentials or account is not approved yet.");
         }
+
+        if (needsUpgrade && staffDocRef) {
+          try {
+            await updateDoc(staffDocRef, { password: hashedInput });
+            matchedStaff.password = hashedInput;
+          } catch (e) {
+            console.error("Failed to auto-upgrade staff password hash:", e);
+          }
+        }
+
         return matchedStaff;
       },
       () => {
         const list = getLocalData('bb_staff_accounts', []);
-        const matched = list.find(s => {
-          if (s.status !== 'Approved') return false;
+        let needsSave = false;
+        let matched = null;
+
+        list.forEach(s => {
+          if (s.status !== 'Approved') return;
           const mob = String(s.mobile || '').trim().toLowerCase();
           const email = String(s.email || '').trim().toLowerCase();
           const name = String(s.name || '').trim().toLowerCase();
-          return (mob === cleanUsername || email === cleanUsername || name === cleanUsername) && 
-                 String(s.password || '').trim() === cleanPassword;
+          if (mob === cleanUsername || email === cleanUsername || name === cleanUsername) {
+            const dbPassword = String(s.password || '').trim();
+            if (dbPassword.length === 64) {
+              if (dbPassword === hashedInput) {
+                matched = s;
+              }
+            } else {
+              if (dbPassword === cleanPassword) {
+                matched = s;
+                s.password = hashedInput;
+                needsSave = true;
+              }
+            }
+          }
         });
 
         if (!matched) {
           throw new Error("Invalid staff credentials or account is not approved yet.");
         }
+
+        if (needsSave) {
+          saveLocalData('bb_staff_accounts', list);
+        }
+
         return matched;
       }
     );
@@ -1943,6 +2047,8 @@ export const dbService = {
       throw new Error("Mobile number and password are required.");
     }
 
+    const hashedInput = await hashPassword(cleanPassword);
+
     return runQuery(
       async () => {
         const tenantsSnapshot = await getDocs(firestoreCollection(db, "tenants"));
@@ -1952,9 +2058,33 @@ export const dbService = {
           try {
             // Check if Owner
             const ownerMob = String(tenant.owner_whatsapp || '').trim().replace(/\D/g, '');
-            const requiredPassword = tenant.admin_password || 'admin123';
-            if (ownerMob === cleanMobile && requiredPassword === cleanPassword) {
+            const requiredPassword = String(tenant.admin_password || 'admin123').trim();
+            
+            let ownerMatch = false;
+            let ownerNeedsUpgrade = false;
+
+            if (requiredPassword.length === 64) {
+              if (requiredPassword === hashedInput) {
+                ownerMatch = true;
+              }
+            } else {
+              if (requiredPassword === cleanPassword) {
+                ownerMatch = true;
+                ownerNeedsUpgrade = true;
+              }
+            }
+
+            if (ownerMatch) {
               dbService.setTenantCode(tenant.id);
+              if (ownerNeedsUpgrade) {
+                try {
+                  const docRef = firestoreDoc(db, "tenants", tenant.id);
+                  await updateDoc(docRef, { admin_password: hashedInput });
+                  tenant.admin_password = hashedInput;
+                } catch (err) {
+                  console.error(`Failed to auto-upgrade tenant ${tenant.id} password hash:`, err);
+                }
+              }
               return { role: 'admin', username: 'Owner', tenant };
             }
 
@@ -1965,15 +2095,37 @@ export const dbService = {
             );
             
             let matchedStaff = null;
-            querySnapshot.forEach(doc => {
-              const data = doc.data();
+            let staffNeedsUpgrade = false;
+            let staffDocRef = null;
+
+            querySnapshot.forEach(docSnap => {
+              const data = docSnap.data();
               const mob = String(data.mobile || '').trim().replace(/\D/g, '');
-              if (mob === cleanMobile && String(data.password || '').trim() === cleanPassword) {
-                matchedStaff = { id: doc.id, ...data };
+              if (mob === cleanMobile) {
+                const dbPassword = String(data.password || '').trim();
+                if (dbPassword.length === 64) {
+                  if (dbPassword === hashedInput) {
+                    matchedStaff = { id: docSnap.id, ...data };
+                  }
+                } else {
+                  if (dbPassword === cleanPassword) {
+                    matchedStaff = { id: docSnap.id, ...data };
+                    staffNeedsUpgrade = true;
+                    staffDocRef = docSnap.ref;
+                  }
+                }
               }
             });
 
             if (matchedStaff) {
+              if (staffNeedsUpgrade && staffDocRef) {
+                try {
+                  await updateDoc(staffDocRef, { password: hashedInput });
+                  matchedStaff.password = hashedInput;
+                } catch (e) {
+                  console.error("Failed to auto-upgrade staff password hash:", e);
+                }
+              }
               return { role: 'staff', staff: matchedStaff, tenant };
             }
           } catch (e) {
@@ -1988,22 +2140,62 @@ export const dbService = {
         for (const tenant of tenants) {
           // Check if Owner
           const ownerMob = String(tenant.owner_whatsapp || '').trim().replace(/\D/g, '');
-          const requiredPassword = tenant.admin_password || 'admin123';
-          if (ownerMob === cleanMobile && requiredPassword === cleanPassword) {
+          const requiredPassword = String(tenant.admin_password || 'admin123').trim();
+          
+          let ownerMatch = false;
+          let ownerNeedsUpgrade = false;
+
+          if (requiredPassword.length === 64) {
+            if (requiredPassword === hashedInput) {
+              ownerMatch = true;
+            }
+          } else {
+            if (requiredPassword === cleanPassword) {
+              ownerMatch = true;
+              ownerNeedsUpgrade = true;
+            }
+          }
+
+          if (ownerMatch) {
             dbService.setTenantCode(tenant.id);
+            if (ownerNeedsUpgrade) {
+              tenant.admin_password = hashedInput;
+              const idx = tenants.findIndex(t => t.id === tenant.id);
+              if (idx !== -1) {
+                tenants[idx].admin_password = hashedInput;
+                saveLocalData('bb_tenants', tenants);
+              }
+            }
             return { role: 'admin', username: 'Owner', tenant };
           }
 
           // Check if Staff
           const prefix = `bb_${tenant.id}_`;
           const staffAccounts = JSON.parse(localStorage.getItem(prefix + 'staff_accounts') || '[]');
-          const matched = staffAccounts.find(s => 
-            String(s.mobile || '').trim().replace(/\D/g, '') === cleanMobile && 
-            String(s.password || '').trim() === cleanPassword && 
-            s.status === 'Approved'
-          );
+          let staffNeedsUpgrade = false;
+          const matched = staffAccounts.find(s => {
+            if (s.status !== 'Approved') return false;
+            const mob = String(s.mobile || '').trim().replace(/\D/g, '') === cleanMobile;
+            if (mob) {
+              const dbPassword = String(s.password || '').trim();
+              if (dbPassword.length === 64) {
+                return dbPassword === hashedInput;
+              } else {
+                if (dbPassword === cleanPassword) {
+                  staffNeedsUpgrade = true;
+                  s.password = hashedInput;
+                  return true;
+                }
+              }
+            }
+            return false;
+          });
+
           if (matched) {
             dbService.setTenantCode(tenant.id);
+            if (staffNeedsUpgrade) {
+              localStorage.setItem(prefix + 'staff_accounts', JSON.stringify(staffAccounts));
+            }
             return { role: 'staff', staff: matched, tenant };
           }
         }
@@ -2033,11 +2225,12 @@ export const dbService = {
 
   async updateStaffPassword(staffId, newPassword) {
     const cleanPassword = String(newPassword || '').trim();
+    const hashedPassword = await hashPassword(cleanPassword);
     return runQuery(
       async () => {
         const docRef = doc(db, "staff_accounts", staffId);
         await updateDoc(docRef, { 
-          password: cleanPassword, 
+          password: hashedPassword, 
           must_change_password: false 
         });
         return true;
@@ -2046,7 +2239,7 @@ export const dbService = {
         const list = getLocalData('bb_staff_accounts', []);
         const idx = list.findIndex(s => s.id === staffId);
         if (idx !== -1) {
-          list[idx].password = cleanPassword;
+          list[idx].password = hashedPassword;
           list[idx].must_change_password = false;
           saveLocalData('bb_staff_accounts', list);
           return true;
@@ -2058,17 +2251,21 @@ export const dbService = {
 
   async updateStaffAccount(staffId, updatedData) {
     await dbService.logActivity(`Updated staff account details for "${staffId}"`);
+    const cleanData = { ...updatedData };
+    if (cleanData.password) {
+      cleanData.password = await hashPassword(cleanData.password);
+    }
     return runQuery(
       async () => {
         const docRef = doc(db, "staff_accounts", staffId);
-        await updateDoc(docRef, updatedData);
+        await updateDoc(docRef, cleanData);
         return true;
       },
       () => {
         const list = getLocalData('bb_staff_accounts', []);
         const idx = list.findIndex(s => s.id === staffId);
         if (idx !== -1) {
-          list[idx] = { ...list[idx], ...updatedData };
+          list[idx] = { ...list[idx], ...cleanData };
           saveLocalData('bb_staff_accounts', list);
           return true;
         }
@@ -2079,12 +2276,13 @@ export const dbService = {
 
   async updateParentPassword(studentId, newPassword) {
     const cleanPassword = String(newPassword || '').trim();
+    const hashedPassword = await hashPassword(cleanPassword);
     return runQuery(
       async () => {
         const docRef = doc(db, "parent_accounts", studentId);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
-          await updateDoc(docRef, { password: cleanPassword });
+          await updateDoc(docRef, { password: hashedPassword });
         } else {
           const studentRef = doc(db, "students", studentId);
           const studentSnap = await getDoc(studentRef);
@@ -2093,7 +2291,7 @@ export const dbService = {
           await setDoc(docRef, {
             student_id: studentId,
             student_numeric_id: numId,
-            password: cleanPassword
+            password: hashedPassword
           });
         }
         return true;
@@ -2102,7 +2300,7 @@ export const dbService = {
         const list = getLocalData('bb_parent_accounts', []);
         const idx = list.findIndex(p => p.student_id === studentId);
         if (idx !== -1) {
-          list[idx].password = cleanPassword;
+          list[idx].password = hashedPassword;
         } else {
           const students = getLocalData('bb_students', INITIAL_STUDENTS);
           const student = students.find(s => s.id === studentId) || {};
@@ -2110,7 +2308,7 @@ export const dbService = {
           list.push({
             student_id: studentId,
             student_numeric_id: numId,
-            password: cleanPassword
+            password: hashedPassword
           });
         }
         saveLocalData('bb_parent_accounts', list);
