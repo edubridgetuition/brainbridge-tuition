@@ -1238,6 +1238,194 @@ export const dbService = {
     );
   },
 
+  async verifyParentLoginWithoutTenant(studentNumericId, password) {
+    const numId = parseInt(studentNumericId) || 0;
+    const cleanPassword = String(password || '').trim();
+    const cleanStudentNumericId = String(studentNumericId || '').trim();
+    const hashedInput = await hashPassword(cleanPassword);
+
+    const reverseFallbackMap = {
+      '1001': 's1',
+      '1002': 's2',
+      '1003': 's3',
+      '1004': 's4'
+    };
+
+    return runQuery(
+      async () => {
+        // 1. Sign in as guest to search tenants and student accounts
+        await signInGuest();
+
+        const tenantsSnapshot = await getDocs(firestoreCollection(db, "tenants"));
+        const tenants = tenantsSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+
+        for (const tenant of tenants) {
+          try {
+            dbService.setTenantCode(tenant.id);
+
+            // Verify Student exists
+            let studentSnap = await getDocs(query(collection(db, "students"), where("student_id", "==", numId)));
+            if (studentSnap.empty) {
+              studentSnap = await getDocs(query(collection(db, "students"), where("student_id", "==", cleanStudentNumericId)));
+            }
+            
+            let studentDoc = null;
+            let studentId = null;
+            let studentData = null;
+
+            if (!studentSnap.empty) {
+              studentDoc = studentSnap.docs[0];
+              studentId = studentDoc.id;
+              studentData = studentDoc.data();
+            } else {
+              // Fallback to check default document ID map
+              const fallbackDocId = reverseFallbackMap[cleanStudentNumericId];
+              if (fallbackDocId) {
+                const docRef = doc(db, "students", fallbackDocId);
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                  studentDoc = docSnap;
+                  studentId = docSnap.id;
+                  studentData = docSnap.data();
+                }
+              }
+            }
+
+            if (studentDoc && studentData) {
+              if (studentData.parent_portal_disabled === true || studentData.parent_portal_disabled === 'true') {
+                continue;
+              }
+
+              const studentIdVal = studentData.student_id || studentData.student_numeric_id || numId;
+
+              // Verify parent credentials (registered password or parent/student mobile number)
+              const parentSnap = await getDoc(doc(db, "parent_accounts", studentId));
+              let isValid = false;
+              let needsUpgrade = false;
+              let dbPassword = "";
+              
+              if (parentSnap.exists()) {
+                dbPassword = String(parentSnap.data().password || '').trim();
+                if (dbPassword.length === 64) {
+                  if (dbPassword === hashedInput) {
+                    isValid = true;
+                  }
+                } else {
+                  if (dbPassword === cleanPassword) {
+                    isValid = true;
+                    needsUpgrade = true;
+                  }
+                }
+              }
+              
+              if (!isValid) {
+                const pMobile = String(studentData.parent_mobile || '').trim();
+                const sMobile = String(studentData.mobile || '').trim();
+                if ((pMobile && pMobile === cleanPassword) || (sMobile && sMobile === cleanPassword)) {
+                  isValid = true;
+                  needsUpgrade = true;
+                  dbPassword = cleanPassword;
+                }
+              }
+
+              if (isValid) {
+                await signOutUser(); // Sign out guest
+                const activeHash = needsUpgrade ? hashedInput : dbPassword;
+                await authenticateUserWithAuth('student', tenant.id, studentId, activeHash);
+
+                if (needsUpgrade) {
+                  try {
+                    const parentRef = doc(db, "parent_accounts", studentId);
+                    await setDoc(parentRef, {
+                      student_id: studentId,
+                      student_numeric_id: studentIdVal,
+                      password: hashedInput
+                    }, { merge: true });
+                  } catch (e) {
+                    console.error("Failed to auto-upgrade parent password hash:", e);
+                  }
+                }
+
+                return { student: { id: studentId, student_id: studentIdVal, ...studentData }, tenant };
+              }
+            }
+          } catch (e) {
+            console.error(`Failed to verify parent login for tenant ${tenant.id}:`, e);
+          }
+        }
+
+        await signOutUser();
+        dbService.setTenantCode(null);
+        throw new Error("Invalid Student ID or password.");
+      },
+      () => {
+        const tenants = getLocalData('bb_tenants', INITIAL_TENANTS);
+        for (const tenant of tenants) {
+          const prefix = `bb_${tenant.id}_`;
+          const students = JSON.parse(localStorage.getItem(prefix + 'students') || '[]');
+          
+          const student = students.find(s => 
+            parseInt(s.student_id) === numId || 
+            String(s.student_id).trim() === cleanStudentNumericId ||
+            (s.id === 's1' && cleanStudentNumericId === '1001') ||
+            (s.id === 's2' && cleanStudentNumericId === '1002') ||
+            (s.id === 's3' && cleanStudentNumericId === '1003') ||
+            (s.id === 's4' && cleanStudentNumericId === '1004')
+          );
+
+          if (student) {
+            if (student.parent_portal_disabled === true || student.parent_portal_disabled === 'true') {
+              continue;
+            }
+
+            const parents = JSON.parse(localStorage.getItem(prefix + 'parent_accounts') || '[]');
+            let needsSave = false;
+            let parentAccount = null;
+
+            parents.forEach(p => {
+              if ((parseInt(p.student_numeric_id) === numId || String(p.student_numeric_id).trim() === cleanStudentNumericId || p.student_id === student.id)) {
+                const dbPassword = String(p.password || '').trim();
+                if (dbPassword.length === 64) {
+                  if (dbPassword === hashedInput) {
+                    parentAccount = p;
+                  }
+                } else {
+                  if (dbPassword === cleanPassword) {
+                    parentAccount = p;
+                    p.password = hashedInput;
+                    needsSave = true;
+                  }
+                }
+              }
+            });
+            
+            let isValid = false;
+            if (parentAccount) {
+              isValid = true;
+            } else {
+              const pMobile = String(student.parent_mobile || '').trim();
+              const sMobile = String(student.mobile || '').trim();
+              if ((pMobile && pMobile === cleanPassword) || (sMobile && sMobile === cleanPassword)) {
+                isValid = true;
+              }
+            }
+
+            if (isValid) {
+              dbService.setTenantCode(tenant.id);
+              if (needsSave) {
+                localStorage.setItem(prefix + 'parent_accounts', JSON.stringify(parents));
+              }
+              const studentIdVal = student.student_id || numId;
+              return { student: { ...student, student_id: studentIdVal }, tenant };
+            }
+          }
+        }
+
+        throw new Error("Invalid Student ID or password.");
+      }
+    );
+  },
+
   // --- HOMEWORK ---
   async getHomework() {
     return runQuery(

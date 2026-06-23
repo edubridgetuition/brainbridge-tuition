@@ -434,12 +434,6 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
     e.preventDefault();
     clearMessages();
 
-    const cleanCode = centreName.trim().toLowerCase();
-    if (!cleanCode) {
-      setError('Please enter Centre Name.');
-      return;
-    }
-
     if (!studentId.trim()) {
       setError('Please enter your Student ID number.');
       return;
@@ -450,11 +444,8 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
     }
 
     try {
-      const tenant = await dbService.verifyTenantCode(cleanCode);
-      if (!tenant) {
-        setError('Invalid Centre Name.');
-        return;
-      }
+      const result = await dbService.verifyParentLoginWithoutTenant(studentId.trim(), password);
+      const { student, tenant } = result;
 
       if (tenant.status === 'Pending') {
         setError('Your Tuition Center registration is pending approval from the Master Admin.');
@@ -467,7 +458,6 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
 
       await onTenantCodeSubmit(tenant.id);
 
-      const student = await dbService.verifyParentLogin(studentId.trim(), password);
       onLogin({
         username: student.name,
         role: 'parent',
@@ -899,22 +889,6 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
 
           {activeTab === 'parent_login' && (
             <form onSubmit={handleParentLoginSubmit} style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              {/* Centre name */}
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <div style={{ position: 'relative' }}>
-                  <School size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
-                  <input
-                    type="text"
-                    className="form-control"
-                    placeholder="Class Name / Centre Name"
-                    value={centreName}
-                    onChange={(e) => handleCentreNameChange(e.target.value)}
-                    style={{ paddingLeft: '2.5rem' }}
-                    required
-                  />
-                </div>
-              </div>
-
               {/* Student ID */}
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <div style={{ position: 'relative' }}>
