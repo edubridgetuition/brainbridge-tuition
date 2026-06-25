@@ -1819,17 +1819,17 @@ export const dbService = {
 
   getTenantCode() {
     let code = localStorage.getItem('bb_tenant_code') || '';
-    if (code === 'ak007') {
-      code = 'akash academy';
-      localStorage.setItem('bb_tenant_code', 'akash academy');
+    if (code === 'ak007' || code === 'akash academy') {
+      code = 'akash_academy';
+      localStorage.setItem('bb_tenant_code', 'akash_academy');
     }
     return code;
   },
 
   setTenantCode(code) {
     let targetCode = code;
-    if (targetCode === 'ak007') {
-      targetCode = 'akash academy';
+    if (targetCode === 'ak007' || targetCode === 'akash academy') {
+      targetCode = 'akash_academy';
     }
     if (targetCode) {
       localStorage.setItem('bb_tenant_code', targetCode);
@@ -1840,8 +1840,8 @@ export const dbService = {
 
   async verifyTenantCode(code) {
     let cleanCode = String(code || '').trim().toLowerCase();
-    if (cleanCode === 'ak007') {
-      cleanCode = 'akash academy';
+    if (cleanCode === 'ak007' || cleanCode === 'akash academy') {
+      cleanCode = 'akash_academy';
     }
     if (!cleanCode) return null;
     
