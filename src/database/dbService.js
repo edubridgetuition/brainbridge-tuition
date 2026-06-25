@@ -64,6 +64,30 @@ const signInGuest = async () => {
   }
 };
 
+const ensureAuthenticatedForTenant = async (tenantId) => {
+  if (!isFirebaseConfigured || !auth) return null;
+  const currentUser = auth.currentUser;
+  if (currentUser) {
+    const email = currentUser.email || '';
+    const cleanTenant = String(tenantId || '').trim().toLowerCase();
+    
+    // If already logged in as superadmin, we have access to everything
+    if (email === 'superadmin@edubridge.internal' || email === 'admin@edubridge.com') {
+      return currentUser;
+    }
+    
+    // If logged in as a user for this specific tenant, we don't need guest sign-in
+    if (email.startsWith('owner_' + cleanTenant + '_') || 
+        email.startsWith('staff_' + cleanTenant + '_') || 
+        email.startsWith('student_' + cleanTenant + '_')) {
+      return currentUser;
+    }
+  }
+  
+  // Otherwise, we must sign in as guest to get read access
+  return await signInGuest();
+};
+
 const signOutUser = async () => {
   if (isFirebaseConfigured && auth) {
     try {
@@ -1847,8 +1871,8 @@ export const dbService = {
     
     return runQuery(
       async () => {
-        // Sign in as guest to resolve tenant credentials
-        await signInGuest();
+        // Ensure we are authenticated (either as a tenant user or guest) to read metadata
+        await ensureAuthenticatedForTenant(cleanCode);
 
         // 1. Try matching by tenant document ID
         const docRef = firestoreDoc(db, "tenants", cleanCode);
