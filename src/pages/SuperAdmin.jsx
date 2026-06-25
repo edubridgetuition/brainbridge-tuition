@@ -5,6 +5,7 @@ import {
   Edit2, 
   Trash2, 
   Eye, 
+  EyeOff,
   LogOut, 
   Shield, 
   Database, 
@@ -28,6 +29,7 @@ export default function SuperAdmin({ onLogout, onInspectTenant }) {
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingTenantId, setEditingTenantId] = useState(null);
+  const [visiblePasswords, setVisiblePasswords] = useState({});
 
   // Console sub-tab state
   const [activeConsoleTab, setActiveConsoleTab] = useState('dashboard'); // 'dashboard' or 'centers'
@@ -763,7 +765,36 @@ export default function SuperAdmin({ onLogout, onInspectTenant }) {
                             <span>{t.owner_whatsapp}</span>
                           </div>
                         </td>
-                        <td style={{ padding: '0.75rem 1rem', color: '#64748b' }}><code>{t.admin_password || 'admin123'}</code></td>
+                        <td style={{ padding: '0.75rem 1rem', color: '#64748b' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <code style={{ 
+                              display: 'inline-block',
+                              maxWidth: visiblePasswords[t.id] ? '150px' : 'none',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                              verticalAlign: 'middle'
+                            }}>
+                              {visiblePasswords[t.id] ? (t.admin_password || 'admin123') : '••••••••'}
+                            </code>
+                            <button
+                              onClick={() => setVisiblePasswords(prev => ({ ...prev, [t.id]: !prev[t.id] }))}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                padding: '0.2rem',
+                                cursor: 'pointer',
+                                color: '#64748b',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                              }}
+                              title={visiblePasswords[t.id] ? "Hide Password" : "Show Password"}
+                            >
+                              {visiblePasswords[t.id] ? <EyeOff size={14} /> : <Eye size={14} />}
+                            </button>
+                          </div>
+                        </td>
                         <td style={{ padding: '0.75rem 1rem' }}>
                           {(() => {
                             const status = t.status || 'Approved';
