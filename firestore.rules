@@ -27,9 +27,9 @@ service cloud.firestore {
     function belongsToTenant(tenantId) {
       return isAuthenticated() && (
         isSuperAdmin() ||
-        request.auth.token.email.startsWith('owner_' + tenantId.lower() + '_') ||
-        request.auth.token.email.startsWith('staff_' + tenantId.lower() + '_') ||
-        request.auth.token.email.startsWith('student_' + tenantId.lower() + '_')
+        request.auth.token.email.matches('^owner_' + tenantId.lower() + '_.*') ||
+        request.auth.token.email.matches('^staff_' + tenantId.lower() + '_.*') ||
+        request.auth.token.email.matches('^student_' + tenantId.lower() + '_.*')
       );
     }
 
@@ -42,7 +42,7 @@ service cloud.firestore {
       allow read: if isSuperAdmin() || isGuest() || belongsToTenant(tenantId);
       
       // Only SuperAdmin or the Tenant Owner can modify tenant configuration
-      allow write: if isSuperAdmin() || (isAuthenticated() && request.auth.token.email.startsWith('owner_' + tenantId.lower() + '_'));
+      allow write: if isSuperAdmin() || (isAuthenticated() && request.auth.token.email.matches('^owner_' + tenantId.lower() + '_.*'));
 
       // 2. Staff Accounts Subcollection
       match /staff_accounts/{staffId} {
