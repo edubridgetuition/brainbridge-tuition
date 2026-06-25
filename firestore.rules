@@ -22,21 +22,14 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.token.email == 'guest@edubridge.com';
     }
 
-    function cleanTenantId(tenantId) {
-      return (tenantId.split(' ')[0] + 
-             (tenantId.split(' ').size() > 1 ? tenantId.split(' ')[1] : '') + 
-             (tenantId.split(' ').size() > 2 ? tenantId.split(' ')[2] : '') + 
-             (tenantId.split(' ').size() > 3 ? tenantId.split(' ')[3] : '')).lower();
-    }
-
     // Check if the authenticated user belongs to the requested tenant.
-    // Tenant users' virtual emails contain the tenantId (e.g., owner_akash_academy@... or staff_akash_academy_mobile@...)
+    // Tenant users' virtual emails contain the tenantId (e.g., owner_akash_academy_... or staff_akash_academy_...)
     function belongsToTenant(tenantId) {
       return isAuthenticated() && (
         isSuperAdmin() ||
-        request.auth.token.email.startsWith('owner_' + cleanTenantId(tenantId) + '_') ||
-        request.auth.token.email.startsWith('staff_' + cleanTenantId(tenantId) + '_') ||
-        request.auth.token.email.startsWith('student_' + cleanTenantId(tenantId) + '_')
+        request.auth.token.email.startsWith('owner_' + tenantId.toLowerCase() + '_') ||
+        request.auth.token.email.startsWith('staff_' + tenantId.toLowerCase() + '_') ||
+        request.auth.token.email.startsWith('student_' + tenantId.toLowerCase() + '_')
       );
     }
 
@@ -49,7 +42,7 @@ service cloud.firestore {
       allow read: if isSuperAdmin() || isGuest() || belongsToTenant(tenantId);
       
       // Only SuperAdmin or the Tenant Owner can modify tenant configuration
-      allow write: if isSuperAdmin() || (isAuthenticated() && request.auth.token.email.startsWith('owner_' + cleanTenantId(tenantId) + '_'));
+      allow write: if isSuperAdmin() || (isAuthenticated() && request.auth.token.email.startsWith('owner_' + tenantId.toLowerCase() + '_'));
 
       // 2. Staff Accounts Subcollection
       match /staff_accounts/{staffId} {
