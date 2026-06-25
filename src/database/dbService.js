@@ -2518,7 +2518,9 @@ export const dbService = {
     }
     return runQuery(
       async () => {
-        await authenticateUserWithAuth('superadmin', 'global', 'master', 'Super123!');
+        if (isFirebaseConfigured && auth) {
+          await signInWithEmailAndPassword(auth, 'superadmin@edubridge.internal', 'Super123!');
+        }
         return { username: 'Super Admin', role: 'superadmin' };
       },
       () => {
