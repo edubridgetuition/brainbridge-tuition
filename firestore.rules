@@ -23,7 +23,10 @@ service cloud.firestore {
     }
 
     function cleanTenantId(tenantId) {
-      return tenantId.replace(' ', '').replace(' ', '').replace(' ', '').toLowerCase();
+      return (tenantId.split(' ')[0] + 
+             (tenantId.split(' ').size() > 1 ? tenantId.split(' ')[1] : '') + 
+             (tenantId.split(' ').size() > 2 ? tenantId.split(' ')[2] : '') + 
+             (tenantId.split(' ').size() > 3 ? tenantId.split(' ')[3] : '')).lower();
     }
 
     // Check if the authenticated user belongs to the requested tenant.
