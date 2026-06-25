@@ -41,23 +41,30 @@ service cloud.firestore {
       // Tenant users and SuperAdmin can read
       allow read: if isSuperAdmin() || isGuest() || belongsToTenant(tenantId);
       
+      // Anyone using the guest account (on the registration form) or SuperAdmin can register a new tenant
+      allow create: if isSuperAdmin() || isGuest();
+      
       // Only SuperAdmin or the Tenant Owner can modify tenant configuration
-      allow write: if isSuperAdmin() || (isAuthenticated() && request.auth.token.email.matches('^owner_' + tenantId.lower() + '_.*'));
+      allow update, delete: if isSuperAdmin() || (isAuthenticated() && request.auth.token.email.matches('^owner_' + tenantId.lower() + '_.*'));
 
       // 2. Staff Accounts Subcollection
       match /staff_accounts/{staffId} {
         // Guest is allowed to read specific staff documents to perform login validation
         allow read: if isGuest() || belongsToTenant(tenantId);
-        // Writing requires belonging to the tenant (Owners/Managers)
-        allow write: if belongsToTenant(tenantId);
+        // Guests or tenant users can register a new pending staff account
+        allow create: if isGuest() || belongsToTenant(tenantId);
+        // Writing/modifying requires belonging to the tenant (Owners/Managers)
+        allow update, delete: if belongsToTenant(tenantId);
       }
 
       // 3. Parent Accounts Subcollection
       match /parent_accounts/{studentId} {
         // Guest is allowed to read specific parent documents to verify password hashes
         allow read: if isGuest() || belongsToTenant(tenantId);
-        // Writing requires belonging to the tenant
-        allow write: if belongsToTenant(tenantId);
+        // Guest can register a new parent account
+        allow create: if isGuest() || belongsToTenant(tenantId);
+        // Modifying/deleting requires belonging to the tenant
+        allow update, delete: if belongsToTenant(tenantId);
       }
 
       // 4. Inquiries Subcollection
