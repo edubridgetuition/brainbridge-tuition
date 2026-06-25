@@ -1894,7 +1894,10 @@ export const dbService = {
         });
         
         if (!matchedTenant) {
-          await signOutUser();
+          const email = auth.currentUser?.email || '';
+          if (email !== 'superadmin@edubridge.internal' && email !== 'admin@edubridge.com' && email !== 'guest@edubridge.com') {
+            await signOutUser();
+          }
         }
         return matchedTenant;
       },
