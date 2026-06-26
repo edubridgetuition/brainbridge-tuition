@@ -44,3 +44,47 @@ We compiled the code and ran a full native Gradle build. The fresh native binari
 2. **SuperAdmin 0 Centers Issue**:
    - Previously, the SuperAdmin was logging in with a virtual email prefix which failed the strict `isSuperAdmin()` checks in the security rules.
    - We updated `verifySuperAdminLogin` in `src/database/dbService.js` to sign in using the exact `superadmin@edubridge.internal` email, restoring full global read/write access.
+
+---
+
+## 📅 Class / Standard (Std) Homework Configuration (June 2026)
+
+We have added support for defining and showing the **Class / Standard (Std)** for homework assignments:
+
+### 1. Dynamic Dropdown Selection during Assignment
+In [Homework.jsx](file:///D:/tuition-management-app/src/pages/Homework.jsx), the standard selection is now integrated with the configured standards in settings (`activeTenant.standards`).
+- If there are standards defined in settings, a `<select>` dropdown of standards is presented, plus an option to select **Other / Custom...** to type in a custom standard name.
+- If no standards are configured in settings, it falls back to a clean text input.
+
+### 2. Admin Filters for Standard & Batch
+To accommodate large academies, we added filtering controls at the top of the Admin homework dashboard. Admins and teachers can now easily filter the list of assigned homework by **Standard** and/or **Batch**.
+
+### 3. Visual Standard Indicators
+- **Homework Cards**: Displays a clear orange/yellow badge (e.g. `Std: 10th`) on each card.
+- **Dashboard Updates**: Displays the standard tag next to the homework title under the "Active Homework" section of [Dashboard.jsx](file:///D:/tuition-management-app/src/pages/Dashboard.jsx) so it's instantly clear which standard it belongs to.
+
+### 4. Updated APK & AAB Compilation
+The changes have been verified and compiled successfully into production-ready Android artifacts.
+- APK: [EduBridge.apk](file:///D:/tuition-management-app/EduBridge.apk)
+- AAB: [EduBridge.aab](file:///D:/tuition-management-app/EduBridge.aab)
+
+---
+
+## 🔗 Batch-Standard Linkage and Auto-Detection in Homework (June 26, 2026)
+
+To streamline user workflow and eliminate double data-entry:
+
+### 1. Linking Standard to Batch on Creation
+- Updated the "Create Batch" modal in [Students.jsx](file:///D:/tuition-management-app/src/pages/Students.jsx#L762-L788) to include a **Standard / Class** field.
+- When creating a batch, the admin/teacher selects the Standard from settings (or inputs it manually if no settings standard exists).
+- Each batch document in Firestore now holds a `standard` field.
+
+### 2. Auto-Detection in Homework Assign Form
+- Updated the Homework Assign form in [Homework.jsx](file:///D:/tuition-management-app/src/pages/Homework.jsx#L252-L315) so that when a Batch is selected, the app automatically finds the linked Standard and displays it as read-only (e.g. `10th (Auto-detected from Batch)`).
+- If selecting an old batch (created before this update), it falls back to the manual dropdown/text input selector.
+- The homework document continues to save the `standard` field properly so it remains visible on all cards and dashboards.
+
+### 3. Re-Compilation Complete
+All changes have been successfully integrated and built:
+- APK: [EduBridge.apk](file:///D:/tuition-management-app/EduBridge.apk)
+- AAB: [EduBridge.aab](file:///D:/tuition-management-app/EduBridge.aab)

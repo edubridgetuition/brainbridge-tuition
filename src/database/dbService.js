@@ -17,7 +17,8 @@ import {
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  signOut
+  signOut,
+  onAuthStateChanged
 } from "firebase/auth";
 
 // --- FIREBASE AUTHENTICATION HELPERS ---
@@ -64,8 +65,35 @@ const signInGuest = async () => {
   }
 };
 
+let isAuthInitialized = false;
+let authInitPromise = null;
+
+const ensureAuthInitialized = () => {
+  if (!isFirebaseConfigured || !auth) return Promise.resolve(null);
+  if (isAuthInitialized) return Promise.resolve(auth.currentUser);
+  if (authInitPromise) return authInitPromise;
+
+  authInitPromise = new Promise((resolve) => {
+    const timer = setTimeout(() => {
+      isAuthInitialized = true;
+      resolve(auth.currentUser);
+    }, 1000);
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      clearTimeout(timer);
+      isAuthInitialized = true;
+      resolve(user);
+      unsubscribe();
+    });
+  });
+  return authInitPromise;
+};
+
 const ensureAuthenticatedForTenant = async (tenantId) => {
   if (!isFirebaseConfigured || !auth) return null;
+  
+  // Wait for Firebase Auth to restore the session from cache
+  await ensureAuthInitialized();
+
   const currentUser = auth.currentUser;
   if (currentUser) {
     const email = currentUser.email || '';

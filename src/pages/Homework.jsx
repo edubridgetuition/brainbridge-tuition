@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, ClipboardList, Calendar, AlertCircle, Image, X, Eye } from 'lucide-react';
 import { dbService, formatDateDisplay } from '../database/dbService';
 
-export default function Homework({ currentUser, verifyAction }) {
+export default function Homework({ currentUser, verifyAction, activeTenant }) {
   const [homeworkList, setHomeworkList] = useState([]);
   const [batches, setBatches] = useState([]);
   const [students, setStudents] = useState([]);
@@ -15,11 +15,18 @@ export default function Homework({ currentUser, verifyAction }) {
   const [description, setDescription] = useState('');
   const [batchId, setBatchId] = useState('');
   const [dueDate, setDueDate] = useState('');
+  const [standard, setStandard] = useState('');
+  const [customStandard, setCustomStandard] = useState('');
+  const [isCustomStandard, setIsCustomStandard] = useState(false);
   const [formError, setFormError] = useState('');
   const [image, setImage] = useState('');
   const [selectedImage, setSelectedImage] = useState(null);
   const [trackingHomework, setTrackingHomework] = useState(null);
   const [tempSubmissions, setTempSubmissions] = useState({});
+
+  // Filter States for Admin
+  const [selectedStandard, setSelectedStandard] = useState('All');
+  const [selectedBatch, setSelectedBatch] = useState('All');
 
   const handleImageChange = (e) => {
     setFormError('');
@@ -56,6 +63,16 @@ export default function Homework({ currentUser, verifyAction }) {
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    if (batchId) {
+      const selectedB = batches.find(b => b.id === batchId);
+      if (selectedB && selectedB.standard) {
+        setStandard(selectedB.standard);
+        setIsCustomStandard(false);
+      }
+    }
+  }, [batchId, batches]);
 
   const fetchData = async () => {
     try {
@@ -127,7 +144,9 @@ export default function Homework({ currentUser, verifyAction }) {
     e.preventDefault();
     setFormError('');
 
-    if (!subject.trim() || !title.trim() || !description.trim() || !dueDate) {
+    const finalStandard = isCustomStandard ? customStandard.trim() : standard.trim();
+
+    if (!subject.trim() || !title.trim() || !description.trim() || !dueDate || !finalStandard) {
       setFormError('Please fill in all fields');
       return;
     }
@@ -140,6 +159,7 @@ export default function Homework({ currentUser, verifyAction }) {
           title: title.trim(),
           description: description.trim(),
           due_date: dueDate,
+          standard: finalStandard,
           image: image || null
         });
         setHomeworkList(prev => [newHw, ...prev]);
@@ -148,6 +168,9 @@ export default function Homework({ currentUser, verifyAction }) {
         setDescription('');
         setDueDate('');
         setImage('');
+        setStandard('');
+        setCustomStandard('');
+        setIsCustomStandard(false);
         setShowAddForm(false);
       } catch (err) {
         setFormError(err.message || 'Failed to add homework.');
@@ -180,10 +203,15 @@ export default function Homework({ currentUser, verifyAction }) {
     }
   };
 
-  // Filter homework based on user role
-  const filteredHomework = isAdmin 
-    ? homeworkList 
-    : homeworkList.filter(h => h.batch_id === currentUser.batchId);
+  const standardOptions = (activeTenant?.standards || []).map(s => s.std);
+
+  // Filter homework based on user role and standard/batch filters
+  const filteredHomework = homeworkList.filter(h => {
+    const matchesRole = isAdmin ? true : h.batch_id === currentUser.batchId;
+    const matchesStandard = !isAdmin || selectedStandard === 'All' || h.standard === selectedStandard;
+    const matchesBatch = !isAdmin || selectedBatch === 'All' || h.batch_id === selectedBatch;
+    return matchesRole && matchesStandard && matchesBatch;
+  });
 
   const getBatchName = (id) => {
     const b = batches.find(x => x.id === id);
@@ -234,8 +262,78 @@ export default function Homework({ currentUser, verifyAction }) {
             </div>
 
             <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">Class / Std *</label>
+              {batchId && batches.find(b => b.id === batchId)?.standard ? (
+                <div style={{ display: 'flex', alignItems: 'center', height: '42px', padding: '0 0.75rem', backgroundColor: 'rgba(255, 255, 255, 0.02)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', fontSize: '0.88rem', color: 'var(--text-secondary)' }}>
+                  {standard} (Auto-detected from Batch)
+                </div>
+              ) : (
+                standardOptions.length > 0 ? (
+                  !isCustomStandard ? (
+                    <select 
+                      className="form-control" 
+                      value={standard} 
+                      onChange={e => {
+                        if (e.target.value === 'custom') {
+                          setIsCustomStandard(true);
+                          setStandard('');
+                        } else {
+                          setStandard(e.target.value);
+                        }
+                      }} 
+                      required
+                    >
+                      <option value="">Select Standard</option>
+                      {standardOptions.map(std => (
+                        <option key={std} value={std}>{std}</option>
+                      ))}
+                      <option value="custom">Other / Custom...</option>
+                    </select>
+                  ) : (
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <input 
+                        type="text" 
+                        className="form-control" 
+                        placeholder="e.g. 10th Standard" 
+                        value={customStandard} 
+                        onChange={e => setCustomStandard(e.target.value)} 
+                        required 
+                        style={{ flex: 1 }}
+                      />
+                      <button 
+                        type="button" 
+                        className="btn btn-secondary" 
+                        onClick={() => {
+                          setIsCustomStandard(false);
+                          setCustomStandard('');
+                        }}
+                        style={{ padding: '0 0.75rem', width: 'auto', height: '42px', margin: 0 }}
+                      >
+                        Select
+                      </button>
+                    </div>
+                  )
+                ) : (
+                  <input 
+                    type="text" 
+                    className="form-control" 
+                    placeholder="e.g. 10th Standard, 12th Sci" 
+                    value={standard} 
+                    onChange={e => setStandard(e.target.value)} 
+                    required 
+                  />
+                )
+              )}
+            </div>
+
+            <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label">Subject</label>
               <input type="text" className="form-control" placeholder="e.g. Mathematics" value={subject} onChange={e => setSubject(e.target.value)} required />
+            </div>
+
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">Due Date</label>
+              <input type="date" className="form-control" value={dueDate} onChange={e => setDueDate(e.target.value)} required />
             </div>
 
             <div className="form-group" style={{ gridColumn: 'span 2', marginBottom: 0 }}>
@@ -248,12 +346,7 @@ export default function Homework({ currentUser, verifyAction }) {
               <textarea className="form-control" placeholder="Describe the homework instructions, questions, and notes..." value={description} onChange={e => setDescription(e.target.value)} style={{ minHeight: '100px' }} required />
             </div>
 
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label">Due Date</label>
-              <input type="date" className="form-control" value={dueDate} onChange={e => setDueDate(e.target.value)} required />
-            </div>
-
-            <div className="form-group" style={{ marginBottom: 0 }}>
+            <div className="form-group" style={{ gridColumn: 'span 2', marginBottom: 0 }}>
               <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span>Upload Image (Max 50KB)</span>
                 {image && (
@@ -334,6 +427,45 @@ export default function Homework({ currentUser, verifyAction }) {
         </div>
       )}
 
+      {/* Filters for Admin */}
+      {isAdmin && homeworkList.length > 0 && (
+        <div className="card" style={{ padding: '1rem', marginBottom: '1.5rem', display: 'flex', gap: '1.5rem', flexWrap: 'wrap', alignItems: 'center', backgroundColor: 'rgba(255, 255, 255, 0.01)', border: '1px solid var(--border-color)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span style={{ fontSize: '0.85rem', fontWeight: '700', color: 'var(--text-secondary)' }}>Standard:</span>
+            <select 
+              className="form-control" 
+              value={selectedStandard} 
+              onChange={e => setSelectedStandard(e.target.value)}
+              style={{ width: '160px', margin: 0, padding: '0.25rem 0.5rem', height: '36px' }}
+            >
+              <option value="All">All Standards</option>
+              {standardOptions.map(std => (
+                <option key={std} value={std}>{std}</option>
+              ))}
+              {/* Also add any standards present in homeworkList but not in standardOptions */}
+              {Array.from(new Set(homeworkList.map(h => h.standard).filter(std => std && !standardOptions.includes(std)))).map(std => (
+                <option key={std} value={std}>{std}</option>
+              ))}
+            </select>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span style={{ fontSize: '0.85rem', fontWeight: '700', color: 'var(--text-secondary)' }}>Batch:</span>
+            <select 
+              className="form-control" 
+              value={selectedBatch} 
+              onChange={e => setSelectedBatch(e.target.value)}
+              style={{ width: '180px', margin: 0, padding: '0.25rem 0.5rem', height: '36px' }}
+            >
+              <option value="All">All Batches</option>
+              {batches.map(b => (
+                <option key={b.id} value={b.id}>{b.name}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      )}
+
       {/* Homework List View */}
       {filteredHomework.length === 0 ? (
         <div className="card" style={{ padding: '3rem', textAlign: 'center', color: '#64748b' }}>
@@ -366,16 +498,30 @@ export default function Homework({ currentUser, verifyAction }) {
               }}>
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
-                    <span style={{ 
-                      fontSize: '0.75rem', 
-                      fontWeight: '800', 
-                      backgroundColor: 'rgba(37, 99, 235, 0.1)', 
-                      color: 'var(--primary)', 
-                      padding: '0.25rem 0.5rem', 
-                      borderRadius: '6px' 
-                    }}>
-                      {h.subject}
-                    </span>
+                    <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                      <span style={{ 
+                        fontSize: '0.75rem', 
+                        fontWeight: '800', 
+                        backgroundColor: 'rgba(37, 99, 235, 0.1)', 
+                        color: 'var(--primary)', 
+                        padding: '0.25rem 0.5rem', 
+                        borderRadius: '6px' 
+                      }}>
+                        {h.subject}
+                      </span>
+                      {h.standard && (
+                        <span style={{ 
+                          fontSize: '0.75rem', 
+                          fontWeight: '800', 
+                          backgroundColor: 'rgba(245, 158, 11, 0.1)', 
+                          color: '#d97706', 
+                          padding: '0.25rem 0.5rem', 
+                          borderRadius: '6px' 
+                        }}>
+                          Std: {h.standard}
+                        </span>
+                      )}
+                    </div>
                     {isAdmin && (
                       <button 
                         onClick={() => handleDelete(h.id)} 
@@ -617,7 +763,7 @@ export default function Homework({ currentUser, verifyAction }) {
               <div>
                 <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: '800', color: '#1e3a8a' }}>Track Submissions</h3>
                 <p style={{ margin: '0.15rem 0 0', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                  {trackingHomework.title} — Batch: {getBatchName(trackingHomework.batch_id)}
+                  {trackingHomework.title} — Std: {trackingHomework.standard || 'N/A'} | Batch: {getBatchName(trackingHomework.batch_id)}
                 </p>
               </div>
               <button 

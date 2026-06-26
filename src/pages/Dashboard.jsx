@@ -468,8 +468,20 @@ export default function Dashboard({ setActiveTab, currentUser, verifyAction, act
                     </div>
                     {recentHomework && recentHomework.length > 0 ? (
                       <div>
-                        <div style={{ fontWeight: '700', fontSize: '0.9rem', color: 'var(--text-primary)' }}>
-                          {recentHomework[0].title}
+                        <div style={{ fontWeight: '700', fontSize: '0.9rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                          <span>{recentHomework[0].title}</span>
+                          {recentHomework[0].standard && (
+                            <span style={{ 
+                              fontSize: '0.7rem', 
+                              fontWeight: '800', 
+                              backgroundColor: 'rgba(245, 158, 11, 0.1)', 
+                              color: '#d97706', 
+                              padding: '0.15rem 0.4rem', 
+                              borderRadius: '4px' 
+                            }}>
+                              Std: {recentHomework[0].standard}
+                            </span>
+                          )}
                         </div>
                         <div style={{ fontSize: '0.78rem', color: '#ef4444', marginTop: '0.2rem', fontWeight: '700' }}>
                           Due Date: {formatDateDisplay(recentHomework[0].due_date)}

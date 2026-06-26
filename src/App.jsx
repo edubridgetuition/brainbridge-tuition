@@ -528,7 +528,7 @@ function App() {
       case 'tests':
         return <TestMarks key={tenantKey} currentUser={currentUser} verifyAction={verifyAction} />;
       case 'homework':
-        return <Homework key={tenantKey} currentUser={currentUser} verifyAction={verifyAction} />;
+        return <Homework key={tenantKey} currentUser={currentUser} verifyAction={verifyAction} activeTenant={activeTenant} />;
       case 'materials':
         return <StudyMaterial key={tenantKey} currentUser={currentUser} verifyAction={verifyAction} />;
       case 'student_performance':

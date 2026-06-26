@@ -52,7 +52,8 @@ export default function Students({ currentUser, verifyAction, activeTenant, auto
     name: '',
     subject: '',
     timing: '',
-    teacher_name: ''
+    teacher_name: '',
+    standard: ''
   });
 
   const [formData, setFormData] = useState({
@@ -252,8 +253,8 @@ export default function Students({ currentUser, verifyAction, activeTenant, auto
 
   const handleBatchSubmit = async (e) => {
     e.preventDefault();
-    if (!batchForm.name || !batchForm.subject) {
-      alert("Batch Name and Subject are required.");
+    if (!batchForm.name || !batchForm.subject || !batchForm.standard) {
+      alert("Batch Name, Subject and Standard are required.");
       return;
     }
 
@@ -267,7 +268,8 @@ export default function Students({ currentUser, verifyAction, activeTenant, auto
           name: '',
           subject: '',
           timing: '',
-          teacher_name: ''
+          teacher_name: '',
+          standard: ''
         });
         // Set the newly created batch as selected in the student form if no batch is selected
         setFormData(prev => ({ ...prev, batch_id: prev.batch_id || newBatch.id }));
@@ -294,7 +296,8 @@ export default function Students({ currentUser, verifyAction, activeTenant, auto
       name: '',
       subject: '',
       timing: '',
-      teacher_name: ''
+      teacher_name: '',
+      standard: ''
     });
     setShowBatchModal(true);
   };
@@ -757,6 +760,32 @@ export default function Students({ currentUser, verifyAction, activeTenant, auto
                     onChange={(e) => setBatchForm(prev => ({ ...prev, subject: e.target.value }))}
                     required
                   />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Standard / Class *</label>
+                  {standardOptions && standardOptions.length > 0 ? (
+                    <select
+                      className="form-control"
+                      value={batchForm.standard || ''}
+                      onChange={(e) => setBatchForm(prev => ({ ...prev, standard: e.target.value }))}
+                      required
+                    >
+                      <option value="">Select Standard</option>
+                      {standardOptions.map(std => (
+                        <option key={std} value={std}>{std}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="E.g. 10th, 11th, 12th"
+                      value={batchForm.standard || ''}
+                      onChange={(e) => setBatchForm(prev => ({ ...prev, standard: e.target.value }))}
+                      required
+                    />
+                  )}
                 </div>
 
                 <div className="form-group">
