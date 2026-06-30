@@ -13,6 +13,12 @@ export default function Attendance({ currentUser, verifyAction }) {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [expandedStudentId, setExpandedStudentId] = useState(null);
 
+  // Lock status and Edit logs state
+  const [now, setNow] = useState(Date.now());
+  const [isLocked, setIsLocked] = useState(false);
+  const [creationTime, setCreationTime] = useState(null);
+  const [editLogs, setEditLogs] = useState([]);
+
   // Sub Tab Navigation
   const [activeSubTab, setActiveSubTab] = useState('mark'); // 'mark' or 'history'
   const [historyLogs, setHistoryLogs] = useState([]);
@@ -20,6 +26,29 @@ export default function Attendance({ currentUser, verifyAction }) {
 
   const [parentLogs, setParentLogs] = useState([]);
   const [parentLoading, setParentLoading] = useState(true);
+
+  // Keep now updated for live countdown
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNow(Date.now());
+    }, 10000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Update lock status dynamically when clock ticks
+  useEffect(() => {
+    if (creationTime) {
+      const elapsed = now - creationTime.getTime();
+      setIsLocked(elapsed > 30 * 60 * 1000);
+    } else {
+      const todayStr = new Date().toISOString().split('T')[0];
+      if (selectedDate && selectedDate < todayStr) {
+        setIsLocked(true);
+      } else {
+        setIsLocked(false);
+      }
+    }
+  }, [now, creationTime, selectedDate]);
 
   useEffect(() => {
     if (currentUser?.role !== 'parent') return;
@@ -55,39 +84,69 @@ export default function Attendance({ currentUser, verifyAction }) {
     loadInitialData();
   }, []);
 
-  useEffect(() => {
+  const loadBatchAttendance = async () => {
     if (!selectedBatch) return;
+    try {
+      setLoading(true);
+      setSaveSuccess(false);
+      
+      // Load all students, attendance, and edit logs for the date in parallel
+      const [allStudents, dateLogs, editLogsList] = await Promise.all([
+        dbService.getStudents(),
+        dbService.getAttendance(selectedDate),
+        dbService.getAttendanceEditLogs(selectedDate, selectedBatch)
+      ]);
+      
+      // Filter and sort students belonging to this batch alphabetically
+      const batchStudents = allStudents
+        .filter(s => s.batch_id === selectedBatch)
+        .sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
+      setStudents(batchStudents);
 
-    async function loadBatchAttendance() {
-      try {
-        setLoading(true);
-        setSaveSuccess(false);
-        
-        // Load all students and attendance for the date in parallel
-        const [allStudents, dateLogs] = await Promise.all([
-          dbService.getStudents(),
-          dbService.getAttendance(selectedDate)
-        ]);
-        
-        // Filter and sort students belonging to this batch alphabetically
-        const batchStudents = allStudents
-          .filter(s => s.batch_id === selectedBatch)
-          .sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
-        setStudents(batchStudents);
+      // Map existing attendance log or default to 'Present'
+      const attendanceMap = {};
+      batchStudents.forEach(student => {
+        const log = dateLogs.find(l => l.student_id === student.id);
+        attendanceMap[student.id] = log ? log.status : 'Present'; // default to Present
+      });
+      setAttendance(attendanceMap);
+      setEditLogs(editLogsList || []);
 
-        // Map existing attendance log or default to 'Present'
-        const attendanceMap = {};
-        batchStudents.forEach(student => {
-          const log = dateLogs.find(l => l.student_id === student.id);
-          attendanceMap[student.id] = log ? log.status : 'Present'; // default to Present
-        });
-        setAttendance(attendanceMap);
-      } catch (err) {
-        console.error("Failed to load attendance logs:", err);
-      } finally {
-        setLoading(false);
+      // Calculate lock status
+      const batchRecords = dateLogs.filter(log => batchStudents.some(s => s.id === log.student_id));
+      if (batchRecords.length > 0) {
+        const createdAtTimes = batchRecords
+          .filter(r => r.createdAt)
+          .map(r => new Date(r.createdAt).getTime());
+        
+        if (createdAtTimes.length > 0) {
+          const oldestTime = Math.min(...createdAtTimes);
+          const cTime = new Date(oldestTime);
+          setCreationTime(cTime);
+          const elapsed = Date.now() - oldestTime;
+          setIsLocked(elapsed > 30 * 60 * 1000);
+        } else {
+          // Legacy records
+          const todayStr = new Date().toISOString().split('T')[0];
+          setCreationTime(null);
+          if (selectedDate < todayStr) {
+            setIsLocked(true);
+          } else {
+            setIsLocked(false);
+          }
+        }
+      } else {
+        setIsLocked(false);
+        setCreationTime(null);
       }
+    } catch (err) {
+      console.error("Failed to load attendance logs:", err);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  useEffect(() => {
     loadBatchAttendance();
   }, [selectedBatch, selectedDate]);
 
@@ -136,6 +195,7 @@ export default function Attendance({ currentUser, verifyAction }) {
   }, [activeSubTab]);
 
   const toggleAttendance = (studentId) => {
+    if (isLocked) return;
     setAttendance(prev => ({
       ...prev,
       [studentId]: prev[studentId] === 'Present' ? 'Absent' : 'Present'
@@ -143,6 +203,7 @@ export default function Attendance({ currentUser, verifyAction }) {
   };
 
   const setAllStatus = (status) => {
+    if (isLocked) return;
     const updated = {};
     students.forEach(s => {
       updated[s.id] = status;
@@ -151,6 +212,10 @@ export default function Attendance({ currentUser, verifyAction }) {
   };
 
   const handleSave = async () => {
+    if (isLocked) {
+      alert("Attendance is locked. Edits are not allowed after 30 minutes.");
+      return;
+    }
     if (!window.confirm("Are you sure you want to save?")) return;
     const action = async () => {
       try {
@@ -162,7 +227,11 @@ export default function Attendance({ currentUser, verifyAction }) {
           status: attendance[studentId]
         }));
 
-        await dbService.saveAttendance(selectedDate, records);
+        await dbService.saveAttendance(selectedDate, records, {
+          batchId: selectedBatch,
+          editedBy: currentUser?.username || currentUser?.email || 'Admin',
+          studentsInfo: students
+        });
 
         // Send notifications for each student in parallel
         const notifPromises = records.map(record => {
@@ -179,9 +248,12 @@ export default function Attendance({ currentUser, verifyAction }) {
 
         setSaveSuccess(true);
         setTimeout(() => setSaveSuccess(false), 3000);
+
+        // Reload to update lock status and edit logs
+        await loadBatchAttendance();
       } catch (err) {
         console.error("Failed to save attendance:", err);
-        alert("Error saving attendance records.");
+        alert(err.message || "Error saving attendance records.");
       } finally {
         setSaving(false);
       }
@@ -269,6 +341,40 @@ export default function Attendance({ currentUser, verifyAction }) {
     );
   }
 
+  const getLockMessage = () => {
+    if (isLocked) {
+      return {
+        type: 'danger',
+        text: `Locked - Created more than 30 minutes ago. Attendance records cannot be edited.`,
+        icon: <X size={18} />
+      };
+    }
+    if (creationTime) {
+      const elapsedMins = Math.floor((now - creationTime.getTime()) / 60000);
+      const remainingMins = 30 - elapsedMins;
+      if (remainingMins > 0) {
+        return {
+          type: 'warning',
+          text: `Editable for another ${remainingMins} minute${remainingMins !== 1 ? 's' : ''} (Created ${elapsedMins} minute${elapsedMins !== 1 ? 's' : ''} ago).`,
+          icon: <Calendar size={18} />
+        };
+      } else {
+        return {
+          type: 'danger',
+          text: `Locked - Created more than 30 minutes ago. Attendance records cannot be edited.`,
+          icon: <X size={18} />
+        };
+      }
+    }
+    return {
+      type: 'info',
+      text: 'Attendance not marked yet. Changes can be made within 30 minutes after saving.',
+      icon: <Calendar size={18} />
+    };
+  };
+
+  const lockMsg = getLockMessage();
+
   return (
     <div>
       <div className="page-header">
@@ -351,15 +457,45 @@ export default function Attendance({ currentUser, verifyAction }) {
               </div>
 
               <div style={{ display: 'flex', gap: '0.75rem' }}>
-                <button className="btn btn-secondary" onClick={() => setAllStatus('Present')} disabled={students.length === 0 || loading}>
+                <button className="btn btn-secondary" onClick={() => setAllStatus('Present')} disabled={students.length === 0 || loading || isLocked}>
                   Mark All Present
                 </button>
-                <button className="btn btn-secondary" onClick={() => setAllStatus('Absent')} disabled={students.length === 0 || loading}>
+                <button className="btn btn-secondary" onClick={() => setAllStatus('Absent')} disabled={students.length === 0 || loading || isLocked}>
                   Mark All Absent
                 </button>
               </div>
             </div>
           </div>
+
+          {/* Warning Banner */}
+          {lockMsg && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              padding: '1rem 1.25rem',
+              borderRadius: 'var(--radius-md)',
+              border: `1px solid ${
+                lockMsg.type === 'danger' ? 'var(--danger-border)' : 
+                lockMsg.type === 'warning' ? 'var(--warning-border)' : 'rgba(37, 99, 235, 0.2)'
+              }`,
+              backgroundColor: `${
+                lockMsg.type === 'danger' ? 'var(--danger-bg)' : 
+                lockMsg.type === 'warning' ? 'var(--warning-bg)' : 'rgba(37, 99, 235, 0.05)'
+              }`,
+              color: `${
+                lockMsg.type === 'danger' ? 'var(--danger)' : 
+                lockMsg.type === 'warning' ? 'var(--warning)' : 'var(--primary)'
+              }`,
+              fontWeight: '600',
+              fontSize: '0.9rem',
+              marginBottom: '1.5rem',
+              boxShadow: 'var(--shadow-premium)'
+            }}>
+              {lockMsg.icon}
+              <span>{lockMsg.text}</span>
+            </div>
+          )}
 
           {/* Attendance Register Board */}
           {loading ? (
@@ -378,7 +514,7 @@ export default function Attendance({ currentUser, verifyAction }) {
                       <Check size={16} /> Saved Successfully
                     </span>
                   )}
-                  <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
+                  <button className="btn btn-primary" onClick={handleSave} disabled={saving || isLocked}>
                     <Save size={16} />
                     <span>{saving ? 'Saving...' : 'Save Attendance'}</span>
                   </button>
@@ -446,17 +582,26 @@ export default function Attendance({ currentUser, verifyAction }) {
                         <td data-label="Standard">{student.standard}</td>
                         <td data-label="Status" style={{ textAlign: 'center' }}>
                           <div 
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', userSelect: 'none' }}
+                            style={{ 
+                              display: 'inline-flex', 
+                              alignItems: 'center', 
+                              gap: '0.5rem', 
+                              cursor: isLocked ? 'not-allowed' : 'pointer', 
+                              userSelect: 'none',
+                              opacity: isLocked ? 0.7 : 1
+                            }}
                             onClick={() => toggleAttendance(student.id)}
                           >
                             <button 
                               className={`btn ${isPresent ? 'btn-success' : 'btn-danger'}`}
+                              disabled={isLocked}
                               style={{ 
                                 padding: '0.35rem 1rem', 
                                 fontSize: '0.8rem', 
                                 width: '100px',
                                 boxShadow: 'none',
-                                transform: 'none'
+                                transform: 'none',
+                                cursor: isLocked ? 'not-allowed' : 'pointer'
                               }}
                             >
                               {isPresent ? 'Present' : 'Absent'}
@@ -468,6 +613,59 @@ export default function Attendance({ currentUser, verifyAction }) {
                   })}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {/* Edit Logs Timeline */}
+          {editLogs.length > 0 && (
+            <div className="card" style={{ marginTop: '2rem', padding: '1.5rem' }}>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-primary)' }}>
+                <Calendar size={18} style={{ color: 'var(--primary)' }} />
+                Attendance Edit History
+              </h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {editLogs.map((log, index) => (
+                  <div key={log.id || index} style={{
+                    padding: '1rem',
+                    backgroundColor: 'rgba(0, 0, 0, 0.02)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: '0.88rem'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                      <span style={{ fontWeight: '700', color: 'var(--text-primary)' }}>
+                        Edited by: <span style={{ color: 'var(--primary)' }}>{log.edited_by}</span>
+                      </span>
+                      <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
+                        {new Date(log.edited_at).toLocaleString()}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', paddingLeft: '0.75rem', borderLeft: '2px solid var(--primary)' }}>
+                      {log.changes.map((change, cIdx) => (
+                        <div key={cIdx} style={{ color: 'var(--text-secondary)' }}>
+                          <strong>{change.student_name}</strong>: 
+                          <span style={{
+                            textDecoration: 'line-through',
+                            color: 'var(--text-muted)',
+                            marginLeft: '0.25rem',
+                            marginRight: '0.25rem'
+                          }}>
+                            {change.old_status}
+                          </span>
+                          ➡️ 
+                          <span style={{
+                            fontWeight: '700',
+                            color: change.new_status === 'Present' ? 'var(--success)' : 'var(--danger)',
+                            marginLeft: '0.25rem'
+                          }}>
+                            {change.new_status}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </>

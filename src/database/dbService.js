@@ -671,16 +671,72 @@ export const dbService = {
     );
   },
 
-  async saveAttendance(date, records) {
+  async saveAttendance(date, records, options = {}) {
     await dbService.logActivity(`Saved attendance for date ${date}`);
     return runQuery(
       async () => {
+        // Fetch existing records first to check lock status and track changes
+        const q = query(collection(db, "attendance"), where("date", "==", date));
+        const querySnapshot = await getDocs(q);
+        const existingRecords = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        const todayStr = new Date().toISOString().split('T')[0];
+        const currentTime = Date.now();
+        const changes = [];
+
+        // Verify lock status for status changes
+        records.forEach(record => {
+          const existing = existingRecords.find(e => e.student_id === record.student_id);
+          if (existing && existing.status !== record.status) {
+            let isLocked = false;
+            if (existing.createdAt) {
+              const createdTime = new Date(existing.createdAt).getTime();
+              if (currentTime - createdTime > 30 * 60 * 1000) {
+                isLocked = true;
+              }
+            } else {
+              if (date < todayStr) {
+                isLocked = true;
+              }
+            }
+
+            if (isLocked) {
+              throw new Error("Attendance is locked. Edits are not allowed after 30 minutes.");
+            }
+
+            // Track changes
+            const student = (options.studentsInfo || []).find(s => s.id === record.student_id);
+            const studentName = student ? student.name : `Student (${record.student_id})`;
+            changes.push({
+              student_id: record.student_id,
+              student_name: studentName,
+              old_status: existing.status,
+              new_status: record.status
+            });
+          }
+        });
+
+        // Write edit log if changes were made
+        if (changes.length > 0) {
+          const logId = generateUUID();
+          await setDoc(doc(db, "attendance_edit_logs", logId), {
+            date: date,
+            batch_id: options.batchId || '',
+            edited_by: options.editedBy || 'System',
+            edited_at: new Date().toISOString(),
+            changes: changes
+          });
+        }
+
         const promises = records.map(record => {
           const docId = `${record.student_id}_${date}`;
+          const existing = existingRecords.find(e => e.student_id === record.student_id);
+          const createdAt = existing?.createdAt || new Date().toISOString();
           return setDoc(doc(db, "attendance", docId), {
             student_id: record.student_id,
             date: date,
-            status: record.status
+            status: record.status,
+            createdAt: createdAt
           });
         });
         await Promise.all(promises);
@@ -688,19 +744,95 @@ export const dbService = {
       },
       () => {
         let attendance = getLocalData('bb_attendance', INITIAL_ATTENDANCE);
+        const existingRecords = attendance.filter(a => a.date === date);
+
+        const todayStr = new Date().toISOString().split('T')[0];
+        const currentTime = Date.now();
+        const changes = [];
+
+        // Verify lock status for status changes
+        records.forEach(record => {
+          const existing = existingRecords.find(e => e.student_id === record.student_id);
+          if (existing && existing.status !== record.status) {
+            let isLocked = false;
+            if (existing.createdAt) {
+              const createdTime = new Date(existing.createdAt).getTime();
+              if (currentTime - createdTime > 30 * 60 * 1000) {
+                isLocked = true;
+              }
+            } else {
+              if (date < todayStr) {
+                isLocked = true;
+              }
+            }
+
+            if (isLocked) {
+              throw new Error("Attendance is locked. Edits are not allowed after 30 minutes.");
+            }
+
+            // Track changes
+            const student = (options.studentsInfo || []).find(s => s.id === record.student_id);
+            const studentName = student ? student.name : `Student (${record.student_id})`;
+            changes.push({
+              student_id: record.student_id,
+              student_name: studentName,
+              old_status: existing.status,
+              new_status: record.status
+            });
+          }
+        });
+
+        // Write edit log if changes were made
+        if (changes.length > 0) {
+          let editLogs = getLocalData('bb_attendance_edit_logs', []);
+          editLogs.push({
+            id: generateUUID(),
+            date: date,
+            batch_id: options.batchId || '',
+            edited_by: options.editedBy || 'System',
+            edited_at: new Date().toISOString(),
+            changes: changes
+          });
+          saveLocalData('bb_attendance_edit_logs', editLogs);
+        }
+
         // Remove existing records for this date first to avoid duplicates
         attendance = attendance.filter(a => a.date !== date);
         // Add new ones
         records.forEach(r => {
+          const existing = existingRecords.find(e => e.student_id === r.student_id);
+          const createdAt = existing?.createdAt || new Date().toISOString();
           attendance.push({
-            id: generateUUID(),
+            id: existing?.id || generateUUID(),
             student_id: r.student_id,
             date: date,
-            status: r.status
+            status: r.status,
+            createdAt: createdAt
           });
         });
         saveLocalData('bb_attendance', attendance);
         return records;
+      }
+    );
+  },
+
+  async getAttendanceEditLogs(date, batchId) {
+    return runQuery(
+      async () => {
+        const q = query(
+          collection(db, "attendance_edit_logs"),
+          where("date", "==", date),
+          where("batch_id", "==", batchId)
+        );
+        const querySnapshot = await getDocs(q);
+        const logs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        return logs.sort((a, b) => new Date(b.edited_at) - new Date(a.edited_at));
+      },
+      () => {
+        const logs = getLocalData('bb_attendance_edit_logs', []);
+        const filtered = logs.filter(l => l.date === date && l.batch_id === batchId);
+        filtered.sort((a, b) => new Date(b.edited_at) - new Date(a.edited_at));
+        return filtered;
       }
     );
   },
@@ -2428,7 +2560,7 @@ export const dbService = {
               }
             }
 
-            if (ownerMatch) {
+            if (ownerMatch && ownerMob === cleanMobile) {
               await signOutUser();
               const activeHash = ownerNeedsUpgrade ? hashedInput : requiredPassword;
               await authenticateUserWithAuth('owner', tenant.id, 'owner', activeHash);
@@ -2518,7 +2650,7 @@ export const dbService = {
             }
           }
 
-          if (ownerMatch) {
+          if (ownerMatch && ownerMob === cleanMobile) {
             dbService.setTenantCode(tenant.id);
             if (ownerNeedsUpgrade) {
               tenant.admin_password = hashedInput;

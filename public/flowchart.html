@@ -3,20 +3,27 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EduBridge ERP - Application Flowchart</title>
+  <title>EduBridge ERP - Step-by-Step Operations Wizard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   
   <style>
     :root {
-      --bg: #070a13;
-      --card-bg: rgba(15, 23, 42, 0.6);
-      --primary: #2563eb;
-      --primary-glow: rgba(37, 99, 235, 0.25);
-      --border: rgba(255, 255, 255, 0.08);
+      --bg-dark: #070913;
+      --bg-card: rgba(13, 18, 33, 0.75);
+      --border-color: rgba(255, 255, 255, 0.08);
+      --primary: #3b82f6;
+      --primary-glow: rgba(59, 130, 246, 0.2);
+      --success: #10b981;
+      --success-glow: rgba(16, 185, 129, 0.2);
+      --warning: #f59e0b;
+      --warning-glow: rgba(245, 158, 11, 0.2);
       --text-main: #f8fafc;
       --text-muted: #94a3b8;
+      --radius-lg: 24px;
+      --radius-md: 16px;
+      --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     * {
@@ -26,268 +33,1091 @@
     }
 
     body {
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      background-color: var(--bg);
+      background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(circle at 5% 5%, rgba(59, 130, 246, 0.1) 0%, transparent 35%),
+        radial-gradient(circle at 95% 95%, rgba(16, 185, 129, 0.08) 0%, transparent 35%);
+      background-attachment: fixed;
       color: var(--text-main);
+      font-family: 'Plus Jakarta Sans', sans-serif;
       min-height: 100vh;
-      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
     }
 
-    header {
+    /* Layout Wrapper */
+    .app-wrapper {
       max-width: 1200px;
-      margin: 0 auto 3rem auto;
+      width: 100%;
+      margin: 0 auto;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+
+    /* Top Navigation Header */
+    header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      border-bottom: 1px solid var(--border);
-      padding-bottom: 1.5rem;
+      margin-bottom: 2rem;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 1.25rem;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
     }
 
     .brand-logo {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
       display: flex;
       align-items: center;
-      gap: 0.5rem;
+      justify-content: center;
       font-weight: 800;
-      font-size: 1.3rem;
-      background: linear-gradient(135deg, #fff, var(--text-muted));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+      font-size: 0.9rem;
+      color: #fff;
+      box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3);
     }
 
-    .badge {
-      background-color: var(--primary-glow);
-      color: #60a5fa;
-      border: 1px solid rgba(59, 130, 246, 0.3);
-      padding: 0.3rem 0.8rem;
-      font-size: 0.8rem;
+    .brand-name {
+      font-family: 'Outfit', sans-serif;
       font-weight: 700;
-      border-radius: 50px;
+      font-size: 1.1rem;
+      letter-spacing: 0.02em;
     }
 
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
+    .header-actions {
+      display: flex;
+      gap: 0.75rem;
+    }
+
+    .btn-help {
+      background-color: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.25);
+      color: #93c5fd;
+      padding: 0.5rem 1rem;
+      border-radius: 50px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: var(--transition);
+    }
+
+    .btn-help:hover {
+      background-color: var(--primary);
+      color: #ffffff;
+      box-shadow: 0 0 12px var(--primary-glow);
+    }
+
+    /* Main Workspace Split Grid */
+    .workspace {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 2rem;
+      flex: 1;
+      align-items: start;
+    }
+
+    /* Sidebar Stepper menu (Desktop) */
+    .sidebar-stepper {
       display: flex;
       flex-direction: column;
-      gap: 4rem;
+      gap: 0.5rem;
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 1rem;
+      backdrop-filter: blur(10px);
     }
 
-    .section {
-      background-color: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 2.5rem;
-      backdrop-filter: blur(8px);
-      box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+    .stepper-section-title {
+      font-size: 0.7rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin: 0.75rem 0.5rem 0.25rem 0.5rem;
     }
 
-    .section-title {
-      font-size: 1.5rem;
-      font-weight: 700;
-      margin-bottom: 1rem;
-      background: linear-gradient(135deg, #ffffff, #94a3b8);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+    .step-menu-item {
       display: flex;
       align-items: center;
-      gap: 0.5rem;
+      gap: 0.75rem;
+      padding: 0.75rem 0.85rem;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: var(--transition);
+      border: 1px solid transparent;
+      text-align: left;
+      background: none;
+      width: 100%;
+      color: var(--text-muted);
     }
 
-    .section-desc {
+    .step-menu-item:hover {
+      background-color: rgba(255, 255, 255, 0.03);
+      color: var(--text-main);
+    }
+
+    .step-menu-item.active {
+      background-color: rgba(59, 130, 246, 0.08);
+      border-color: rgba(59, 130, 246, 0.2);
+      color: #60a5fa;
+    }
+
+    .step-menu-num {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background-color: rgba(255, 255, 255, 0.05);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 0.75rem;
       color: var(--text-muted);
-      font-size: 0.95rem;
-      margin-bottom: 2rem;
+      flex-shrink: 0;
+      transition: var(--transition);
+    }
+
+    .step-menu-item.active .step-menu-num {
+      background-color: var(--primary);
+      color: #ffffff;
+      box-shadow: 0 0 8px var(--primary-glow);
+    }
+
+    .step-menu-label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Mobile horizontal stepper bar (Hidden on Desktop) */
+    .mobile-stepper {
+      display: none;
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 0.75rem;
+      margin-bottom: 1.25rem;
+      overflow-x: auto;
+      gap: 0.5rem;
+      justify-content: space-between;
+      scrollbar-width: none; /* Hide scrollbar for clean UI */
+    }
+    .mobile-stepper::-webkit-scrollbar {
+      display: none;
+    }
+
+    .mobile-step-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background-color: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      font-weight: 800;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .mobile-step-btn.active {
+      background-color: var(--primary);
+      color: #ffffff;
+      border-color: var(--primary);
+      box-shadow: 0 0 10px var(--primary-glow);
+    }
+
+    /* Main Presentation Card */
+    .wizard-card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 2.25rem;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+      min-height: 520px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    /* Step content container with stable height to prevent layout shifts */
+    .step-content-area {
+      flex: 1;
+    }
+
+    .slide-section {
+      display: none;
+      animation: fadeSlide 0.25s ease-out;
+    }
+
+    .slide-section.active {
+      display: block;
+    }
+
+    .slide-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 1rem;
+    }
+
+    .phase-badge {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      padding: 0.25rem 0.75rem;
+      border-radius: 50px;
+    }
+    .badge-setup { background-color: rgba(59, 130, 246, 0.1); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.25); }
+    .badge-ops { background-color: rgba(16, 185, 129, 0.1); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.25); }
+    .badge-billing { background-color: rgba(245, 158, 11, 0.1); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.25); }
+
+    .step-indicator-text {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-weight: 700;
+    }
+
+    .slide-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: #ffffff;
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .slide-desc {
+      font-size: 1.05rem;
+      color: #cbd5e1;
+      margin-bottom: 1.5rem;
+      font-weight: 500;
+      background: rgba(255, 255, 255, 0.02);
+      padding: 0.75rem 1rem;
+      border-radius: var(--radius-md);
+      border-left: 3px solid var(--primary);
+    }
+
+    /* Split layout inside detail cards */
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .info-box {
+      background-color: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 1.25rem;
+      transition: var(--transition);
+    }
+
+    .info-box h4 {
+      font-size: 0.82rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .box-path h4 { color: #60a5fa; }
+    
+    .box-why {
+      cursor: pointer;
+      border-color: rgba(16, 185, 129, 0.15);
+      background-color: rgba(16, 185, 129, 0.02);
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+    }
+    
+    .box-why h4 { 
+      color: #34d399; 
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+    }
+
+    .box-why:hover {
+      background-color: rgba(16, 185, 129, 0.05);
+      border-color: rgba(16, 185, 129, 0.3);
+    }
+
+    .why-text {
+      display: none;
+      margin-top: 0.5rem;
+      animation: fadeSlide 0.2s ease-out;
+    }
+
+    .box-why.expanded .why-text {
+      display: block;
+    }
+
+    .info-box p {
+      font-size: 0.88rem;
+      color: #94a3b8;
       line-height: 1.5;
     }
 
-    .mermaid-container {
-      background-color: rgba(0, 0, 0, 0.25);
-      border-radius: 12px;
-      padding: 1.5rem;
-      border: 1px solid rgba(255, 255, 255, 0.05);
-      overflow-x: auto;
+    .checklist-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 0.75rem;
+    }
+
+    .checklist {
+      list-style: none;
+      margin-bottom: 1.5rem;
+    }
+
+    .checklist li {
+      position: relative;
+      padding-left: 1.5rem;
+      margin-bottom: 0.6rem;
+      font-size: 0.9rem;
+      color: #cbd5e1;
+    }
+
+    .checklist li::before {
+      content: '✓';
+      position: absolute;
+      left: 0;
+      color: var(--success);
+      font-weight: 800;
+    }
+
+    .tip-box {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(16, 185, 129, 0.01) 100%);
+      border-left: 4px solid var(--success);
+      padding: 1rem 1.25rem;
+      border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    }
+
+    .tip-box h5 {
+      color: #6ee7b7;
+      font-size: 0.85rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
       display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .tip-box p {
+      font-size: 0.82rem;
+      color: #a7f3d0;
+    }
+
+    /* Footer Wizard controls */
+    .wizard-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid var(--border-color);
+      padding-top: 1.5rem;
+      margin-top: 1.5rem;
+    }
+
+    .btn-nav {
+      background-color: var(--primary);
+      color: #ffffff;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: var(--radius-md);
+      font-weight: 700;
+      font-size: 0.9rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: var(--transition);
+    }
+
+    .btn-nav:hover {
+      background-color: #2563eb;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+    }
+
+    .btn-nav.secondary {
+      background-color: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-color);
+      color: #e2e8f0;
+    }
+
+    .btn-nav.secondary:hover {
+      background-color: rgba(255, 255, 255, 0.08);
+      transform: translateY(-2px);
+    }
+
+    .btn-nav:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none !important;
+      box-shadow: none !important;
+    }
+
+    /* Modal Styling for Standard vs Batch Overlay */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background-color: rgba(7, 9, 19, 0.8);
+      backdrop-filter: blur(8px);
+      display: none;
+      align-items: center;
       justify-content: center;
+      z-index: 10000;
+      padding: 1.5rem;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal-card {
+      background-color: #0d1221;
+      border: 1px solid rgba(59, 130, 246, 0.2);
+      border-radius: var(--radius-lg);
+      max-width: 550px;
+      width: 100%;
+      padding: 2.25rem;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      animation: scaleIn 0.25s ease-out;
+      color: var(--text-main);
+      position: relative;
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 1.25rem;
+      right: 1.25rem;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 1.5rem;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .modal-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: #93c5fd;
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .modal-content p {
+      font-size: 0.95rem;
+      color: #cbd5e1;
+      line-height: 1.6;
+      margin-bottom: 1.25rem;
+    }
+
+    .modal-highlight-box {
+      background-color: rgba(59, 130, 246, 0.05);
+      border: 1px solid rgba(59, 130, 246, 0.15);
+      border-radius: var(--radius-md);
+      padding: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .modal-highlight-box h5 {
+      color: #60a5fa;
+      font-size: 0.9rem;
+      font-weight: 700;
+      margin-bottom: 0.35rem;
+    }
+
+    @keyframes fadeSlide {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes scaleIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    /* Mobile adaptation (width <= 900px) */
+    @media (max-width: 900px) {
+      body {
+        padding: 0;
+      }
+      .app-wrapper {
+        padding: 1rem;
+      }
+      header {
+        margin-bottom: 1rem;
+        padding-bottom: 0.75rem;
+      }
+      .workspace {
+        grid-template-columns: 1fr;
+        gap: 0;
+      }
+      .sidebar-stepper {
+        display: none; /* Hide vertical stepper on mobile */
+      }
+      .mobile-stepper {
+        display: flex; /* Show horizontal stepper on mobile */
+      }
+      .wizard-card {
+        padding: 1.5rem;
+        min-height: 520px;
+        border-radius: var(--radius-md);
+      }
+      .slide-title {
+        font-size: 1.4rem;
+      }
+      .info-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+      }
+      .slide-desc {
+        font-size: 0.9rem;
+      }
     }
   </style>
 </head>
 <body>
 
-  <header>
-    <div class="brand-logo">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="color: var(--primary);"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
-      <span>EduBridge ERP</span>
-    </div>
-    <span class="badge">Application Flowcharts</span>
-  </header>
-
-  <div class="container">
+  <div class="app-wrapper">
     
-    <!-- Section 1: Auth & Routing -->
-    <div class="section">
-      <h2 class="section-title">🔑 Phase 1: Launch & Authentication Flow</h2>
-      <p class="section-desc">Shows how the application handles session checking, role-based dashboard routing, and new user sign-up approval waitlist states.</p>
-      <div class="mermaid-container">
-        <pre class="mermaid">
-graph TD
-    A["📱 App Launched"] --> B{"Session Checked?"}
-    B -- "Session Valid (Auto-login)" --> C{"Determine Role"}
-    B -- "No Session / Logged Out" --> D["🔐 Login Screen"]
-    
-    D --> E["Enter Email / Phone & Password"]
-    E --> F{"Credentials Valid?"}
-    F -- "Yes" --> C
-    F -- "No" --> G["⚠️ Display Error (Retry)"]
-    G --> D
-
-    D -. "New User?" .-> H["📝 Registration Portal"]
-    H --> I["Select Role: Teacher or Student"]
-    I --> J["Enter Center Tuition Code"]
-    J --> K["Submit Info & Set Password"]
-    K --> L["⏳ Pending Admin Approval Screen"]
-    L -. "Admin Approves" .-> D
-    
-    C -- "Role = Admin" --> DashboardAdmin["👑 Admin Dashboard"]
-    C -- "Role = Teacher" --> DashboardTeacher["👨‍🏫 Teacher Dashboard"]
-    C -- "Role = Student/Parent" --> DashboardStudent["🎓 Student/Parent Portal"]
-        </pre>
+    <!-- Top Header -->
+    <header>
+      <div class="brand">
+        <div class="brand-logo">EB</div>
+        <span class="brand-name">EduBridge Tuition ERP</span>
       </div>
+      <div class="header-actions">
+        <button class="btn-help" onclick="toggleHelpModal(true)">
+          <span>💡</span> Standard vs Batch
+        </button>
+      </div>
+    </header>
+
+    <!-- Mobile Horizontal Stepper -->
+    <div class="mobile-stepper">
+      <button class="mobile-step-btn active" id="mob-btn-1" onclick="selectStep(1)">1</button>
+      <button class="mobile-step-btn" id="mob-btn-2" onclick="selectStep(2)">2</button>
+      <button class="mobile-step-btn" id="mob-btn-3" onclick="selectStep(3)">3</button>
+      <button class="mobile-step-btn" id="mob-btn-4" onclick="selectStep(4)">4</button>
+      <button class="mobile-step-btn" id="mob-btn-5" onclick="selectStep(5)">5</button>
+      <button class="mobile-step-btn" id="mob-btn-6" onclick="selectStep(6)">6</button>
+      <button class="mobile-step-btn" id="mob-btn-7" onclick="selectStep(7)">7</button>
+      <button class="mobile-step-btn" id="mob-btn-8" onclick="selectStep(8)">8</button>
+      <button class="mobile-step-btn" id="mob-btn-9" onclick="selectStep(9)">9</button>
     </div>
 
-    <!-- Section 2: Admin Flow -->
-    <div class="section">
-      <h2 class="section-title">👑 Phase 2: Admin Workflow (Tuition Owner)</h2>
-      <p class="section-desc">Owner operations including staff credentials approval, classroom slot allocation checks, fee ledgers, receipts printing, and automated WhatsApp reminders routing.</p>
-      <div class="mermaid-container">
-        <pre class="mermaid">
-graph TD
-    DashboardAdmin["👑 Admin Dashboard"] --> MenuAdmin{"Select Operation"}
-    
-    MenuAdmin --> M1["👥 Staff Approval Board"]
-    M1 --> M1_1["Approve/Reject Teacher Registration"]
-    M1_1 --> DashboardAdmin
-    
-    MenuAdmin --> M2["🧑‍🎓 Student Directory"]
-    M2 --> M2_1["Add/Register Student"]
-    M2_1 --> M2_2["Assign to Batch & Roll Number"]
-    M2_2 --> DashboardAdmin
-    
-    MenuAdmin --> M3["📅 Timetable Scheduler"]
-    M3 --> M3_1["Configure Room Capacity"]
-    M3_1 --> M3_2["Schedule Batch Time slots"]
-    M3_2 --> M3_3{"Conflict Detected?"}
-    M3_3 -- "Yes" --> M3_4["⚠️ Block & Show Slot Clash"]
-    M3_3 -- "No" --> M3_5["✅ Save Schedule"]
-    M3_4 --> M3_2
-    M3_5 --> DashboardAdmin
-    
-    MenuAdmin --> M4["💳 Fee & Collections Manager"]
-    M4 --> M4_1["View Pending Dues List"]
-    M4_1 --> M4_2["Generate One-Tap Payment Link"]
-    M4_2 --> M4_3["📲 Send Auto WhatsApp Reminder"]
-    M4_1 --> M4_4["Log Payment: Cash / UPI / Card"]
-    M4_4 --> M4_5["🖨️ Print Custom Fee Receipt"]
-    M4_3 --> DashboardAdmin
-    M4_5 --> DashboardAdmin
-    
-    MenuAdmin --> M5["⚙️ Settings & Customization"]
-    M5 --> M5_1["Upload Academy Logo"]
-    M5_1 --> M5_2["Edit Receipt Terms & Footnotes"]
-    M5_2 --> DashboardAdmin
+    <!-- Main split layout workspace -->
+    <div class="workspace">
+      
+      <!-- Desktop Left Sidebar Stepper -->
+      <nav class="sidebar-stepper">
+        <div class="stepper-section-title">Phase 1: Setup</div>
+        <button class="step-menu-item active" id="menu-btn-1" onclick="selectStep(1)">
+          <div class="step-menu-num">1</div>
+          <span class="step-menu-label">Add Standards (Classes)</span>
+        </button>
+        <button class="step-menu-item" id="menu-btn-2" onclick="selectStep(2)">
+          <div class="step-menu-num">2</div>
+          <span class="step-menu-label">Register Teachers / Staff</span>
+        </button>
+        <button class="step-menu-item" id="menu-btn-3" onclick="selectStep(3)">
+          <div class="step-menu-num">3</div>
+          <span class="step-menu-label">Create Batches</span>
+        </button>
 
-    MenuAdmin --> LogoutAdmin["🚪 Click Logout"]
-    LogoutAdmin --> ClearSession["🧹 Clear Session Data"]
-    ClearSession --> LaunchScreen["🔐 Redirect to Login Screen"]
-        </pre>
+        <div class="stepper-section-title">Phase 2: Daily Operations</div>
+        <button class="step-menu-item" id="menu-btn-4" onclick="selectStep(4)">
+          <div class="step-menu-num">4</div>
+          <span class="step-menu-label">Register Students</span>
+        </button>
+        <button class="step-menu-item" id="menu-btn-5" onclick="selectStep(5)">
+          <div class="step-menu-num">5</div>
+          <span class="step-menu-label">Daily Attendance</span>
+        </button>
+        <button class="step-menu-item" id="menu-btn-6" onclick="selectStep(6)">
+          <div class="step-menu-num">6</div>
+          <span class="step-menu-label">Assign Homework</span>
+        </button>
+
+        <div class="stepper-section-title">Phase 3: Billing & Analytics</div>
+        <button class="step-menu-item" id="menu-btn-7" onclick="selectStep(7)">
+          <div class="step-menu-num">7</div>
+          <span class="step-menu-label">Tests & Marks Entry</span>
+        </button>
+        <button class="step-menu-item" id="menu-btn-8" onclick="selectStep(8)">
+          <div class="step-menu-num">8</div>
+          <span class="step-menu-label">Fees & Collection</span>
+        </button>
+        <button class="step-menu-item" id="menu-btn-9" onclick="selectStep(9)">
+          <div class="step-menu-num">9</div>
+          <span class="step-menu-label">Student Performance</span>
+        </button>
+      </nav>
+
+      <!-- Main Presentation Presentation wizard-card -->
+      <div class="wizard-card">
+        
+        <div class="step-content-area" id="step-content-box">
+          
+          <!-- STEP 1 CONTENT -->
+          <div class="slide-section active" id="slide-1">
+            <div class="slide-header">
+              <span class="phase-badge badge-setup">Setup Phase</span>
+              <span class="step-indicator-text">Step 1 of 9</span>
+            </div>
+            <h2 class="slide-title">⚙️ Standard Listings (Add Classes)</h2>
+            <p class="slide-desc">This is the foundation of your entire setup. Define your tuition classes (e.g., 10th Std) and their monthly fees.</p>
+            
+            <div class="info-grid">
+              <div class="info-box box-path">
+                <h4>🗺️ Where to go?</h4>
+                <p>Click on <strong>Settings ⚙️</strong> in the sidebar ➜ select the <strong>Fees Structure</strong> tab at the top.</p>
+              </div>
+              <div class="info-box box-why" onclick="toggleWhy(this)">
+                <h4>❓ Why is this important?</h4>
+                <p class="why-text">Without adding a Standard (e.g., 10th Std), you cannot create batches for it, register students under that grade, or generate monthly fee invoices.</p>
+              </div>
+            </div>
+
+            <div class="checklist-title">📝 Checklist (How to do it)</div>
+            <ul class="checklist success-style">
+              <li><strong>Standard Name:</strong> Enter the grade name (e.g., <code>6th</code>, <code>10th Science</code>, <code>JEE prep</code>).</li>
+              <li><strong>Board Name:</strong> Enter the board (e.g., CBSE, ICSE, GSEB).</li>
+              <li><strong>Monthly Fee:</strong> Input the standard fee charged to students in this class.</li>
+              <li>Click <strong>Add Standard</strong> to save.</li>
+            </ul>
+
+            <div class="tip-box">
+              <h5>💡 Pro-Tip</h5>
+              <p>If you charge different fees for streams (e.g., Science and Commerce) in the same grade, create them as separate Standards: "12th Science" and "12th Commerce".</p>
+            </div>
+          </div>
+
+          <!-- STEP 2 CONTENT -->
+          <div class="slide-section" id="slide-2">
+            <div class="slide-header">
+              <span class="phase-badge badge-setup">Setup Phase</span>
+              <span class="step-indicator-text">Step 2 of 9</span>
+            </div>
+            <h2 class="slide-title">👨‍🏫 Register Teachers & Staff</h2>
+            <p class="slide-desc">Add teachers and staff to let them log in, take attendance, and assign homework.</p>
+            
+            <div class="info-grid">
+              <div class="info-box box-path">
+                <h4>🗺️ Where to go?</h4>
+                <p>Go to the <strong>Staff Management 👥</strong> page in the sidebar ➜ click the <strong>"+ Register Staff"</strong> button at the top.</p>
+              </div>
+              <div class="info-box box-why" onclick="toggleWhy(this)">
+                <h4>❓ Why is this important?</h4>
+                <p class="why-text">Adding your teachers allows you to assign them to specific batches. Teachers will only see academic records for the batches they teach.</p>
+              </div>
+            </div>
+
+            <div class="checklist-title">📝 Checklist (How to do it)</div>
+            <ul class="checklist success-style">
+              <li>Enter the teacher's name, email ID, and mobile number.</li>
+              <li>Set a temporary login <strong>Password</strong> (teachers can change this after logging in).</li>
+              <li><strong>Designation / Role:</strong> Choose their role (e.g., Teacher, Admin).</li>
+              <li><strong>Permissions:</strong> Select what actions they are allowed to perform.</li>
+            </ul>
+          </div>
+
+          <!-- STEP 3 CONTENT -->
+          <div class="slide-section" id="slide-3">
+            <div class="slide-header">
+              <span class="phase-badge badge-setup">Setup Phase</span>
+              <span class="step-indicator-text">Step 3 of 9</span>
+            </div>
+            <h2 class="slide-title">⏰ Create Batches (Study Groups)</h2>
+            <p class="slide-desc">Create timings/slots (batches) and link them to tuition classes.</p>
+            
+            <div class="info-grid">
+              <div class="info-box box-path">
+                <h4>🗺️ Where to go?</h4>
+                <p>Go to the <strong>Students 👥</strong> page in the sidebar ➜ click the <strong>"+ Create Batch"</strong> button at the top.</p>
+              </div>
+              <div class="info-box box-why" onclick="toggleWhy(this)">
+                <h4>❓ Why is this important?</h4>
+                <p class="why-text">Linking a Batch to a Standard (Class) means that when you assign homework, select a student, or view timetables, selecting the Batch automatically auto-populates the Class/Standard field, saving you from double data entry!</p>
+              </div>
+            </div>
+
+            <div class="checklist-title">📝 Checklist (How to do it)</div>
+            <ul class="checklist success-style">
+              <li><strong>Batch Name:</strong> Enter a unique identifier (e.g., <code>10th Morning Batch</code>, <code>6th Science Slot B</code>).</li>
+              <li><strong>Subject:</strong> Enter the subject taught (e.g., Mathematics, Physics).</li>
+              <li><strong>Standard/Class:</strong> Select the grade level created in <strong>Step 1</strong>.</li>
+              <li><strong>Class Timing:</strong> Specify the time slot (e.g., 04:00 PM - 05:00 PM).</li>
+              <li><strong>Teacher Name:</strong> Assign the teacher responsible for this batch.</li>
+            </ul>
+          </div>
+
+          <!-- STEP 4 CONTENT -->
+          <div class="slide-section" id="slide-4">
+            <div class="slide-header">
+              <span class="phase-badge badge-ops">Daily Operations</span>
+              <span class="step-indicator-text">Step 4 of 9</span>
+            </div>
+            <h2 class="slide-title">🧑‍🎓 Register Students (Admissions)</h2>
+            <p class="slide-desc">Register students and assign them a class and batch.</p>
+            
+            <div class="info-grid">
+              <div class="info-box box-path">
+                <h4>🗺️ Where to go?</h4>
+                <p>Go to the <strong>Students 👥</strong> page in the sidebar ➜ click the <strong>"+ Register Student"</strong> button at the top.</p>
+              </div>
+              <div class="info-box box-why" onclick="toggleWhy(this)">
+                <h4>❓ Why is this important?</h4>
+                <p class="why-text">Students must be assigned to a Batch to appear in attendance sheets, receive homework notifications, and pay standard class fees.</p>
+              </div>
+            </div>
+
+            <div class="checklist-title">📝 Checklist (How to do it)</div>
+            <ul class="checklist success-style">
+              <li>Enter the student's name, roll number, and parent's WhatsApp number.</li>
+              <li><strong>Standard (Class):</strong> Choose their grade from the dropdown (e.g., 10th).</li>
+              <li><strong>Batch:</strong> Select their specific study group/batch.</li>
+              <li>Click the <strong>Register Student</strong> button to save.</li>
+            </ul>
+          </div>
+
+          <!-- STEP 5 CONTENT -->
+          <div class="slide-section" id="slide-5">
+            <div class="slide-header">
+              <span class="phase-badge badge-ops">Daily Operations</span>
+              <span class="step-indicator-text">Step 5 of 9</span>
+            </div>
+            <h2 class="slide-title">📅 Daily Attendance & WhatsApp Alerts</h2>
+            <p class="slide-desc">Mark batch attendance and send parent alerts on WhatsApp.</p>
+            
+            <div class="info-grid">
+              <div class="info-box box-path">
+                <h4>🗺️ Where to go?</h4>
+                <p>Click on <strong>Attendance 📅</strong> in the sidebar.</p>
+              </div>
+              <div class="info-box box-why" onclick="toggleWhy(this)">
+                <h4>❓ Why is this important?</h4>
+                <p class="why-text">Notifying parents of student absence immediately improves reliability, trust, and attendance rates at your academy.</p>
+              </div>
+            </div>
+
+            <div class="checklist-title">📝 Checklist (How to do it)</div>
+            <ul class="checklist success-style">
+              <li>Select the <strong>Batch</strong> and the current <strong>Date</strong> at the top.</li>
+              <li>Mark each student as <strong>Present</strong> or <strong>Absent</strong>.</li>
+              <li>Click <strong>Save Attendance</strong> to sync with the cloud.</li>
+            </ul>
+
+            <div class="tip-box">
+              <h5>💬 WhatsApp Absent Alerts</h5>
+              <p>Once saved, click the <strong>WhatsApp Icon</strong> next to any absent student to send a pre-configured alert message directly to their parent.</p>
+            </div>
+          </div>
+
+          <!-- STEP 6 CONTENT -->
+          <div class="slide-section" id="slide-6">
+            <div class="slide-header">
+              <span class="phase-badge badge-ops">Daily Operations</span>
+              <span class="step-indicator-text">Step 6 of 9</span>
+            </div>
+            <h2 class="slide-title">📝 Assign Homework</h2>
+            <p class="slide-desc">Assign homework to batches (Class is auto-detected).</p>
+            
+            <div class="info-grid">
+              <div class="info-grid box-path" style="display:block;">
+                <div class="info-box" style="width:100%;">
+                  <h4>🗺️ Where to go?</h4>
+                  <p>Go to the <strong>Homework 📝</strong> page ➜ click the <strong>"Assign Homework"</strong> button at the top.</p>
+                </div>
+              </div>
+              <div class="info-box box-why" onclick="toggleWhy(this)">
+                <h4>❓ Why is this important?</h4>
+                <p class="why-text">With our latest update, selecting a <strong>Batch</strong> automatically detects and fills the <strong>Class / Standard</strong> field! This saves time and avoids mistakes.</p>
+              </div>
+            </div>
+
+            <div class="checklist-title">📝 Checklist (How to do it)</div>
+            <ul class="checklist success-style">
+              <li><strong>Batch:</strong> Select the target batch.</li>
+              <li><strong>Class / Std:</strong> Automatically filled upon selecting the batch.</li>
+              <li><strong>Homework Title:</strong> Enter the topic/exercise name.</li>
+              <li><strong>Instructions:</strong> Write out clear instructions for the student.</li>
+              <li><strong>Image Attachment (Optional):</strong> Upload a photo of the questions (max 50KB).</li>
+            </ul>
+          </div>
+
+          <!-- STEP 7 CONTENT -->
+          <div class="slide-section" id="slide-7">
+            <div class="slide-header">
+              <span class="phase-badge badge-billing">Billing & Analytics</span>
+              <span class="step-indicator-text">Step 7 of 9</span>
+            </div>
+            <h2 class="slide-title">📊 Tests & Marks Entry</h2>
+            <p class="slide-desc">Create tests and enter marks to track progress.</p>
+            
+            <div class="info-grid">
+              <div class="info-box box-path">
+                <h4>🗺️ Where to go?</h4>
+                <p>Click on <strong>Tests 📊</strong> in the sidebar.</p>
+              </div>
+              <div class="info-box box-why" onclick="toggleWhy(this)">
+                <h4>❓ Why is this important?</h4>
+                <p class="why-text">Filing test marks enables students and parents to view score progress graphs, highlighting strengths and subjects needing attention.</p>
+              </div>
+            </div>
+
+            <div class="checklist-title">📝 Checklist (How to do it)</div>
+            <ul class="checklist success-style">
+              <li>Click <strong>Add Test</strong> to define the test details (Subject, Topic, Maximum Marks, and Date).</li>
+              <li>Locate the test in the list and click <strong>"Enter Marks"</strong>.</li>
+              <li>Input scores for each student in the list.</li>
+              <li>Click <strong>Save Marks</strong> to lock in the records.</li>
+            </ul>
+          </div>
+
+          <!-- STEP 8 CONTENT -->
+          <div class="slide-section" id="slide-8">
+            <div class="slide-header">
+              <span class="phase-badge badge-billing">Billing & Analytics</span>
+              <span class="step-indicator-text">Step 8 of 9</span>
+            </div>
+            <h2 class="slide-title">💰 Fees Collection & WhatsApp Reminders</h2>
+            <p class="slide-desc">Collect monthly fees, generate receipts, and send WhatsApp reminders.</p>
+            
+            <div class="info-grid">
+              <div class="info-box box-path">
+                <h4>🗺️ Where to go?</h4>
+                <p>Click on <strong>Fees 💰</strong> in the sidebar.</p>
+              </div>
+              <div class="info-box box-why" onclick="toggleWhy(this)">
+                <h4>❓ Why is this important?</h4>
+                <p class="why-text">The system auto-calculates monthly dues based on the student's assigned Standard fee. Marking fees paid generates printable PDF receipts and updates financial logs instantly.</p>
+              </div>
+            </div>
+
+            <div class="checklist-title">📝 Checklist (How to do it)</div>
+            <ul class="checklist success-style">
+              <li>Review the list of students with pending dues.</li>
+              <li>Click <strong>"Collect Fee"</strong> when a payment is received, choose the payment mode (Cash, UPI, Card), and confirm the collection.</li>
+              <li>Click <strong>Print Receipt</strong> to download/print the professional PDF receipt.</li>
+            </ul>
+
+            <div class="tip-box">
+              <h5>💬 WhatsApp Fee Reminders</h5>
+              <p>For any pending fees, click the <strong>WhatsApp Icon</strong> next to the student's name. The app automatically drafts and sends a message containing the unpaid balance and payment instructions to the parent's phone!</p>
+            </div>
+          </div>
+
+          <!-- STEP 9 CONTENT -->
+          <div class="slide-section" id="slide-9">
+            <div class="slide-header">
+              <span class="phase-badge badge-billing">Billing & Analytics</span>
+              <span class="step-indicator-text">Step 9 of 9</span>
+            </div>
+            <h2 class="slide-title">📈 Student Performance Profiles</h2>
+            <p class="slide-desc">View attendance, test graphs, and print student report cards.</p>
+            
+            <div class="info-grid">
+              <div class="info-box box-path">
+                <h4>🗺️ Where to go?</h4>
+                <p>Click on <strong>Performance 📈</strong> in the sidebar.</p>
+              </div>
+              <div class="info-box box-why" onclick="toggleWhy(this)">
+                <h4>❓ Why is this important?</h4>
+                <p class="why-text">Provides a ready-to-use digital progress profile during Parent-Teacher Meetings (PTMs), giving parents clear data on their child's academic journey.</p>
+              </div>
+            </div>
+
+            <div class="checklist-title">📝 Checklist (How to do it)</div>
+            <ul class="checklist success-style">
+              <li>Search for a student's name in the bar.</li>
+              <li>Click their card to load their dashboard.</li>
+              <li>Analyze their <strong>Attendance Trend</strong>, <strong>Homework Graph</strong>, and <strong>Test Score Lines</strong>.</li>
+              <li>Click <strong>Download Report PDF</strong> to generate and print a comprehensive report card.</li>
+            </ul>
+          </div>
+
+        </div>
+
+        <!-- Wizard Navigation Controls (Always stable at bottom) -->
+        <div class="wizard-footer">
+          <button class="btn-nav secondary" id="btn-prev" onclick="prevStep()" disabled>
+            ← Previous
+          </button>
+          <button class="btn-nav" id="btn-next" onclick="nextStep()">
+            Next Step →
+          </button>
+        </div>
+
       </div>
-    </div>
 
-    <!-- Section 3: Teacher Flow -->
-    <div class="section">
-      <h2 class="section-title">👨‍🏫 Phase 3: Teacher Workflow</h2>
-      <p class="section-desc">Academic batch logs including visual trend diagnostics entries, assignments image attachments, and daily attendance cloud storage sync operations.</p>
-      <div class="mermaid-container">
-        <pre class="mermaid">
-graph TD
-    DashboardTeacher["👨‍🏫 Teacher Dashboard"] --> MenuTeacher{"Select Action"}
-    
-    MenuTeacher --> T1["📝 Daily Attendance Log"]
-    T1 --> T1_1["Select Batch & Date"]
-    T1_1 --> T1_2["Mark Present / Absent"]
-    T1_2 --> T1_3["💾 Sync Attendance Cloud Vault"]
-    T1_3 --> DashboardTeacher
-    
-    MenuTeacher --> T2["📊 Test Marks Manager"]
-    T2 --> T2_1["Create Test Scheme (Max Marks, Topic)"]
-    T2_1 --> T2_2["Enter Marks for Student Roll list"]
-    T2_2 --> T2_3["Generate visual trend analytics"]
-    T2_3 --> DashboardTeacher
-    
-    MenuTeacher --> T3["📚 Assignments & Homework"]
-    T3 --> T3_1["Write Assignment Details"]
-    T3_1 --> T3_2["Attach Homework image file (<50KB)"]
-    T3_2 --> T3_3["Publish to Student Portal"]
-    T3_3 --> DashboardTeacher
-
-    MenuTeacher --> LogoutTeacher["🚪 Click Logout"]
-    LogoutTeacher --> ClearSessionT["🧹 Clear Session Data"]
-    ClearSessionT --> LaunchScreen["🔐 Redirect to Login Screen"]
-        </pre>
-      </div>
-    </div>
-
-    <!-- Section 4: Student Flow -->
-    <div class="section">
-      <h2 class="section-title">🎓 Phase 4: Student/Parent Workflow</h2>
-      <p class="section-desc">Parent dashboard visual analytics view, fee balance checks, homework assignments check, and Google Gemini AI automated tip generators.</p>
-      <div class="mermaid-container">
-        <pre class="mermaid">
-graph TD
-    DashboardStudent["🎓 Student/Parent Portal"] --> MenuStudent{"Select Tab"}
-    
-    MenuStudent --> S1["📅 Class Timetable"]
-    S1 --> S1_1["View Today's Batches & Room Numbers"]
-    S1_1 --> DashboardStudent
-    
-    MenuStudent --> S2["📚 Assignments Dashboard"]
-    S2 --> S2_1["View Active Tasks & PDF Attachments"]
-    S2_1 --> S2_2["Mark Assignment Completed"]
-    S2_2 --> DashboardStudent
-    
-    MenuStudent --> S3["📊 Progress Report Card"]
-    S3 --> S3_1["View Attendance Graphs"]
-    S3_1 --> S3_2["Check Test Scores Trend Line"]
-    S3_2 --> S3_3["🤖 Fetch Gemini AI Study Diagnostics Tips"]
-    S3_3 --> S3_4["🖨️ Download PDF Report Card"]
-    S3_4 --> DashboardStudent
-    
-    MenuStudent --> S4["💳 Receipts & Fees History"]
-    S4 --> S4_1["View Pending Fee Schedule"]
-    S4_1 --> S4_2["Open Paid Invoices Receipts"]
-    S4_2 --> DashboardStudent
-
-    MenuStudent --> LogoutStudent["🚪 Click Logout"]
-    LogoutStudent --> ClearSessionS["🧹 Clear Session Data"]
-    ClearSessionS --> LaunchScreen["🔐 Redirect to Login Screen"]
-        </pre>
-      </div>
     </div>
 
   </div>
 
-  <!-- Load Mermaid script to dynamically compile and draw vectors -->
-  <script type="module">
-    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-    mermaid.initialize({ 
-      startOnLoad: true,
-      theme: 'dark',
-      securityLevel: 'loose',
-      themeVariables: {
-        background: '#0a0f1d',
-        primaryColor: '#2563eb',
-        primaryTextColor: '#f8fafc',
-        lineColor: '#38bdf8',
-        nodeBorder: '#1e293b'
+  <!-- Standard vs Batch Explanation Modal -->
+  <div class="modal-overlay" id="help-modal">
+    <div class="modal-card">
+      <button class="modal-close" onclick="toggleHelpModal(false)">×</button>
+      <h3 class="modal-title">💡 Standard vs Batch Explained</h3>
+      <div class="modal-content">
+        <p>Understanding this distinction will save you from double-entering data into the ERP:</p>
+        
+        <div class="modal-highlight-box">
+          <h5>1. Standard (Class / Grade level)</h5>
+          <p style="margin:0; font-size:0.88rem; color:#cbd5e1;">
+            This is the school grade (e.g. <strong>6th Grade</strong>, <strong>10th Science</strong>, <strong>JEE prep</strong>). It defines the base <strong>Monthly Fees</strong>. You set this up once in Settings.
+          </p>
+        </div>
+
+        <div class="modal-highlight-box" style="background-color: rgba(16, 185, 129, 0.04); border-color: rgba(16, 185, 129, 0.15);">
+          <h5 style="color:#6ee7b7;">2. Batch (Class Time & Subject)</h5>
+          <p style="margin:0; font-size:0.88rem; color:#cbd5e1;">
+            This is the group/time slot where students sit and study (e.g. <strong>10th Morning Maths</strong>, <strong>10th Evening Physics</strong>). Every Batch is linked to a <strong>Standard</strong>.
+          </p>
+        </div>
+
+        <p style="margin:0; font-size:0.88rem; color:#94a3b8;">
+          <strong>Why link them?</strong> Once a Batch is linked to a Standard, you only select the Batch during homework assignment or student registration. The system automatically fetches and sets the correct class level without asking you again!
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentStep = 1;
+    const totalSteps = 9;
+
+    function selectStep(stepNum) {
+      currentStep = stepNum;
+      
+      // 1. Toggle active class on sidebar buttons (Desktop)
+      const menuItems = document.querySelectorAll('.step-menu-item');
+      menuItems.forEach(item => {
+        const itemNum = parseInt(item.id.split('-')[2]);
+        if (itemNum === currentStep) {
+          item.classList.add('active');
+        } else {
+          item.classList.remove('active');
+        }
+      });
+
+      // 2. Toggle active class on mobile stepper buttons
+      const mobButtons = document.querySelectorAll('.mobile-step-btn');
+      mobButtons.forEach(btn => {
+        const btnNum = parseInt(btn.id.split('-')[2]);
+        if (btnNum === currentStep) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+
+      // 3. Toggle visibility of content slides (Fade animation happens naturally in CSS)
+      const slides = document.querySelectorAll('.slide-section');
+      slides.forEach(slide => {
+        const slideNum = parseInt(slide.id.split('-')[1]);
+        if (slideNum === currentStep) {
+          slide.classList.add('active');
+        } else {
+          slide.classList.remove('active');
+        }
+      });
+
+      // 4. Update Navigation Button states (Disable/Enable and label change)
+      const prevBtn = document.getElementById('btn-prev');
+      const nextBtn = document.getElementById('btn-next');
+
+      if (currentStep === 1) {
+        prevBtn.disabled = true;
+      } else {
+        prevBtn.disabled = false;
+      }
+
+      if (currentStep === totalSteps) {
+        nextBtn.innerHTML = "Restart Guide ⟲";
+        nextBtn.style.backgroundColor = "var(--success)";
+      } else {
+        nextBtn.innerHTML = "Next Step →";
+        nextBtn.style.backgroundColor = "var(--primary)";
+      }
+
+      // CRITICAL: We removed all scrollIntoView calls! No unexpected viewport movements.
+    }
+
+    function nextStep() {
+      if (currentStep < totalSteps) {
+        selectStep(currentStep + 1);
+      } else {
+        selectStep(1); // Restart
+      }
+    }
+
+    function prevStep() {
+      if (currentStep > 1) {
+        selectStep(currentStep - 1);
+      }
+    }
+
+    function toggleWhy(element) {
+      element.classList.toggle('expanded');
+    }
+
+    function toggleHelpModal(show) {
+      const modal = document.getElementById('help-modal');
+      if (show) {
+        modal.classList.add('active');
+      } else {
+        modal.classList.remove('active');
+      }
+    }
+
+    // Close modal on escape key or clicking outside the card
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        toggleHelpModal(false);
+      }
+    });
+
+    document.getElementById('help-modal').addEventListener('click', (e) => {
+      if (e.target.id === 'help-modal') {
+        toggleHelpModal(false);
       }
     });
   </script>
