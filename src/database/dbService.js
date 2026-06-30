@@ -68,49 +68,51 @@ const signInGuest = async () => {
 let isAuthInitialized = false;
 let authInitPromise = null;
 
-const ensureAuthInitialized = () => {
-  if (!isFirebaseConfigured || !auth) return Promise.resolve(null);
-  if (isAuthInitialized) return Promise.resolve(auth.currentUser);
-  if (authInitPromise) return authInitPromise;
+const ensureAuthInitialized = async () => {
+  if (!isFirebaseConfigured || !auth) return null;
 
-  authInitPromise = new Promise((resolve) => {
-    const timer = setTimeout(() => {
-      isAuthInitialized = true;
-      resolve(auth.currentUser);
-    }, 1000);
+  const storedUser = sessionStorage.getItem('bb_current_user');
+  const userObj = storedUser ? JSON.parse(storedUser) : null;
+  const authEmail = userObj?.authEmail;
+  const authPassword = userObj?.authPassword;
 
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      clearTimeout(timer);
-      unsubscribe();
-      try {
-        const storedUser = sessionStorage.getItem('bb_current_user');
-        const userObj = storedUser ? JSON.parse(storedUser) : null;
-        const authEmail = userObj?.authEmail;
-        const authPassword = userObj?.authPassword;
+  // Wait for Firebase Auth to restore the session from cache initially
+  if (!isAuthInitialized) {
+    if (authInitPromise) {
+      await authInitPromise;
+    } else {
+      authInitPromise = new Promise((resolve) => {
+        const timer = setTimeout(() => {
+          isAuthInitialized = true;
+          resolve(auth.currentUser);
+        }, 1000);
 
-        if (authEmail) {
-          if (user?.email === authEmail) {
-            isAuthInitialized = true;
-            resolve(user);
-          } else {
-            // Restore active session
-            const password = authPassword || AUTH_PROJECT_SECRET;
-            const userCred = await signInWithEmailAndPassword(auth, authEmail, password);
-            isAuthInitialized = true;
-            resolve(userCred.user);
-          }
-        } else {
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+          clearTimeout(timer);
           isAuthInitialized = true;
           resolve(user);
-        }
+          unsubscribe();
+        });
+      });
+      await authInitPromise;
+    }
+  }
+
+  // Verify and dynamically restore the expected logged-in user session
+  if (authEmail) {
+    const currentUser = auth.currentUser;
+    if (!currentUser || currentUser.email !== authEmail) {
+      try {
+        const password = authPassword || AUTH_PROJECT_SECRET;
+        const userCred = await signInWithEmailAndPassword(auth, authEmail, password);
+        return userCred.user;
       } catch (err) {
         console.error("Failed to restore authenticated user session:", err);
-        isAuthInitialized = true;
-        resolve(user);
       }
-    });
-  });
-  return authInitPromise;
+    }
+  }
+
+  return auth.currentUser;
 };
 
 const ensureAuthenticatedForTenant = async (tenantId) => {
