@@ -819,7 +819,7 @@ export default function Dashboard({ setActiveTab, currentUser, verifyAction, act
   const headerTitle = currentUser?.role === 'superadmin'
     ? 'Master admin'
     : (currentUser?.role === 'admin')
-      ? (currentUser.staffId ? currentUser.designation || (activeTenant?.custom_owner_title || 'Owner admin') : (activeTenant?.custom_owner_title || 'Owner admin')) 
+      ? (currentUser.staffId ? currentUser.username : (activeTenant?.custom_owner_title || 'Owner admin')) 
       : 'Home';
 
   return (
