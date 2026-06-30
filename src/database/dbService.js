@@ -78,11 +78,36 @@ const ensureAuthInitialized = () => {
       isAuthInitialized = true;
       resolve(auth.currentUser);
     }, 1000);
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       clearTimeout(timer);
-      isAuthInitialized = true;
-      resolve(user);
       unsubscribe();
+      try {
+        const storedUser = sessionStorage.getItem('bb_current_user');
+        const userObj = storedUser ? JSON.parse(storedUser) : null;
+        const authEmail = userObj?.authEmail;
+        const authPassword = userObj?.authPassword;
+
+        if (authEmail) {
+          if (user?.email === authEmail) {
+            isAuthInitialized = true;
+            resolve(user);
+          } else {
+            // Restore active session
+            const password = authPassword || AUTH_PROJECT_SECRET;
+            const userCred = await signInWithEmailAndPassword(auth, authEmail, password);
+            isAuthInitialized = true;
+            resolve(userCred.user);
+          }
+        } else {
+          isAuthInitialized = true;
+          resolve(user);
+        }
+      } catch (err) {
+        console.error("Failed to restore authenticated user session:", err);
+        isAuthInitialized = true;
+        resolve(user);
+      }
     });
   });
   return authInitPromise;
@@ -1356,7 +1381,7 @@ export const dbService = {
           }
         }
 
-        return { id: studentId, student_id: studentIdVal, ...studentData };
+        return { id: studentId, student_id: studentIdVal, ...studentData, authEmail: getVirtualEmail('student', tenantId, studentId, activeHash), authPassword: AUTH_PROJECT_SECRET };
       },
       () => {
         const students = getLocalData('bb_students', INITIAL_STUDENTS);
@@ -1515,7 +1540,8 @@ export const dbService = {
               if (isValid) {
                 await signOutUser(); // Sign out guest
                 const activeHash = needsUpgrade ? hashedInput : dbPassword;
-                await authenticateUserWithAuth('student', tenant.id, studentId, activeHash);
+                const authUser = await authenticateUserWithAuth('student', tenant.id, studentId, activeHash);
+                const authEmail = authUser ? authUser.email : null;
 
                 if (needsUpgrade) {
                   try {
@@ -1530,7 +1556,7 @@ export const dbService = {
                   }
                 }
 
-                return { student: { id: studentId, student_id: studentIdVal, ...studentData }, tenant };
+                return { student: { id: studentId, student_id: studentIdVal, ...studentData }, tenant, authEmail, authPassword: AUTH_PROJECT_SECRET };
               }
             }
           } catch (e) {
@@ -2469,7 +2495,8 @@ export const dbService = {
         // 3. Authenticate with virtual email
         await signOutUser(); // Sign out guest first
         const activeHash = needsUpgrade ? hashedInput : dbPassword;
-        await authenticateUserWithAuth('staff', tenantId, matchedStaff.id, activeHash);
+        const authUser = await authenticateUserWithAuth('staff', tenantId, matchedStaff.id, activeHash);
+        const authEmail = authUser ? authUser.email : null;
 
         if (needsUpgrade) {
           try {
@@ -2481,7 +2508,7 @@ export const dbService = {
           }
         }
 
-        return matchedStaff;
+        return { ...matchedStaff, authEmail, authPassword: AUTH_PROJECT_SECRET };
       },
       () => {
         const list = getLocalData('bb_staff_accounts', []);
@@ -2563,7 +2590,8 @@ export const dbService = {
             if (ownerMatch && ownerMob === cleanMobile) {
               await signOutUser();
               const activeHash = ownerNeedsUpgrade ? hashedInput : requiredPassword;
-              await authenticateUserWithAuth('owner', tenant.id, 'owner', activeHash);
+              const authUser = await authenticateUserWithAuth('owner', tenant.id, 'owner', activeHash);
+              const authEmail = authUser ? authUser.email : null;
 
               dbService.setTenantCode(tenant.id);
               if (ownerNeedsUpgrade) {
@@ -2575,7 +2603,7 @@ export const dbService = {
                   console.error(`Failed to auto-upgrade tenant ${tenant.id} password hash:`, err);
                 }
               }
-              return { role: 'admin', username: 'Owner', tenant };
+              return { role: 'admin', username: 'Owner', tenant, authEmail, authPassword: AUTH_PROJECT_SECRET };
             }
 
             // Check if Staff
@@ -2608,7 +2636,8 @@ export const dbService = {
             if (matchedStaff) {
               await signOutUser();
               const activeHash = staffNeedsUpgrade ? hashedInput : matchedStaff.password;
-              await authenticateUserWithAuth('staff', tenant.id, matchedStaff.id, activeHash);
+              const authUser = await authenticateUserWithAuth('staff', tenant.id, matchedStaff.id, activeHash);
+              const authEmail = authUser ? authUser.email : null;
 
               if (staffNeedsUpgrade) {
                 try {
@@ -2619,7 +2648,7 @@ export const dbService = {
                   console.error("Failed to auto-upgrade staff password hash:", e);
                 }
               }
-              return { role: 'staff', staff: matchedStaff, tenant };
+              return { role: 'staff', staff: matchedStaff, tenant, authEmail, authPassword: AUTH_PROJECT_SECRET };
             }
           } catch (e) {
             console.error(`Failed to verify staff login for tenant ${tenant.id}:`, e);
@@ -2708,10 +2737,10 @@ export const dbService = {
         if (isFirebaseConfigured && auth) {
           await signInWithEmailAndPassword(auth, 'superadmin@edubridge.internal', 'Super123!');
         }
-        return { username: 'Super Admin', role: 'superadmin' };
+        return { username: 'Super Admin', role: 'superadmin', authEmail: 'superadmin@edubridge.internal', authPassword: 'Super123!' };
       },
       () => {
-        return { username: 'Super Admin', role: 'superadmin' };
+        return { username: 'Super Admin', role: 'superadmin', authEmail: 'superadmin@edubridge.internal', authPassword: 'Super123!' };
       }
     );
   },

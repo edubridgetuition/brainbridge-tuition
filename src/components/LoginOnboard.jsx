@@ -410,6 +410,8 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
           role: 'admin',
           studentId: null,
           batchId: null,
+          authEmail: result.authEmail,
+          authPassword: result.authPassword,
           must_change_password: tenant.must_change_password === true
         });
       } else {
@@ -420,6 +422,8 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
           studentId: null,
           batchId: null,
           staffId: staff.id,
+          authEmail: result.authEmail,
+          authPassword: result.authPassword,
           designation: staff.role || 'Teacher',
           must_change_password: staff.must_change_password
         });
@@ -463,7 +467,9 @@ export default function LoginOnboard({ onLogin, activeTenant, onTenantCodeSubmit
         role: 'parent',
         studentId: student.id,
         batchId: student.batch_id,
-        numericId: student.student_id
+        numericId: student.student_id,
+        authEmail: result.authEmail,
+        authPassword: result.authPassword
       });
     } catch (err) {
       setError(err.message || 'Invalid Student ID or password.');
