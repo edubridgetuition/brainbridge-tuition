@@ -55,6 +55,11 @@
   font-family: var(--font-body);
 }
 
+/* Eliminate 300ms double-tap zoom delay on mobile devices */
+html, body, button, input, select, textarea, label, a, [role="button"], .btn, .nav-item, .card {
+  touch-action: manipulation;
+}
+
 html, body, #root {
   height: 100dvh;
   width: 100vw;
@@ -297,9 +302,9 @@ h1, h2, h3, h4, h5, h6 {
   filter: brightness(1.1);
 }
 
-/* Tactile Active Click Feedback */
-.btn:active, .nav-item:active, .card:active, .badge:active {
-  transform: scale(0.96) !important;
+/* Tactile Active Click Feedback (gentler scale to prevent click cancellation on mobile) */
+.btn:active, .nav-item:active, .card:active {
+  transform: scale(0.99) !important;
   filter: brightness(0.9) !important;
   transition: transform 0.08s cubic-bezier(0, 0, 0.2, 1) !important;
 }
