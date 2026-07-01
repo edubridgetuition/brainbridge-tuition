@@ -16,6 +16,8 @@ export default function Chat({ currentUser, verifyAction }) {
   const [inputText, setInputText] = useState('');
   const [globalUnread, setGlobalUnread] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeContactTab, setActiveContactTab] = useState('teacher');
+  const [selectedStandard, setSelectedStandard] = useState('All');
 
   // Refs for scroll
   const chatEndRef = useRef(null);
@@ -72,6 +74,8 @@ export default function Chat({ currentUser, verifyAction }) {
           id: s.id,
           name: s.name,
           role: s.role || 'Teacher',
+          type: 'teacher',
+          standard: '',
           subtext: `Teacher – ${s.subject || 'General'}`
         }));
 
@@ -80,12 +84,26 @@ export default function Chat({ currentUser, verifyAction }) {
         return {
           id: s.id,
           name: s.name,
-          role: 'Student / Parent',
+          role: 'Student',
+          type: 'student',
+          standard: s.standard || 'N/A',
           subtext: `Standard: ${s.standard || 'N/A'} (${batch ? batch.name : 'No Batch'})`
         };
       });
 
-      list = [...staffContacts, ...studentContacts];
+      const parentContacts = students.map(s => {
+        const batch = batches.find(b => b.id === s.batch_id);
+        return {
+          id: s.id,
+          name: s.parent_name || `Parent of ${s.name}`,
+          role: 'Parent',
+          type: 'parent',
+          standard: s.standard || 'N/A',
+          subtext: `Parent of ${s.name} (${s.standard || 'N/A'})`
+        };
+      });
+
+      list = [...staffContacts, ...studentContacts, ...parentContacts];
     } else if (isTeacher) {
       // Teacher can only see and chat with students in the batches they teach
       const myBatches = batches.filter(b => 
@@ -99,8 +117,22 @@ export default function Chat({ currentUser, verifyAction }) {
         return {
           id: s.id,
           name: s.name,
-          role: 'Student / Parent',
+          role: 'Student',
+          type: 'student',
+          standard: s.standard || 'N/A',
           subtext: `Batch: ${batch ? batch.name : 'Unknown'}`
+        };
+      });
+
+      const parentContacts = myStudents.map(s => {
+        const batch = batches.find(b => b.id === s.batch_id);
+        return {
+          id: s.id,
+          name: s.parent_name || `Parent of ${s.name}`,
+          role: 'Parent',
+          type: 'parent',
+          standard: s.standard || 'N/A',
+          subtext: `Parent of ${s.name} (Batch: ${batch ? batch.name : 'Unknown'})`
         };
       });
 
@@ -109,10 +141,12 @@ export default function Chat({ currentUser, verifyAction }) {
         id: 'owner',
         name: 'Tuition Owner',
         role: 'Administrator',
+        type: 'teacher',
+        standard: '',
         subtext: 'Owner / Head Admin'
       };
 
-      list = [ownerContact, ...studentContacts];
+      list = [ownerContact, ...studentContacts, ...parentContacts];
     } else if (isParent) {
       // Parent can chat with their batch's teacher and the Owner
       const studentBatchId = currentUser.batchId;
@@ -122,6 +156,8 @@ export default function Chat({ currentUser, verifyAction }) {
         id: 'owner',
         name: 'Tuition Owner',
         role: 'Administrator',
+        type: 'teacher',
+        standard: '',
         subtext: 'Owner / Head Admin'
       };
       list.push(ownerContact);
@@ -136,6 +172,8 @@ export default function Chat({ currentUser, verifyAction }) {
           id: matchedStaff ? matchedStaff.id : 'teacher_fallback',
           name: myBatch.teacher_name,
           role: 'Class Teacher',
+          type: 'teacher',
+          standard: '',
           subtext: `Teacher – ${myBatch.subject || 'General'}`
         });
       }
@@ -144,19 +182,32 @@ export default function Chat({ currentUser, verifyAction }) {
     setContacts(list);
   }, [loading, batches, students, staffList, isOwner, isTeacher, isParent, currentUserName, currentUser]);
 
-  // Handle Search Filtering
+  // Handle Search & Tab Filtering
   useEffect(() => {
     const q = searchQuery.toLowerCase().trim();
-    if (!q) {
-      setFilteredContacts(contacts);
-    } else {
-      setFilteredContacts(contacts.filter(c => 
+    
+    // First, filter by tab type if Owner or Teacher
+    let result = contacts;
+    if (isOwner || isTeacher) {
+      result = contacts.filter(c => c.type === activeContactTab);
+      
+      // If it is 'student' or 'parent' tab, we also filter by standard
+      if ((activeContactTab === 'student' || activeContactTab === 'parent') && selectedStandard !== 'All') {
+        result = result.filter(c => c.standard === selectedStandard);
+      }
+    }
+    
+    // Then filter by search query
+    if (q) {
+      result = result.filter(c => 
         c.name.toLowerCase().includes(q) || 
         c.role.toLowerCase().includes(q) || 
         (c.subtext && c.subtext.toLowerCase().includes(q))
-      ));
+      );
     }
-  }, [contacts, searchQuery]);
+    
+    setFilteredContacts(result);
+  }, [contacts, searchQuery, activeContactTab, selectedStandard, isOwner, isTeacher]);
 
   // Listen to messages for the active conversation
   useEffect(() => {
@@ -365,6 +416,7 @@ export default function Chat({ currentUser, verifyAction }) {
         }
         .role-badge.teacher { background: #eff6ff; color: #1e40af; }
         .role-badge.student { background: #f0fdf4; color: #166534; }
+        .role-badge.parent { background: #fff7ed; color: #c2410c; }
         .role-badge.owner { background: #faf5ff; color: #6b21a8; }
         .unread-count-badge {
           background-color: #ef4444;
@@ -398,7 +450,7 @@ export default function Chat({ currentUser, verifyAction }) {
         
         {/* SIDEBAR: CONTACTS LIST */}
         <aside className={`chat-sidebar ${selectedContact ? 'mobile-hidden' : ''}`}>
-          <div className="chat-sidebar-header">
+          <div className="chat-sidebar-header" style={{ gap: '0.65rem' }}>
             <h3 style={{ fontSize: '1.1rem', fontWeight: '800', margin: 0, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
               <MessageSquare size={18} style={{ color: 'var(--primary)' }} /> Live Contacts
             </h3>
@@ -413,6 +465,76 @@ export default function Chat({ currentUser, verifyAction }) {
               />
               <Search size={14} style={{ position: 'absolute', left: '0.85rem', color: '#64748b' }} />
             </div>
+
+            {/* TABS Selector for Admin/Teacher */}
+            {(isOwner || isTeacher) && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.15rem' }}>
+                <div style={{ 
+                  display: 'flex', 
+                  backgroundColor: '#f1f5f9', 
+                  borderRadius: '8px', 
+                  padding: '2px',
+                  gap: '2px'
+                }}>
+                  {['teacher', 'student', 'parent'].map(tab => (
+                    <button
+                      key={tab}
+                      type="button"
+                      onClick={() => {
+                        setActiveContactTab(tab);
+                        setSelectedStandard('All'); // Reset grade filter on tab change
+                      }}
+                      style={{
+                        flex: 1,
+                        border: 'none',
+                        backgroundColor: activeContactTab === tab ? '#ffffff' : 'transparent',
+                        color: activeContactTab === tab ? 'var(--primary)' : 'var(--text-secondary)',
+                        fontSize: '0.78rem',
+                        fontWeight: activeContactTab === tab ? '800' : '600',
+                        padding: '0.45rem 0',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        boxShadow: activeContactTab === tab ? '0 1px 3px rgba(0,0,0,0.05)' : 'none',
+                        transition: 'all 0.15s ease',
+                        textTransform: 'capitalize'
+                      }}
+                    >
+                      {tab === 'teacher' ? 'Teachers' : tab === 'student' ? 'Students' : 'Parents'}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Grade/Standard Filter Dropdown for Students and Parents */}
+                {(activeContactTab === 'student' || activeContactTab === 'parent') && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', width: '100%' }}>
+                    <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: '700', whiteSpace: 'nowrap' }}>Grade:</span>
+                    <select
+                      className="form-control"
+                      value={selectedStandard}
+                      onChange={(e) => setSelectedStandard(e.target.value)}
+                      style={{
+                        fontSize: '0.75rem',
+                        height: '28px',
+                        padding: '0 0.5rem',
+                        borderRadius: '6px',
+                        border: '1px solid #cbd5e1',
+                        flex: 1,
+                        backgroundColor: '#ffffff',
+                        margin: 0
+                      }}
+                    >
+                      <option value="All">All Grades</option>
+                      {Array.from(new Set(students.map(s => s.standard).filter(Boolean)))
+                        .sort()
+                        .map(std => (
+                          <option key={std} value={std}>{std}</option>
+                        ))
+                      }
+                    </select>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="chat-contacts-list">
@@ -435,7 +557,7 @@ export default function Chat({ currentUser, verifyAction }) {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
                         <span style={{ fontWeight: '700', fontSize: '0.88rem', color: '#0f172a' }}>{c.name}</span>
                         <span className={`role-badge ${
-                          c.role.includes('Teacher') ? 'teacher' : c.role.includes('Student') ? 'student' : 'owner'
+                          c.role.includes('Teacher') ? 'teacher' : c.role.includes('Student') ? 'student' : c.role.includes('Parent') ? 'parent' : 'owner'
                         }`}>
                           {c.role}
                         </span>
