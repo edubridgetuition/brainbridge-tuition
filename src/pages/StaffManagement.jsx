@@ -177,7 +177,7 @@ export default function StaffManagement({ currentUser, verifyAction, activeTenan
         await dbService.updateStaffAccountStatus(id, 'Approved');
         
         // 2. Refresh lists locally
-        setStaffList(prev => prev.map(s => s.id === id ? { ...s, status: 'Approved', must_change_password: true } : s));
+        setStaffList(prev => prev.map(s => s.id === id ? { ...s, status: 'Approved', must_change_password: true, approved_at: new Date().toISOString() } : s));
         
         // 3. Compose and trigger WhatsApp message to staff with login details
         const tenantCode = dbService.getTenantCode() || '';
@@ -1009,9 +1009,19 @@ export default function StaffManagement({ currentUser, verifyAction, activeTenan
                 </div>
               </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '0.2rem' }}>Registration Date</label>
-                <span style={{ color: '#64748b', fontSize: '0.8rem' }}>{formatDate(selectedStaffForView.created_at)}</span>
+              <div style={{ display: 'grid', gridTemplateColumns: selectedStaffForView.status === 'Approved' ? '1fr 1fr' : '1fr', gap: '1rem', borderTop: '1px dashed #e2e8f0', paddingTop: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '0.2rem' }}>Registration Date</label>
+                  <span style={{ color: '#64748b', fontSize: '0.8rem' }}>{formatDate(selectedStaffForView.created_at)}</span>
+                </div>
+                {selectedStaffForView.status === 'Approved' && (
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '0.2rem' }}>Approved Date</label>
+                    <span style={{ color: '#64748b', fontSize: '0.8rem' }}>
+                      {selectedStaffForView.approved_at ? formatDate(selectedStaffForView.approved_at) : 'N/A'}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 

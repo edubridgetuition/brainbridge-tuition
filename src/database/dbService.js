@@ -2411,6 +2411,7 @@ export const dbService = {
         const updateData = { status };
         if (status === 'Approved') {
           updateData.must_change_password = true;
+          updateData.approved_at = new Date().toISOString();
         }
         await updateDoc(docRef, updateData);
         return true;
@@ -2422,6 +2423,7 @@ export const dbService = {
           list[idx].status = status;
           if (status === 'Approved') {
             list[idx].must_change_password = true;
+            list[idx].approved_at = new Date().toISOString();
           }
           saveLocalData('bb_staff_accounts', list);
           return true;
